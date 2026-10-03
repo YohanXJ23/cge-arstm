@@ -146,7 +146,7 @@ const LogoCGE = ({ className = "w-10 h-10" }) => (
 // ---------- Mot du Président (encadré de l'accueil) ----------
 // Pour changer de président : remplacer le nom, la photo et le message ci-dessous.
 const PRESIDENT = {
-  name: "NANGUI Akré Yohan",
+  name: "NANGUI AKRE",
   title: "Président de la CGE ARSTM",
   // Message provisoire : à remplacer par le texte du Président
   message: "Bienvenue sur le portail de la CGE ARSTM. Ensemble, faisons de notre conférence un espace d'entraide, d'excellence et d'ouverture vers le monde professionnel.",
@@ -251,7 +251,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Bureau CGE section ARSTM 2026-2027 (fiches de secours, affichées seulement si Supabase ne répond pas)
 const initialMembers = [
-  { id: 1, name: "NANGUI AKRE YOHAN", role: "Président", department: "presidence", position: "chef", bio: null, image: PRESIDENT.photo },
+  { id: 1, name: "NANGUI AKRE", role: "Président", department: "presidence", position: "chef", bio: null, image: PRESIDENT.photo },
   { id: 2, name: "SYLLA YACOUBA", role: "Vice-Président", department: "vice_presidence", position: "chef", bio: null, image: null },
   { id: 3, name: "COULIBALY DAVID", role: "Secrétaire Général", department: "secretariat", position: "chef", bio: null, image: null },
   { id: 4, name: "GUIRA CHEICK", role: "Secrétaire Général Adjoint", department: "secretariat", position: "adjoint", bio: null, image: null },
@@ -2397,29 +2397,14 @@ function App() {
 
       </main>
 
-      {/* PIED DE PAGE : CRÉATEURS DU SITE (permanent, affiché sur l'accueil uniquement) */}
-      {activeTab === 'accueil' && <footer className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-4">
-        <div className="glass-card rounded-3xl px-6 py-5 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
-          <div className="flex items-center gap-3">
-            <LogoCGE className="w-9 h-9 flex-shrink-0" />
-            <div>
-              <p className="text-xs font-bold text-stone-900">CGE ARSTM</p>
-              <p className="text-[11px] text-stone-500">© {new Date().getFullYear()} — Tous droits réservés</p>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-extrabold uppercase tracking-widest text-orange-600">Site conçu et développé par</p>
-            <div className="flex flex-col sm:flex-row sm:gap-6 gap-1.5">
-              {SITE_CREATORS.map(c => (
-                <p key={c.name} className="text-xs text-stone-700">
-                  <span className="font-bold text-stone-900">{c.name}</span>
-                  <span className="text-stone-500"> — {c.section}, {c.promo}</span>
-                </p>
-              ))}
-            </div>
-          </div>
-        </div>
-      </footer>}
+      {/* PIED DE PAGE : CRÉATEURS DU SITE (permanent, discret, accueil uniquement) */}
+      {activeTab === 'accueil' && (
+        <footer className="w-full px-4 pt-0 pb-2 text-center">
+          <p className="text-[9px] leading-snug text-stone-400/50">
+            © {new Date().getFullYear()} CGE ARSTM · Réalisé par {SITE_CREATORS.map(c => `${c.name} (${c.section}, ${c.promo})`).join(' et ')}
+          </p>
+        </footer>
+      )}
 
       {/* BARRE EN BAS : APPLE LIQUID GLASS DOCK */}
       <div className="fixed bottom-6 inset-x-0 z-40 flex justify-center px-4 pointer-events-none">
