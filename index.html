@@ -1092,7 +1092,61 @@ function App() {
     notify("Témoignage retiré.");
   };
 
-  if (firstLoad) return <FullLoader />;
+  // ----- Textes et réglages modifiés depuis le site (prioritaires sur config.js) -----
+  const [settings, setSettings] = useState({});
+  const [settingsReady, setSettingsReady] = useState(false);
+  const loadSettings = async () => {
+    try {
+      const { data, error } = await sb.from("site_settings").select("key, value");
+      if (!error && data) {
+        const map = Object.fromEntries(data.map((r) => [r.key, r.value]));
+        applySettings(map);
+        setSettings(map);
+      }
+    } catch (e) { /* table absente : on garde les valeurs de config.js */ }
+    setSettingsReady(true);
+  };
+  useEffect(() => { loadSettings(); }, []);
+  // entries : liste de [clé, valeur] ; une valeur null remet la valeur d'origine.
+  const saveSettings = async (entries) => {
+    const now = new Date().toISOString();
+    const up = entries.filter(([, v]) => v !== null).map(([key, value]) => ({ key, value, updated_at: now }));
+    const del = entries.filter(([, v]) => v === null).map(([k]) => k);
+    if (up.length) {
+      const { error } = await sb.from("site_settings").upsert(up);
+      if (error) { notify("Enregistrement impossible : " + error.message, "error"); return false; }
+    }
+    if (del.length) {
+      const { error } = await sb.from("site_settings").delete().in("key", del);
+      if (error) { notify("Enregistrement impossible : " + error.message, "error"); return false; }
+    }
+    const next = { ...settings };
+    del.forEach((k) => { delete next[k]; });
+    up.forEach((r) => { next[r.key] = r.value; });
+    applySettings(next);
+    setSettings(next);
+    return true;
+  };
+
+  // Membres ayant des droits délégués : on charge les données de gestion dont ils ont besoin.
+  useEffect(() => {
+    if (!me || me.role === "admin") return;
+    const p = me.permissions || [];
+    if (p.includes("candidatures")) sb.from("profiles").select("*").order("created_at", { ascending: false }).then(({ data }) => { if (data) setMembers(data); });
+    if (p.includes("messages")) sb.from("messages").select("*").order("created_at", { ascending: false }).then(({ data }) => { if (data) setMessages(data); });
+  }, [me]);
+
+  // Présence : le site signale toutes les 2 minutes que le membre est là (journal des connexions).
+  useEffect(() => {
+    if (!me) return;
+    const ping = () => { if (document.visibilityState === "visible") sb.rpc("signaler_presence").then(() => {}, () => {}); };
+    ping();
+    const timer = setInterval(ping, 120000);
+    document.addEventListener("visibilitychange", ping);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", ping); };
+  }, [me && me.id]);
+
+  if (firstLoad || !settingsReady) return <FullLoader />;
 
   const navBtn = (id, label) => (
     <button key={id} onClick={() => go(id)} className={`relative px-2.5 py-2 text-sm font-medium transition whitespace-nowrap inline-flex items-center ${page === id ? "text-orange-600" : "text-slate-600 hover:text-slate-900"}`}>
@@ -1191,15 +1245,15 @@ function App() {
               <div className="grid md:grid-cols-5 gap-8 items-center bg-white rounded-3xl shadow-sm p-8 md:p-10">
                 <div className="md:col-span-2 text-center rounded-3xl p-8 text-white shadow-xl bg-gradient-to-br from-orange-500 to-orange-700">
                   <p className="text-sm font-bold uppercase tracking-widest opacity-90">Créée en</p>
-                  <p className="text-5xl font-extrabold mt-2">Mai 1992</p>
-                  <p className="mt-3 text-orange-100">Plus de 30 ans au service des futurs ingénieurs</p>
+                  <p className="text-5xl font-extrabold mt-2">{tx("apropos.creation")}</p>
+                  <p className="mt-3 text-orange-100">{tx("apropos.creation_texte")}</p>
                 </div>
                 <div className="md:col-span-3">
                   <p className="text-orange-600 font-bold text-sm uppercase tracking-widest">Notre histoire</p>
-                  <h2 className="text-3xl font-extrabold text-slate-900 mt-2">Une association nationale, une section ARSTM</h2>
-                  <p className="text-slate-600 mt-4 leading-relaxed">La Conférence des Grandes Écoles de Côte d'Ivoire est une association née en mai 1992 qui regroupe les ingénieurs de conception des grandes écoles publiques.</p>
-                  <p className="text-slate-600 mt-3 leading-relaxed">La CGE ARSTM en est la section au sein de l'Académie Régionale des Sciences et Techniques de la Mer d'Abidjan.</p>
-                  <p className="text-slate-600 mt-3 leading-relaxed">Parmi ses initiatives : la <strong>Journée de l'Ingénieur</strong>, lancée en 2013 pour rapprocher élèves ingénieurs et entreprises, ainsi que des visites en entreprise pour préparer l'insertion professionnelle.</p>
+                  <h2 className="text-3xl font-extrabold text-slate-900 mt-2">{tx("apropos.histoire_titre")}</h2>
+                  {tx("apropos.histoire").split(/\n\s*\n/).map((para, i) => (
+                    <p key={i} className={`text-slate-600 leading-relaxed whitespace-pre-line ${i ? "mt-3" : "mt-4"}`}>{rich(para)}</p>
+                  ))}
                 </div>
               </div>
 
@@ -1241,11 +1295,11 @@ function App() {
               </div>
 
               <div className="grid md:grid-cols-3 gap-6">
-                {[[Target, "Notre mission", "Représenter les élèves, défendre leurs intérêts et améliorer leur quotidien à l'Académie."], [Heart, "Nos valeurs", "Solidarité, excellence, respect et ouverture entre filières, promotions et nationalités."], [Lightbulb, "Notre vision", "Former une communauté soudée qui accompagne chaque élève jusqu'à son insertion professionnelle."]].map(([Icon, t, d], i) => (
+                {[[Target, "Notre mission", tx("apropos.mission")], [Heart, "Nos valeurs", tx("apropos.valeurs")], [Lightbulb, "Notre vision", tx("apropos.vision")]].map(([Icon, t, d], i) => (
                   <div key={t} className="group bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition duration-300">
                     <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${CARD_GRADIENTS[i]} flex items-center justify-center shadow-lg group-hover:scale-110 transition`}><Icon className="text-white" /></div>
                     <h3 className="text-xl font-bold text-slate-900 mt-5">{t}</h3>
-                    <p className="text-slate-600 mt-2">{d}</p>
+                    <p className="text-slate-600 mt-2 whitespace-pre-line">{d}</p>
                   </div>
                 ))}
               </div>
@@ -1253,7 +1307,7 @@ function App() {
               <div>
                 <h2 className="text-3xl font-extrabold text-slate-900 text-center">Une année avec la CGE</h2>
                 <div className="mt-10 grid md:grid-cols-4 gap-6">
-                  {[["Octobre", "Rentrée & assemblée générale"], ["Novembre", "Conférences métiers & sport"], ["Février", "Forum entreprises & stages"], ["Juin", "Gala & remise des diplômes"]].map(([m, t], i) => (
+                  {tx("apropos.calendrier").split("\n").map((l) => l.split("|").map((s) => s.trim())).filter(([m]) => m).map(([m, t = ""], i) => (
                     <div key={m} className="text-center">
                       <div className="w-14 h-14 mx-auto rounded-full bg-orange-600 text-white flex items-center justify-center font-extrabold text-lg shadow-lg ring-8 ring-orange-100">{i + 1}</div>
                       <p className="text-orange-600 font-bold mt-4 uppercase text-sm tracking-wider">{m}</p>
@@ -1408,16 +1462,17 @@ function App() {
           : <main className="max-w-6xl mx-auto px-4 py-20"><Locked onLogin={openLogin} label="à votre espace personnel" /></main>)}
 
         {/* ===== ADMINISTRATION ===== */}
-        {page === "admin" && isAdmin && (
+        {page === "admin" && canManage && (
           <>
-            <PageHero kicker="Réservé aux administrateurs" title="Administration" icon={Shield} />
-            <AdminPanel news={news} setNews={setNews} events={events} setEvents={setEvents} jobs={jobs} setJobs={setJobs} alumni={alumni} setAlumni={setAlumni}
+            <PageHero kicker={isAdmin ? "Réservé aux administrateurs" : "Droits confiés par le bureau"} title={isAdmin ? "Administration" : "Gestion du site"} icon={Shield} />
+            <AdminPanel key={perms.join(",")} news={news} setNews={setNews} events={events} setEvents={setEvents} jobs={jobs} setJobs={setJobs} alumni={alumni} setAlumni={setAlumni}
               temoignages={temoignages} setTemoignages={setTemoignages} mentoratAll={mentoratAll}
               documents={documents} setDocuments={setDocuments} photos={photos} setPhotos={setPhotos}
               partenaires={partenaires} setPartenaires={setPartenaires} sondages={sondages} setSondages={setSondages} resultats={resultats} countsFor={countsFor}
               applications={applications} setApplications={setApplications} registrations={registrations}
               members={members} setMembers={setMembers} messages={messages} setMessages={setMessages}
-              currentId={user.id} notify={notify} reload={loadAll} />
+              currentId={user.id} notify={notify} reload={() => { loadAll(); loadSettings(); }}
+              isAdmin={isAdmin} can={can} settings={settings} saveSettings={saveSettings} />
           </>
         )}
       </div>
@@ -1427,7 +1482,7 @@ function App() {
         <div className="max-w-6xl mx-auto px-4 py-14 grid md:grid-cols-4 gap-10">
           <div className="md:col-span-2">
             <div className="flex items-center gap-3"><Logo size="w-14 h-14" /><span className="font-extrabold text-white text-lg">CGE <span className="text-orange-500">ARSTM</span></span></div>
-            <p className="text-sm mt-4 max-w-sm">Section ARSTM de la Conférence des Grandes Écoles de Côte d'Ivoire, association des ingénieurs de conception des grandes écoles publiques, créée en mai 1992.</p>
+            <p className="text-sm mt-4 max-w-sm whitespace-pre-line">{tx("footer.description")}</p>
           </div>
           <div>
             <h4 className="text-white font-semibold mb-4">Contact</h4>
@@ -1473,9 +1528,9 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, homeOpps,
               <span className="w-2 h-2 rounded-full bg-orange-500 pulse-dot" /> Bureau exécutif {MANDAT}
             </span>
             <h1 className="text-4xl md:text-6xl font-extrabold mt-6 leading-tight">
-              Unis pour naviguer vers <span className="bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">l'excellence</span>
+              {tx("accueil.titre")} <span className="bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">{tx("accueil.titre_couleur")}</span>
             </h1>
-            <p className="text-slate-300 text-lg mt-6 max-w-xl">Connecter les talents de l'ARSTM, créer des opportunités et construire ensemble l'avenir maritime.</p>
+            <p className="text-slate-300 text-lg mt-6 max-w-xl whitespace-pre-line">{tx("accueil.sous_titre")}</p>
             <div className="flex flex-wrap gap-3 mt-8">
               <button onClick={() => go("opportunites")} className="group px-6 py-3.5 rounded-xl bg-orange-600 font-semibold hover:bg-orange-500 shadow-lg transition flex items-center gap-2">
                 Voir les opportunités <ArrowRight size={18} className="group-hover:translate-x-1 transition" />
@@ -1633,8 +1688,8 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, homeOpps,
         <div className="relative rounded-3xl overflow-hidden p-10 md:p-14 text-white shadow-2xl bg-gradient-to-br from-orange-500 via-orange-600 to-orange-800">
           <Ship size={220} strokeWidth={0.8} className="absolute -right-6 -bottom-10 opacity-20 float" />
           <div className="relative max-w-xl">
-            <h2 className="text-3xl md:text-4xl font-extrabold">Votre profil, votre vitrine professionnelle</h2>
-            <p className="mt-4 text-orange-50 text-lg">Renseignez vos informations, votre objectif et déposez votre CV. Postulez ensuite aux opportunités en un seul clic.</p>
+            <h2 className="text-3xl md:text-4xl font-extrabold">{tx("accueil.cta_titre")}</h2>
+            <p className="mt-4 text-orange-50 text-lg whitespace-pre-line">{tx("accueil.cta_texte")}</p>
             <button onClick={() => (user ? go("profil") : openLogin())} className="mt-8 px-7 py-3.5 rounded-xl bg-white text-orange-700 font-bold hover:shadow-xl hover:scale-105 transition flex items-center gap-2">
               {user ? "Compléter mon profil" : "Créer mon profil"} <ArrowRight size={18} />
             </button>
@@ -3403,6 +3458,440 @@ function AdminPolls({ sondages, setSondages, countsFor, notify }) {
             })}
           </ul>
         )}
+      </Panel>
+    </div>
+  );
+}
+
+// =====================================================================
+// TEXTES & RÉGLAGES (administrateurs et membres ayant le droit « textes »)
+// =====================================================================
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const linesToList = (s) => String(s || "").split("\n").map((x) => x.trim()).filter(Boolean);
+
+const SaveBar = ({ busy, onSave, onReset, resetLabel = "Revenir aux valeurs de config.js" }) => (
+  <div className="flex flex-col sm:flex-row justify-end gap-2">
+    {onReset && <ConfirmButton onConfirm={onReset} confirmLabel="Rétablir ?" className="px-5 py-3 rounded-xl bg-white border border-slate-300 text-sm font-semibold text-slate-600 hover:text-rose-600">{resetLabel}</ConfirmButton>}
+    <button onClick={onSave} disabled={busy} className="px-6 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700 disabled:opacity-60">{busy ? "Enregistrement..." : "Enregistrer"}</button>
+  </div>
+);
+
+function SettingsManager({ settings, saveSettings, notify }) {
+  const [sec, setSec] = useState("bureau");
+  const cur = (k) => copy(k in settings && settings[k] !== null ? settings[k] : DEFAULTS[k]);
+  // Prépare une modification. Une valeur identique à l'origine est supprimée de la base ; rien n'est envoyé si rien ne change.
+  const change = (key, val, def) => {
+    const want = same(val, def) ? null : val;
+    const now = key in settings ? settings[key] : null;
+    return same(want, now) ? null : [key, want];
+  };
+  const commit = async (entries, msg) => {
+    const list = entries.filter(Boolean);
+    if (!list.length) { notify("Aucune modification à enregistrer."); return true; }
+    const ok = await saveSettings(list);
+    if (ok) notify(msg);
+    return ok;
+  };
+  const resetKeys = (keys, msg) => commit(keys.map((k) => (k in settings ? [k, null] : null)), msg);
+  const props = { settings, cur, change, commit, resetKeys, notify };
+  const secs = [["bureau", "Bureau & président", Users], ["textes", "Textes des pages", Pencil], ["contact", "Coordonnées", Phone], ["listes", "Listes", FileText]];
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl bg-sky-50 border border-sky-200 p-5 flex gap-3 text-sm text-sky-900">
+        <Info size={20} className="flex-shrink-0 text-sky-600 mt-0.5" />
+        <p>Les modifications sont visibles immédiatement par tous les visiteurs. Les valeurs d'origine restent dans le fichier config.js et les textes d'origine dans le site : vous pouvez y revenir à tout moment.</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {secs.map(([k, l, I]) => (
+          <button key={k} onClick={() => setSec(k)} className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition ${sec === k ? "bg-slate-900 text-white" : "bg-white shadow-sm text-slate-600 hover:text-orange-600"}`}><I size={15} /> {l}</button>
+        ))}
+      </div>
+      {sec === "bureau" && <BureauSettings {...props} />}
+      {sec === "textes" && <div className="space-y-6">{TEXT_GROUPS.map((g) => <TextGroup key={g.titre} g={g} {...props} />)}</div>}
+      {sec === "contact" && <ContactSettings {...props} />}
+      {sec === "listes" && <ListsSettings {...props} />}
+    </div>
+  );
+}
+
+function BureauSettings({ cur, change, commit, resetKeys, notify }) {
+  const [s, setS] = useState(() => ({ mandat: cur("MANDAT"), pres: cur("PRESIDENT"), bureau: cur("BUREAU") }));
+  const [busy, setBusy] = useState(false);
+  const setBureau = (fn) => setS((x) => ({ ...x, bureau: fn(x.bureau) }));
+  const editDept = (i, fn) => setBureau((b) => b.map((d, j) => (j === i ? fn(d) : d)));
+  const setMember = (i, j, pos, v) => editDept(i, (d) => ({ ...d, members: d.members.map((m, y) => (y !== j ? m : pos === 0 ? [v, m[1]] : [m[0], v])) }));
+  const moveDept = (i, dir) => setBureau((b) => { const j = i + dir; if (j < 0 || j >= b.length) return b; const n = [...b]; [n[i], n[j]] = [n[j], n[i]]; return n; });
+  const names = s.bureau.flatMap((d) => d.members.map(([n]) => String(n).trim())).filter(Boolean);
+  const save = async () => {
+    const bureau = s.bureau
+      .map((d) => ({ dept: String(d.dept).trim(), members: d.members.map(([n, r]) => [String(n).trim(), String(r).trim()]).filter(([n]) => n) }))
+      .filter((d) => d.dept && d.members.length);
+    const pres = { name: String(s.pres.name || "").trim(), message: String(s.pres.message || "").trim() };
+    if (!pres.name) return notify("Indiquez le nom du président.", "error");
+    if (!bureau.length) return notify("Le bureau doit contenir au moins un département avec un membre.", "error");
+    setBusy(true);
+    await commit([change("MANDAT", String(s.mandat).trim(), DEFAULTS.MANDAT), change("PRESIDENT", pres, DEFAULTS.PRESIDENT), change("BUREAU", bureau, DEFAULTS.BUREAU)], "Bureau et président enregistrés.");
+    setBusy(false);
+  };
+  const reset = async () => {
+    setBusy(true);
+    const ok = await resetKeys(["MANDAT", "PRESIDENT", "BUREAU"], "Bureau du fichier config.js rétabli.");
+    setBusy(false);
+    if (ok) setS({ mandat: DEFAULTS.MANDAT, pres: copy(DEFAULTS.PRESIDENT), bureau: copy(DEFAULTS.BUREAU) });
+  };
+  return (
+    <div className="space-y-6">
+      <Panel title="Mandat et président" Icon={Award}>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Mandat</span><input value={s.mandat} onChange={(e) => setS({ ...s, mandat: e.target.value })} placeholder="ex. 2027-2028" className={inputCls} /></label>
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Nom du président</span><input list="noms-bureau" value={s.pres.name || ""} onChange={(e) => setS({ ...s, pres: { ...s.pres, name: e.target.value } })} className={inputCls} /></label>
+        </div>
+        <datalist id="noms-bureau">{names.map((n) => <option key={n} value={n} />)}</datalist>
+        {s.pres.name && !names.includes(String(s.pres.name).trim()) && <p className="text-xs text-amber-700 mt-2">Ce nom n'apparaît pas dans le bureau ci-dessous : ajoutez-le (en général dans « Présidence »), écrit exactement de la même façon.</p>}
+        <label className="block mt-4"><span className="text-xs font-semibold text-slate-600">Le mot du président</span>
+          <textarea rows={5} value={s.pres.message || ""} onChange={(e) => setS({ ...s, pres: { ...s.pres, message: e.target.value } })} className={inputCls} />
+        </label>
+      </Panel>
+      <Panel title="Bureau exécutif" Icon={Users} action={<button onClick={() => setBureau((b) => [...b, { dept: "", members: [["", ""]] }])} className="px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-semibold flex items-center gap-1"><Plus size={16} /> Département</button>}>
+        <p className="text-sm text-slate-500 -mt-3 mb-5">Les photos sont liées au nom de chaque membre : si vous changez un nom, ajoutez de nouveau sa photo dans « Images & logos ».</p>
+        <div className="space-y-4">
+          {s.bureau.map((d, i) => (
+            <div key={i} className="p-4 rounded-2xl border border-slate-200">
+              <div className="flex gap-2 items-center">
+                <input value={d.dept} onChange={(e) => editDept(i, (x) => ({ ...x, dept: e.target.value }))} placeholder="Nom du département" className={inputCls + " mt-0 font-semibold"} />
+                <button onClick={() => moveDept(i, -1)} disabled={i === 0} aria-label="Monter" title="Monter" className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30"><ArrowUp size={16} /></button>
+                <button onClick={() => moveDept(i, 1)} disabled={i === s.bureau.length - 1} aria-label="Descendre" title="Descendre" className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30"><ArrowDown size={16} /></button>
+                <ConfirmButton onConfirm={() => setBureau((b) => b.filter((_, j) => j !== i))} confirmLabel="Retirer ?" ariaLabel="Retirer le département" className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={16} /></ConfirmButton>
+              </div>
+              <div className="mt-3 space-y-2">
+                {d.members.map(([n, r], j) => (
+                  <div key={j} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+                    <input value={n} onChange={(e) => setMember(i, j, 0, e.target.value)} placeholder="NOM Prénom" className={inputCls + " mt-0"} />
+                    <input value={r} onChange={(e) => setMember(i, j, 1, e.target.value)} placeholder="Fonction" className={inputCls + " mt-0"} />
+                    <button onClick={() => editDept(i, (x) => ({ ...x, members: x.members.filter((_, y) => y !== j) }))} aria-label="Retirer ce membre" title="Retirer ce membre" className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"><X size={16} /></button>
+                  </div>
+                ))}
+                <button onClick={() => editDept(i, (x) => ({ ...x, members: [...x.members, ["", ""]] }))} className="text-sm text-orange-600 font-semibold flex items-center gap-1"><Plus size={15} /> Ajouter un membre</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Panel>
+      <SaveBar busy={busy} onSave={save} onReset={reset} />
+    </div>
+  );
+}
+
+function TextGroup({ g, settings, change, commit, resetKeys }) {
+  const current = (k) => { const v = settings["texte:" + k]; return typeof v === "string" && v.trim() ? v : TEXT_DEFAULTS[k]; };
+  const [vals, setVals] = useState(() => Object.fromEntries(g.champs.map(([k]) => [k, current(k)])));
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    setBusy(true);
+    await commit(g.champs.map(([k]) => change("texte:" + k, String(vals[k] || "").trim() || TEXT_DEFAULTS[k], TEXT_DEFAULTS[k])), `Textes enregistrés : ${g.titre}.`);
+    setBusy(false);
+  };
+  const reset = async () => {
+    setBusy(true);
+    const ok = await resetKeys(g.champs.map(([k]) => "texte:" + k), `Textes d'origine rétablis : ${g.titre}.`);
+    setBusy(false);
+    if (ok) setVals(Object.fromEntries(g.champs.map(([k]) => [k, TEXT_DEFAULTS[k]])));
+  };
+  return (
+    <Panel title={g.titre} Icon={Pencil}>
+      <div className="space-y-4">
+        {g.champs.map(([k, label, , long]) => (
+          <label key={k} className="block">
+            <span className="text-xs font-semibold text-slate-600 flex flex-wrap items-center gap-2">{label}{(("texte:" + k) in settings) && <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">modifié</span>}</span>
+            {long
+              ? <textarea rows={k === "apropos.histoire" ? 8 : 3} value={vals[k]} onChange={(e) => setVals({ ...vals, [k]: e.target.value })} className={inputCls} />
+              : <input value={vals[k]} onChange={(e) => setVals({ ...vals, [k]: e.target.value })} className={inputCls} />}
+          </label>
+        ))}
+        <p className="text-xs text-slate-500">Un champ laissé vide reprend son texte d'origine.</p>
+        <SaveBar busy={busy} onSave={save} onReset={reset} resetLabel="Revenir aux textes d'origine" />
+      </div>
+    </Panel>
+  );
+}
+
+function ContactSettings({ cur, change, commit, resetKeys, notify }) {
+  const [c, setC] = useState(() => cur("CONTACT"));
+  const [annee, setAnnee] = useState(() => String(cur("ANNEE_CREATION")));
+  const [busy, setBusy] = useState(false);
+  const set = (k) => (e) => setC({ ...c, [k]: e.target.value });
+  const save = async () => {
+    const v = { adresse: String(c.adresse || "").trim(), email: String(c.email || "").trim(), telephone: String(c.telephone || "").trim(), facebook: String(c.facebook || "").trim() };
+    if (v.email && !EMAIL_RE.test(v.email)) return notify("Adresse email invalide.", "error");
+    if (v.facebook && !/^https?:\/\//i.test(v.facebook)) return notify("Le lien Facebook doit commencer par https://", "error");
+    const y = Number(annee);
+    if (!Number.isInteger(y) || y < 1900 || y > new Date().getFullYear()) return notify("Année de création invalide.", "error");
+    setBusy(true);
+    await commit([change("CONTACT", v, DEFAULTS.CONTACT), change("ANNEE_CREATION", y, DEFAULTS.ANNEE_CREATION)], "Coordonnées enregistrées.");
+    setBusy(false);
+  };
+  const reset = async () => {
+    setBusy(true);
+    const ok = await resetKeys(["CONTACT", "ANNEE_CREATION"], "Coordonnées du fichier config.js rétablies.");
+    setBusy(false);
+    if (ok) { setC(copy(DEFAULTS.CONTACT)); setAnnee(String(DEFAULTS.ANNEE_CREATION)); }
+  };
+  return (
+    <div className="space-y-6">
+      <Panel title="Coordonnées" Icon={Phone}>
+        <p className="text-sm text-slate-500 -mt-3 mb-5">Affichées sur la page Contact et dans le pied de page. Laissez un champ vide pour masquer la ligne.</p>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Adresse</span><input value={c.adresse || ""} onChange={set("adresse")} className={inputCls} /></label>
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Email</span><input type="email" value={c.email || ""} onChange={set("email")} placeholder="ex. cge.arstm@gmail.com" className={inputCls} /></label>
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Téléphone</span><input value={c.telephone || ""} onChange={set("telephone")} placeholder="+225 ..." className={inputCls} /></label>
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Page Facebook</span><input value={c.facebook || ""} onChange={set("facebook")} placeholder="https://www.facebook.com/..." className={inputCls} /></label>
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Année de création de la CGE</span><input value={annee} onChange={(e) => setAnnee(e.target.value)} className={inputCls} /></label>
+        </div>
+      </Panel>
+      <SaveBar busy={busy} onSave={save} onReset={reset} />
+    </div>
+  );
+}
+
+const LIST_FIELDS = [
+  ["FILIERES", "Filières", "Profils des membres, inscription et bandeau défilant de l'accueil."],
+  ["DOMAINES", "Domaines des opportunités", "Filtre « domaine » de la page Opportunités."],
+  ["ZONES", "Zones des opportunités", "Filtre « zone » de la page Opportunités."],
+  ["NEWS_CATEGORIES", "Catégories d'actualités", "Choix proposés lors de la publication d'une actualité."],
+  ["DOC_CATEGORIES", "Catégories de documents", "Classement des documents de la médiathèque."],
+];
+
+function ListsSettings({ cur, change, commit, resetKeys, notify }) {
+  const [vals, setVals] = useState(() => Object.fromEntries(LIST_FIELDS.map(([k]) => [k, cur(k).join("\n")])));
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    const empty = LIST_FIELDS.find(([k]) => !linesToList(vals[k]).length);
+    if (empty) return notify(`La liste « ${empty[1]} » ne peut pas être vide.`, "error");
+    setBusy(true);
+    await commit(LIST_FIELDS.map(([k]) => change(k, linesToList(vals[k]), DEFAULTS[k])), "Listes enregistrées.");
+    setBusy(false);
+  };
+  const reset = async () => {
+    setBusy(true);
+    const ok = await resetKeys(LIST_FIELDS.map(([k]) => k), "Listes du fichier config.js rétablies.");
+    setBusy(false);
+    if (ok) setVals(Object.fromEntries(LIST_FIELDS.map(([k]) => [k, DEFAULTS[k].join("\n")])));
+  };
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">Une valeur par ligne. Renommer une valeur ne change pas les contenus déjà enregistrés (profils, offres, documents…).</div>
+      <div className="grid md:grid-cols-2 gap-6">
+        {LIST_FIELDS.map(([k, label, hint]) => (
+          <Panel key={k} title={label} Icon={FileText}>
+            <p className="text-sm text-slate-500 -mt-3 mb-3">{hint}</p>
+            <textarea rows={8} value={vals[k]} onChange={(e) => setVals({ ...vals, [k]: e.target.value })} className={inputCls} />
+          </Panel>
+        ))}
+      </div>
+      <SaveBar busy={busy} onSave={save} onReset={reset} />
+    </div>
+  );
+}
+
+// =====================================================================
+// DROITS & ACCÈS (administrateurs uniquement)
+// =====================================================================
+function RightsManager({ members, updateMember }) {
+  const active = members.filter((m) => m.statut === "actif");
+  const admins = active.filter((m) => m.role === "admin");
+  const withRights = active.filter((m) => m.role !== "admin" && (m.permissions || []).length > 0);
+  const [q, setQ] = useState("");
+  const [editing, setEditing] = useState(null);
+  const [sel, setSel] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const start = (m) => { setEditing(m.id); setSel(m.permissions || []); };
+  const toggle = (p) => setSel((s) => (s.includes(p) ? s.filter((x) => x !== p) : [...s, p]));
+  const save = async (m, list) => {
+    setBusy(true);
+    await updateMember(m, { permissions: list }, list.length ? `Droits enregistrés pour ${accountName(m)}.` : `Droits retirés à ${accountName(m)}.`);
+    setBusy(false); setEditing(null); setQ("");
+  };
+  const found = q.trim().length >= 2
+    ? active.filter((m) => m.role !== "admin" && !(m.permissions || []).length && [accountName(m), m.email, m.matricule].join(" ").toLowerCase().includes(q.trim().toLowerCase())).slice(0, 8)
+    : [];
+  const editor = (m) => editing === m.id && (
+    <div className="mt-3 p-4 rounded-2xl bg-orange-50 border border-orange-100">
+      <p className="text-xs font-semibold text-slate-600 mb-2">Modèles rapides (modifiables ensuite case par case) :</p>
+      <div className="flex flex-wrap gap-2 mb-4">
+        {PERM_PRESETS.map(([n, ps]) => <button key={n} onClick={() => setSel(ps)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold hover:border-orange-500 hover:text-orange-700">{n}</button>)}
+      </div>
+      <div className="grid sm:grid-cols-2 gap-2">
+        {PERMISSIONS.map(([p, l, d]) => (
+          <label key={p} className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer bg-white transition ${sel.includes(p) ? "border-orange-500 ring-1 ring-orange-300" : "border-slate-200"}`}>
+            <input type="checkbox" checked={sel.includes(p)} onChange={() => toggle(p)} className="mt-0.5 accent-orange-600" />
+            <span><span className="text-sm font-semibold text-slate-900 block">{l}</span><span className="text-xs text-slate-500">{d}</span></span>
+          </label>
+        ))}
+      </div>
+      <div className="flex justify-end gap-2 mt-4">
+        <button onClick={() => setEditing(null)} className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-sm">Annuler</button>
+        <button disabled={busy} onClick={() => save(m, sel)} className="px-5 py-2 rounded-xl bg-orange-600 text-white text-sm font-semibold hover:bg-orange-700 disabled:opacity-60">{busy ? "Enregistrement..." : "Enregistrer les droits"}</button>
+      </div>
+    </div>
+  );
+  const row = (m, extra, actions) => (
+    <li key={m.id} className="py-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Avatar photo={m.data?.photo} name={accountName(m)} size="w-10 h-10" text="text-sm" />
+          <div className="min-w-0">
+            <p className="font-semibold text-slate-900">{accountName(m)}</p>
+            <p className="text-xs text-slate-500">{[m.email, m.filiere, m.promotion && `Promo ${m.promotion}`].filter(Boolean).join(" · ")}</p>
+            {extra}
+          </div>
+        </div>
+        {editing !== m.id && <div className="flex flex-wrap gap-2">{actions}</div>}
+      </div>
+      {editor(m)}
+    </li>
+  );
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl bg-sky-50 border border-sky-200 p-5 flex gap-3 text-sm text-sky-900">
+        <Info size={20} className="flex-shrink-0 text-sky-600 mt-0.5" />
+        <p>Confiez à un membre la gestion de certaines rubriques sans le nommer administrateur. Il verra un menu « Gestion » limité à ces rubriques. La validation des membres, les droits et le journal restent réservés aux administrateurs. Toutes ses actions apparaissent dans le journal.</p>
+      </div>
+      <Panel title="Donner des droits à un membre" Icon={UserCog}>
+        <div className="relative">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un membre : nom, email, matricule..." className={inputCls + " mt-0 pl-10"} />
+        </div>
+        {q.trim().length >= 2 && found.length === 0 && <p className="text-sm text-slate-500 mt-3">Aucun membre sans droits ne correspond.</p>}
+        <ul className="divide-y divide-slate-100">
+          {found.map((m) => row(m, null, <button onClick={() => start(m)} className="px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-semibold hover:bg-orange-700">Donner des droits</button>))}
+        </ul>
+      </Panel>
+      <Panel title={`Membres ayant des droits (${withRights.length})`} Icon={KeyRound}>
+        {withRights.length === 0 ? <p className="text-sm text-slate-500">Aucun membre n'a de droits délégués pour le moment.</p> : (
+          <ul className="divide-y divide-slate-100">
+            {withRights.map((m) => row(m,
+              <div className="flex flex-wrap gap-1 mt-1">{(m.permissions || []).map((p) => <span key={p} className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">{PERM_LABELS[p] || p}</span>)}</div>,
+              <>
+                <button onClick={() => start(m)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1"><Pencil size={14} /> Modifier</button>
+                <ConfirmButton onConfirm={() => save(m, [])} confirmLabel="Tout retirer ?" className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-rose-600">Retirer les droits</ConfirmButton>
+              </>))}
+          </ul>
+        )}
+      </Panel>
+      <Panel title={`Administrateurs (${admins.length})`} Icon={Shield}>
+        <p className="text-sm text-slate-500 -mt-3 mb-4">Ils ont tous les droits. Pour nommer ou retirer un administrateur, utilisez l'onglet « Membres ».</p>
+        <div className="flex flex-wrap gap-2">
+          {admins.map((m) => <span key={m.id} className="px-3 py-1.5 rounded-full bg-slate-900 text-white text-xs font-semibold">{accountName(m)}</span>)}
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+// =====================================================================
+// JOURNAL & CONNEXIONS (administrateurs uniquement)
+// =====================================================================
+function ActivityLog({ members }) {
+  const [rows, setRows] = useState(null);
+  const [presence, setPresence] = useState([]);
+  const [err, setErr] = useState("");
+  const [limit, setLimit] = useState(300);
+  const [who, setWho] = useState("");
+  const [act, setAct] = useState("");
+  const [q, setQ] = useState("");
+  const [allVisits, setAllVisits] = useState(false);
+  const load = async (n) => {
+    const [j, p] = await Promise.all([
+      sb.from("journal").select("*").order("created_at", { ascending: false }).limit(n),
+      sb.from("presence").select("*"),
+    ]);
+    if (j.error) { setErr(j.error.message); setRows([]); return; }
+    setErr(""); setRows(j.data || []); setPresence(p.data || []);
+  };
+  useEffect(() => {
+    load(limit);
+    const timer = setInterval(() => load(limit), 60000);
+    return () => clearInterval(timer);
+  }, [limit]);
+
+  const byId = Object.fromEntries(members.map((m) => [m.id, m]));
+  const isOnline = (p) => p.last_seen && Date.now() - new Date(p.last_seen) < 5 * 60000;
+  const visits = presence.filter((p) => byId[p.user_id]).sort((a, b) => new Date(b.last_seen) - new Date(a.last_seen));
+  const online = visits.filter(isOnline);
+  const label = (r) => (r.rubrique === "site_settings" ? settingLabel(r.objet) : r.rubrique === "site_images" ? imageLabel(r.objet) : r.objet);
+  const people = [...new Set((rows || []).map((r) => r.user_nom).filter(Boolean))].sort();
+  const shown = (rows || []).filter((r) => (!who || r.user_nom === who) && (!act || r.action === act)
+    && (!q || [label(r), r.details, RUBRIQUES[r.rubrique], r.user_nom].join(" ").toLowerCase().includes(q.toLowerCase())));
+
+  if (rows === null) return <p className="text-slate-500">Chargement du journal...</p>;
+  if (err) return <div className="rounded-2xl bg-rose-50 border border-rose-200 p-5 text-sm text-rose-800">Journal indisponible : {err}. Vérifiez que le script SQL « lot 4 » a bien été lancé dans Supabase.</div>;
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl bg-sky-50 border border-sky-200 p-5 flex gap-3 text-sm text-sky-900">
+        <Info size={20} className="flex-shrink-0 text-sky-600 mt-0.5" />
+        <p>Visible uniquement par les administrateurs. Une « connexion » est notée quand un membre arrive sur le site après plus de 30 minutes d'absence. L'historique est conservé 6 mois et se met à jour chaque minute.</p>
+      </div>
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Panel title={`En ligne maintenant (${online.length})`} Icon={Users}>
+          {online.length === 0 ? <p className="text-sm text-slate-500">Aucun membre en ligne.</p> : (
+            <ul className="space-y-3">
+              {online.map((p) => { const m = byId[p.user_id]; return (
+                <li key={p.user_id} className="flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 pulse-dot flex-shrink-0" />
+                  <Avatar photo={m.data?.photo} name={accountName(m)} size="w-9 h-9" text="text-xs" />
+                  <span className="text-sm font-semibold text-slate-900 flex-1 min-w-0 truncate">{accountName(m)}</span>
+                  <span className="text-xs text-slate-500 whitespace-nowrap">actif {ago(p.last_seen)}</span>
+                </li>
+              ); })}
+            </ul>
+          )}
+        </Panel>
+        <Panel title="Dernières visites" Icon={Clock}>
+          {visits.length === 0 ? <p className="text-sm text-slate-500">Aucune visite enregistrée pour le moment.</p> : (
+            <>
+              <ul className="divide-y divide-slate-100">
+                {(allVisits ? visits : visits.slice(0, 8)).map((p) => { const m = byId[p.user_id]; return (
+                  <li key={p.user_id} className="py-2.5 flex items-center justify-between gap-3 text-sm">
+                    <span className="font-semibold text-slate-900 flex items-center gap-2 min-w-0 truncate">{isOnline(p) && <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />}{accountName(m)}</span>
+                    <span className="text-xs text-slate-500 text-right">vu {ago(p.last_seen)}{p.derniere_connexion && <><br />arrivé(e) {fmtDateTime(p.derniere_connexion)}</>}</span>
+                  </li>
+                ); })}
+              </ul>
+              {visits.length > 8 && <button onClick={() => setAllVisits(!allVisits)} className="mt-3 text-sm text-orange-600 font-semibold">{allVisits ? "Réduire" : `Voir les ${visits.length} membres`}</button>}
+            </>
+          )}
+          <p className="text-xs text-slate-400 mt-3">Les membres qui ne sont pas venus depuis la mise en place du journal n'apparaissent pas encore.</p>
+        </Panel>
+      </div>
+      <Panel title="Journal des actions" Icon={HistoryIcon} action={<button onClick={() => load(limit)} className="px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs font-semibold text-slate-600 hover:text-orange-600 flex items-center gap-1"><RotateCcw size={14} /> Actualiser</button>}>
+        <div className="grid sm:grid-cols-3 gap-2 mb-4">
+          <select value={who} onChange={(e) => setWho(e.target.value)} className={inputCls + " mt-0"}>
+            <option value="">Toutes les personnes</option>{people.map((n) => <option key={n}>{n}</option>)}
+          </select>
+          <select value={act} onChange={(e) => setAct(e.target.value)} className={inputCls + " mt-0"}>
+            <option value="">Toutes les actions</option>{Object.entries(ACTIONS).map(([k, [l]]) => <option key={k} value={k}>{l}</option>)}
+          </select>
+          <div className="relative">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher..." className={inputCls + " mt-0 pl-10"} />
+          </div>
+        </div>
+        {shown.length === 0 ? <p className="text-sm text-slate-500">Aucune action ne correspond.</p> : (
+          <ul className="divide-y divide-slate-100">
+            {shown.map((r) => { const [al, ac] = ACTIONS[r.action] || [r.action, "bg-slate-100 text-slate-600"]; const obj = label(r); return (
+              <li key={r.id} className="py-3 flex flex-col sm:flex-row sm:items-start gap-1.5 sm:gap-4 text-sm">
+                <span className="text-xs text-slate-500 sm:w-40 flex-shrink-0 sm:pt-0.5">{fmtDateTime(r.created_at)}</span>
+                <span className={`self-start text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap ${ac}`}>{al}</span>
+                <span className="flex-1 min-w-0 text-slate-700">
+                  <strong className="text-slate-900">{r.user_nom || "Inconnu"}</strong>
+                  {r.action === "connexion" ? " est arrivé(e) sur le site" : <>{" · "}{RUBRIQUES[r.rubrique] || r.rubrique}{obj && <> : « {obj} »</>}</>}
+                  {r.details && <span className="text-slate-500"> — {r.details}</span>}
+                </span>
+              </li>
+            ); })}
+          </ul>
+        )}
+        {rows.length >= limit && <button onClick={() => setLimit(limit + 300)} className="mt-4 text-sm text-orange-600 font-semibold">Charger les actions plus anciennes</button>}
       </Panel>
     </div>
   );
