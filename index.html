@@ -3974,8 +3974,16 @@ function AdminDashboard({ members, jobs, applications, registrations, events, me
   );
 }
 
-function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, setAlumni, temoignages, setTemoignages, mentoratAll, documents, setDocuments, photos, setPhotos, partenaires, setPartenaires, sondages, setSondages, countsFor, applications, setApplications, registrations, members, setMembers, messages, setMessages, currentId, notify, reload }) {
-  const [tab, setTab] = useState("dashboard");
+// Rubriques de l'administration et droit nécessaire pour y accéder (null = administrateurs uniquement).
+const TAB_PERMS = {
+  dashboard: null, news: "news", events: "events", jobs: "jobs", documents: "documents", galerie: "galerie", sondages: "sondages",
+  temoignages: "temoignages", partenaires: "partenaires", alumni: "alumni", members: null, applications: "candidatures", messages: "messages",
+  reglages: "textes", images: "textes", droits: null, journal: null,
+};
+
+function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, setAlumni, temoignages, setTemoignages, mentoratAll, documents, setDocuments, photos, setPhotos, partenaires, setPartenaires, sondages, setSondages, countsFor, applications, setApplications, registrations, members, setMembers, messages, setMessages, currentId, notify, reload, isAdmin, can, settings, saveSettings }) {
+  const allowed = (k) => isAdmin || (!!TAB_PERMS[k] && can(TAB_PERMS[k]));
+  const [tab, setTab] = useState(() => Object.keys(TAB_PERMS).find(allowed) || "news");
   const [form, setForm] = useState({});
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -4103,8 +4111,11 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
     ["members", { label: `Membres${pending.length ? ` (${pending.length} en attente)` : ""}`, icon: Users }],
     ["applications", { label: `Candidatures (${applications.length})`, icon: Send }],
     ["messages", { label: `Messages${unread ? ` (${unread})` : ""}`, icon: Inbox }],
+    ["reglages", { label: "Textes & réglages", icon: SettingsIcon }],
     ["images", { label: "Images & logos", icon: ImageIcon }],
-  ];
+    ["droits", { label: "Droits & accès", icon: UserCog }],
+    ["journal", { label: "Journal & connexions", icon: HistoryIcon }],
+  ].filter(([k]) => allowed(k));
 
   const renderField = (f) => {
     if (!visibleField(f)) return null;
@@ -4143,6 +4154,9 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
       {tab === "images" && <ImagesManager notify={notify} />}
       {tab === "galerie" && <AdminGallery photos={photos} setPhotos={setPhotos} notify={notify} />}
       {tab === "sondages" && <AdminPolls sondages={sondages} setSondages={setSondages} countsFor={countsFor} notify={notify} />}
+      {tab === "reglages" && <SettingsManager settings={settings} saveSettings={saveSettings} notify={notify} />}
+      {tab === "droits" && <RightsManager members={members} updateMember={updateMember} />}
+      {tab === "journal" && <ActivityLog members={members} />}
 
       {tab === "members" && (
         <div className="space-y-6">
@@ -4214,6 +4228,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                           {ancien && <span className="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">Ancien</span>}
                           {ancien && m.data?.mentor && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Mentor</span>}
                           {!ancien && m.data?.disponible && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Dispo stage</span>}
+                          {m.role !== "admin" && (m.permissions || []).length > 0 && <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Droits délégués</span>}
                           {self && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Vous</span>}
                         </p>
                         <p className="text-xs text-slate-500">{[m.email, m.matricule, m.filiere, m.promotion && `Promo ${m.promotion}`].filter(Boolean).join(" · ")}</p>
