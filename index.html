@@ -5906,9 +5906,6 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
       {tab === "journal" && <ActivityLog members={members} />}
       {tab === "adhesions" && <AdminAdhesions can={can} notify={notify} />}
       {tab === "finances" && <AdminFinances can={can} notify={notify} />}
-      {tab === "reglages" && <SettingsManager settings={settings} saveSettings={saveSettings} notify={notify} />}
-      {tab === "droits" && <RightsManager members={members} updateMember={updateMember} />}
-      {tab === "journal" && <ActivityLog members={members} />}
 
       {tab === "members" && (
         <div className="space-y-6">
@@ -5984,7 +5981,6 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                           {m.membre_cge && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Membre CGE{m.numero_membre ? ` · ${m.numero_membre}` : ""}</span>}
                           {m.membre_cge && <RetardBadge uid={m.id} />}
                           {m.departement && <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">{m.departement}{m.poste_cge ? ` · ${m.poste_cge}` : ""}</span>}
-                          {m.role !== "admin" && (m.permissions || []).length > 0 && <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Droits délégués</span>}
                           {self && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Vous</span>}
                         </p>
                         <p className="text-xs text-slate-500">{[m.email, m.matricule, m.filiere, m.promotion && `Promo ${m.promotion}`].filter(Boolean).join(" · ")}</p>
