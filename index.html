@@ -69,7 +69,7 @@
 </script>
 
 <script type="text/babel" data-presets="react">
-const { useState, useEffect, useContext, createContext } = React;
+const { useState, useEffect, useContext, useRef, createContext } = React;
 
 // Icônes : si une icône manque, on affiche un espace vide au lieu de faire planter tout le site.
 const LR = window.LucideReact || {};
@@ -84,16 +84,16 @@ const Anchor = pickIcon("Anchor"), Menu = pickIcon("Menu"), X = pickIcon("X"), C
   Compass = pickIcon("Compass"), Send = pickIcon("Send"), Download = pickIcon("Download"), Printer = pickIcon("Printer"), ArrowRight = pickIcon("ArrowRight"),
   LayoutDashboard = pickIcon("LayoutDashboard", "LayoutGrid"), Quote = pickIcon("Quote"), Globe = pickIcon("Globe"), Search = pickIcon("Search"),
   Ship = pickIcon("Ship"), Megaphone = pickIcon("Megaphone"), Handshake = pickIcon("Handshake", "HeartHandshake"), ImageIcon = pickIcon("Image", "ImageIcon"),
-  Info = pickIcon("Info");
+  Info = pickIcon("Info"), UserPlus = pickIcon("UserPlus"), Pencil = pickIcon("Pencil", "PenLine", "Edit"), Eye = pickIcon("Eye"),
+  RotateCcw = pickIcon("RotateCcw", "RefreshCw"), Hourglass = pickIcon("Hourglass", "Clock");
 
 // =====================================================================
 // À PERSONNALISER — images par défaut (l'administrateur peut aussi les changer depuis le site)
 // =====================================================================
 // Logo de la CGE-ARSTM. Deux possibilités :
 //  1) le chemin d'un fichier image envoyé sur l'hébergeur : "logos/cge-arstm.png"
-//  2) le code du logo copié depuis l'ancien site : "data:image/png;base64,iVBOR..." (voir explications)
+//  2) le code du logo copié depuis l'ancien site : "data:image/png;base64,iVBOR..."
 const LOGO_SRC = "logos/cge-arstm.png";
-const LOGO_SRC_ANCIEN_ESSAI_A_SUPPRIMER = "data:image/png;base64,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";
 
 // Logos des écoles membres : lien ou chemin de l'image (ex. "logos/ensea.png"). null = sigle affiché.
 const LOGOS_ECOLES = { ARSTM: null, ENSEA: null, ESATIC: null, "INP-HB": null, ESA: null, ESCAE: null, ESI: null, ESMG: null, ESTP: null };
@@ -111,7 +111,8 @@ const PARTENAIRES = [
   },
 ];
 
-// Comptes de DÉMONSTRATION. La vraie version utilisera une connexion sécurisée côté serveur.
+// Comptes de DÉMONSTRATION (toujours disponibles, impossibles à supprimer depuis le site).
+// ⚠️ La vraie version utilisera une connexion sécurisée côté serveur : ces mots de passe sont visibles dans le code.
 const DEMO_ACCOUNTS = [
   { login: "ARSTM-001", password: "demo1234", name: "Membre Démo", role: "membre" },
   { login: "admin", password: "admin1234", name: "Administrateur", role: "admin" },
@@ -166,6 +167,63 @@ const EMPTY_PROFILE = {
   formations: [], experiences: [], competences: [], langues: [], cv: null,
 };
 
+// Statuts possibles d'une candidature (modifiables par l'administrateur).
+const APP_STATUSES = ["Envoyée", "En cours d'examen", "Retenue", "Non retenue"];
+const STATUS_STYLES = {
+  "Envoyée": "bg-sky-100 text-sky-700",
+  "En cours d'examen": "bg-amber-100 text-amber-700",
+  "Retenue": "bg-emerald-100 text-emerald-700",
+  "Non retenue": "bg-slate-200 text-slate-600",
+};
+
+const CV_MAX = 2 * 1048576; // 2 Mo en version démo (le navigateur a peu de place)
+
+// =====================================================================
+// SAUVEGARDE — version démo : les données restent dans le navigateur du visiteur.
+// La version finale remplacera ce bloc par un vrai serveur (Supabase, Firebase...).
+// =====================================================================
+const STORE_PREFIX = "cge-arstm:v1:";
+const STORAGE_OK = (() => {
+  try { const k = STORE_PREFIX + "test"; window.localStorage.setItem(k, "1"); window.localStorage.removeItem(k); return true; }
+  catch (e) { return false; }
+})();
+const memoryStore = {};
+const DB = {
+  get(key, fallback) {
+    try {
+      const raw = STORAGE_OK ? window.localStorage.getItem(STORE_PREFIX + key) : memoryStore[key];
+      return raw == null ? fallback : JSON.parse(raw);
+    } catch (e) { console.warn("Lecture impossible :", key, e); return fallback; }
+  },
+  set(key, value) {
+    const raw = JSON.stringify(value);
+    if (!STORAGE_OK) { memoryStore[key] = raw; return true; }
+    try { window.localStorage.setItem(STORE_PREFIX + key, raw); return true; }
+    catch (e) { console.warn("Écriture impossible :", key, e); return false; }
+  },
+  remove(key) {
+    delete memoryStore[key];
+    try { if (STORAGE_OK) window.localStorage.removeItem(STORE_PREFIX + key); } catch (e) {}
+  },
+  clearAll() {
+    Object.keys(memoryStore).forEach((k) => delete memoryStore[k]);
+    try { Object.keys(window.localStorage).filter((k) => k.startsWith(STORE_PREFIX)).forEach((k) => window.localStorage.removeItem(k)); } catch (e) {}
+  },
+};
+
+const isDemoAccount = (login) => DEMO_ACCOUNTS.some((d) => d.login.toLowerCase() === String(login).toLowerCase());
+const loadAccounts = () => [
+  ...DEMO_ACCOUNTS.map((a) => ({ ...a, status: "actif" })),
+  ...DB.get("accounts", []).filter((a) => !isDemoAccount(a.login)),
+];
+const publicUser = (a) => ({ login: a.login, name: a.name, role: a.role });
+// Profil enregistré, ou profil pré-rempli avec les informations données à l'inscription.
+const loadProfile = (acc) => {
+  const saved = DB.get(`profile:${acc.login}`, null);
+  if (saved) return { ...EMPTY_PROFILE, ...saved };
+  return { ...EMPTY_PROFILE, prenoms: acc.prenoms || "", nom: acc.nom || "", email: acc.email || "", filiere: acc.filiere || "", promotion: acc.promotion || "", matricule: acc.role === "membre" ? acc.login : "" };
+};
+
 // =====================================================================
 // IMAGES MODIFIABLES PAR L'ADMINISTRATEUR
 // Clés : "logo", "ecole:ENSEA", "partenaire:<nom>", "membre:<nom>"
@@ -205,11 +263,14 @@ const compressImage = (file, max = 700) => new Promise((resolve, reject) => {
 const NAVY = "linear-gradient(135deg, #0b1b33 0%, #13294b 55%, #1e3a5f 100%)";
 const CARD_GRADIENTS = ["from-orange-500 to-amber-400", "from-slate-800 to-slate-600", "from-sky-700 to-cyan-500", "from-rose-500 to-orange-400"];
 const inputCls = "mt-1 w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const initials = (n) => String(n || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 const fmtDate = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 const dayMonth = (iso) => { const d = new Date(iso + "T12:00:00"); return [d.getDate(), d.toLocaleDateString("fr-FR", { month: "short" }).replace(".", "")]; };
-const daysUntil = (iso) => Math.ceil((new Date(iso + "T12:00:00") - new Date()) / 86400000);
+// Nombre de jours entre aujourd'hui et la date (0 = aujourd'hui, négatif = passé).
+const daysUntil = (iso) => { const t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((new Date(iso + "T00:00:00") - t) / 86400000); };
+const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const fileSize = (b) => (b > 1048576 ? (b / 1048576).toFixed(1) + " Mo" : Math.round(b / 1024) + " Ko");
 
 function completion(p) {
@@ -239,6 +300,15 @@ function SafeImg({ src, alt, className, fallback }) {
   return <img src={src} alt={alt} onError={() => setFailed(src)} className={className} />;
 }
 
+// Bouton à double clic : le premier clic demande confirmation, le second exécute.
+function ConfirmButton({ onConfirm, children, className = "", confirmLabel = "Confirmer ?", ariaLabel }) {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => { if (!armed) return; const t = setTimeout(() => setArmed(false), 3000); return () => clearTimeout(t); }, [armed]);
+  return armed
+    ? <button onClick={() => { setArmed(false); onConfirm(); }} className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold whitespace-nowrap">{confirmLabel}</button>
+    : <button onClick={() => setArmed(true)} className={className} aria-label={ariaLabel} title={ariaLabel}>{children}</button>;
+}
+
 const Logo = ({ size = "w-11 h-11" }) => {
   const images = useImages();
   return <SafeImg src={images.logo} alt="Logo CGE ARSTM" className={`${size} object-contain bg-white rounded-xl p-0.5 shadow-sm`}
@@ -261,7 +331,7 @@ const MemberPhoto = ({ name, size = "w-20 h-20", text = "text-xl", gradient = "f
 
 const Avatar = ({ photo, name, size = "w-12 h-12", text = "text-base" }) =>
   photo ? <img src={photo} alt={name} className={`${size} rounded-full object-cover`} /> :
-  <div className={`${size} ${text} rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-white font-bold flex items-center justify-center`}>{initials(name)}</div>;
+  <div className={`${size} ${text} flex-shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-white font-bold flex items-center justify-center`}>{initials(name)}</div>;
 
 const Waves = ({ fill = "#fafaf9" }) => (
   <div className="absolute bottom-0 left-0 w-full overflow-hidden pointer-events-none" style={{ height: 70 }}>
@@ -331,20 +401,54 @@ const Panel = ({ title, Icon, children, action }) => (
 function App() {
   const [page, setPage] = useState("accueil");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [user, setUser] = useState(null);
   const [loginOpen, setLoginOpen] = useState(false);
   const [toast, setToast] = useState(null);
-  const [news, setNews] = useState(INIT_NEWS);
-  const [events, setEvents] = useState(INIT_EVENTS);
-  const [jobs, setJobs] = useState(INIT_JOBS);
-  const [alumni, setAlumni] = useState(INIT_ALUMNI);
-  const [profile, setProfile] = useState(EMPTY_PROFILE);
-  const [applications, setApplications] = useState([]);
-  const [registrations, setRegistrations] = useState([]);
+  const toastTimer = useRef(null);
+
+  // Données chargées depuis la sauvegarde du navigateur (ou valeurs de départ).
+  const [accounts, setAccounts] = useState(loadAccounts);
+  const [user, setUser] = useState(() => {
+    const login = DB.get("session", null);
+    const acc = login && accounts.find((a) => a.login === login && a.status === "actif");
+    return acc ? publicUser(acc) : null;
+  });
+  const [profile, setProfile] = useState(() => (user ? loadProfile(accounts.find((a) => a.login === user.login)) : EMPTY_PROFILE));
+  const [news, setNews] = useState(() => DB.get("content", {}).news || INIT_NEWS);
+  const [events, setEvents] = useState(() => DB.get("content", {}).events || INIT_EVENTS);
+  const [jobs, setJobs] = useState(() => DB.get("content", {}).jobs || INIT_JOBS);
+  const [alumni, setAlumni] = useState(() => DB.get("content", {}).alumni || INIT_ALUMNI);
+  const [applications, setApplications] = useState(() => DB.get("applications", []));
+  const [registrations, setRegistrations] = useState(() => DB.get("registrations", []));
+  const [imgOverrides, setImgOverrides] = useState(() => DB.get("images", {}));
   const [newsFilter, setNewsFilter] = useState("Toutes");
   const [alumniQuery, setAlumniQuery] = useState("");
-  const [images, setImages] = useState(DEFAULT_IMAGES);
-  const setImage = (key, value) => setImages((s) => ({ ...s, [key]: value }));
+
+  const images = { ...DEFAULT_IMAGES, ...imgOverrides };
+  const setImage = (key, value) => setImgOverrides((s) => ({ ...s, [key]: value }));
+
+  const notify = (msg, type = "success") => {
+    clearTimeout(toastTimer.current);
+    setToast({ msg, type });
+    toastTimer.current = setTimeout(() => setToast(null), 3500);
+  };
+
+  // Enregistrement automatique à chaque changement.
+  const warned = useRef(false);
+  const persist = (key, value) => {
+    if (!DB.set(key, value) && !warned.current) {
+      warned.current = true;
+      notify("Espace de stockage du navigateur plein : la dernière modification n'a pas pu être enregistrée.", "error");
+      setTimeout(() => { warned.current = false; }, 6000);
+    }
+  };
+  useEffect(() => persist("content", { news, events, jobs, alumni }), [news, events, jobs, alumni]);
+  useEffect(() => persist("accounts", accounts.filter((a) => !isDemoAccount(a.login))), [accounts]);
+  useEffect(() => persist("applications", applications), [applications]);
+  useEffect(() => persist("registrations", registrations), [registrations]);
+  useEffect(() => persist("images", imgOverrides), [imgOverrides]);
+  useEffect(() => persist("session", user ? user.login : null), [user]);
+  useEffect(() => { if (user) persist(`profile:${user.login}`, profile); }, [profile, user]);
+  useEffect(() => { if (!STORAGE_OK) notify("Votre navigateur bloque la sauvegarde : les données seront perdues au rechargement.", "error"); }, []);
 
   // L'icône de l'onglet suit le logo choisi par l'administrateur.
   useEffect(() => {
@@ -352,46 +456,68 @@ function App() {
     if (link && images.logo) link.href = images.logo;
   }, [images.logo]);
 
-  const notify = (msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3200); };
   const go = (p) => { setPage(p); setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const openLogin = () => { setLoginOpen(true); setMenuOpen(false); };
   const isAdmin = user?.role === "admin";
   const pct = completion(profile);
   const fullName = [profile.prenoms, profile.nom].filter(Boolean).join(" ") || user?.name || "";
+  const pendingCount = accounts.filter((a) => a.status === "en_attente").length;
+  const myApplications = user ? applications.filter((a) => a.login === user.login) : [];
+  const myRegs = user ? registrations.filter((r) => r.login === user.login).map((r) => r.eventId) : [];
 
   const nav = [
     ["accueil", "Accueil"], ["apropos", "À propos"], ["bureau", "Bureau"], ["actualites", "Actualités"],
     ["evenements", "Événements"], ["emplois", "Emplois & Stages"], ["alumni", "Alumni"],
-    ...(isAdmin ? [["admin", "Administration"]] : []),
+    ...(isAdmin ? [["admin", `Administration${pendingCount ? ` (${pendingCount})` : ""}`]] : []),
   ];
 
   const visibleNews = news.filter((n) => !n.membersOnly || user).sort((a, b) => b.date.localeCompare(a.date));
-  const upcoming = [...events].sort((a, b) => a.date.localeCompare(b.date));
-  const nextEvent = upcoming.find((e) => daysUntil(e.date) >= 0);
+  const sortedEvents = [...events].sort((a, b) => a.date.localeCompare(b.date));
+  const upcoming = sortedEvents.filter((e) => daysUntil(e.date) >= 0);
+  const pastEvents = sortedEvents.filter((e) => daysUntil(e.date) < 0).reverse();
+  const nextEvent = upcoming[0];
   const categories = ["Toutes", ...new Set(visibleNews.map((n) => n.category))];
+
+  const handleLogin = (acc) => {
+    setUser(publicUser(acc));
+    setProfile(loadProfile(acc));
+    setLoginOpen(false);
+    notify(`Bienvenue, ${acc.name} !`);
+  };
+
+  const handleRegister = (acc) => {
+    if (accounts.some((a) => a.login.toLowerCase() === acc.login.toLowerCase())) return "Ce matricule possède déjà un compte.";
+    setAccounts([...accounts, acc]);
+    return null;
+  };
+
+  const logout = () => { setUser(null); setProfile(EMPTY_PROFILE); go("accueil"); notify("Vous êtes déconnecté(e)."); };
 
   const toggleRegistration = (ev) => {
     if (!user) return openLogin();
-    if (registrations.includes(ev.id)) { setRegistrations(registrations.filter((id) => id !== ev.id)); notify("Inscription annulée."); }
-    else { setRegistrations([...registrations, ev.id]); notify(`Vous êtes inscrit(e) : ${ev.title}`); }
+    if (myRegs.includes(ev.id)) {
+      setRegistrations(registrations.filter((r) => !(r.eventId === ev.id && r.login === user.login)));
+      notify("Inscription annulée.");
+    } else {
+      setRegistrations([...registrations, { eventId: ev.id, login: user.login, name: fullName }]);
+      notify(`Vous êtes inscrit(e) : ${ev.title}`);
+    }
   };
 
   const apply = (job) => {
     if (!user) return openLogin();
-    if (applications.some((a) => a.jobId === job.id)) return;
+    if (myApplications.some((a) => a.jobId === job.id)) return;
     if (pct < 50) { notify("Complétez votre profil à au moins 50 % avant de postuler.", "error"); go("profil"); return; }
-    setApplications([...applications, { id: Date.now(), jobId: job.id, title: job.title, company: job.company, date: new Date().toISOString().slice(0, 10), status: "Envoyée", applicant: fullName, email: profile.email, cvName: profile.cv?.name || null }]);
+    setApplications([...applications, { id: Date.now(), jobId: job.id, login: user.login, title: job.title, company: job.company, date: todayISO(), status: "Envoyée", applicant: fullName, email: profile.email, cvName: profile.cv?.name || null }]);
     notify("Candidature envoyée avec votre profil !");
   };
-
-  const logout = () => { setUser(null); go("accueil"); notify("Vous êtes déconnecté(e)."); };
 
   return (
     <ImgCtx.Provider value={{ images, setImage }}>
     <div className="min-h-screen bg-stone-50 text-slate-800 font-sans">
       {toast && (
-        <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-2 fade-up ${toast.type === "error" ? "bg-rose-600 text-white" : "bg-slate-900 text-white"}`}>
-          {toast.type === "error" ? <X size={16} /> : <CheckCircle2 size={16} className="text-orange-400" />} {toast.msg}
+        <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 max-w-md w-max px-5 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-2 fade-up ${toast.type === "error" ? "bg-rose-600 text-white" : "bg-slate-900 text-white"}`}>
+          {toast.type === "error" ? <X size={16} className="flex-shrink-0" /> : <CheckCircle2 size={16} className="text-orange-400 flex-shrink-0" />} {toast.msg}
         </div>
       )}
 
@@ -583,7 +709,7 @@ function App() {
             <PageHero kicker="Agenda" title="Événements" sub="Inscrivez-vous en un clic aux activités de la CGE." icon={Calendar} />
             <main className="max-w-4xl mx-auto px-4 py-16 space-y-5">
               {upcoming.map((e) => {
-                const [d, m] = dayMonth(e.date); const reg = registrations.includes(e.id); const left = daysUntil(e.date);
+                const [d, m] = dayMonth(e.date); const reg = myRegs.includes(e.id); const left = daysUntil(e.date);
                 return (
                   <div key={e.id} className="group bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl transition flex flex-col sm:flex-row gap-6">
                     <div className="w-20 h-20 flex-shrink-0 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 text-white flex flex-col items-center justify-center shadow-lg group-hover:scale-105 transition">
@@ -592,7 +718,7 @@ function App() {
                     <div className="flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-xl font-bold text-slate-900">{e.title}</h3>
-                        {left >= 0 && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold">{left === 0 ? "Aujourd'hui" : `J-${left}`}</span>}
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold">{left === 0 ? "Aujourd'hui" : `J-${left}`}</span>
                       </div>
                       <p className="text-sm text-slate-500 mt-1 flex flex-wrap gap-4"><span className="flex items-center gap-1"><Clock size={14} /> {e.time}</span><span className="flex items-center gap-1"><MapPin size={14} /> {e.place}</span></p>
                       <p className="text-slate-600 mt-2">{e.text}</p>
@@ -603,7 +729,24 @@ function App() {
                   </div>
                 );
               })}
-              {upcoming.length === 0 && <p className="text-slate-500 text-center">Aucun événement prévu pour le moment.</p>}
+              {upcoming.length === 0 && <p className="text-slate-500 text-center">Aucun événement à venir pour le moment.</p>}
+
+              {pastEvents.length > 0 && (
+                <div className="pt-10">
+                  <h2 className="text-2xl font-bold text-slate-900 mb-5 flex items-center gap-3"><span className="w-1.5 h-7 rounded-full bg-slate-300" /> Événements passés</h2>
+                  <div className="space-y-3">
+                    {pastEvents.map((e) => { const [d, m] = dayMonth(e.date); return (
+                      <div key={e.id} className="bg-white rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center gap-4 opacity-80">
+                        <div className="w-14 h-14 flex-shrink-0 rounded-xl bg-slate-100 text-slate-500 flex flex-col items-center justify-center">
+                          <span className="text-xl font-extrabold leading-none">{d}</span><span className="text-xs uppercase font-semibold">{m}</span>
+                        </div>
+                        <div className="flex-1"><p className="font-bold text-slate-700">{e.title}</p><p className="text-sm text-slate-500">{e.place} · {fmtDate(e.date)}</p></div>
+                        {myRegs.includes(e.id) && <span className="self-start sm:self-center text-xs px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold">Vous étiez inscrit(e)</span>}
+                      </div>
+                    ); })}
+                  </div>
+                </div>
+              )}
             </main>
           </>
         )}
@@ -622,7 +765,7 @@ function App() {
                     </div>
                   )}
                   {jobs.map((j) => {
-                    const applied = applications.some((a) => a.jobId === j.id);
+                    const app = myApplications.find((a) => a.jobId === j.id);
                     return (
                       <div key={j.id} className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl transition flex flex-col md:flex-row md:items-center gap-5">
                         <div className={`w-14 h-14 flex-shrink-0 rounded-2xl bg-gradient-to-br ${j.type === "Stage" ? "from-sky-700 to-cyan-500" : "from-orange-500 to-amber-400"} flex items-center justify-center shadow-md`}>
@@ -637,9 +780,13 @@ function App() {
                           <p className="text-sm text-slate-500 mt-1 flex flex-wrap gap-4"><span className="flex items-center gap-1"><Building2 size={14} /> {j.company}</span><span className="flex items-center gap-1"><MapPin size={14} /> {j.place}</span></p>
                           {j.text && <p className="text-slate-600 text-sm mt-2">{j.text}</p>}
                         </div>
-                        <button onClick={() => apply(j)} disabled={applied} className={`px-5 py-3 rounded-xl font-semibold text-sm whitespace-nowrap transition ${applied ? "bg-emerald-100 text-emerald-700" : "bg-orange-600 text-white hover:bg-orange-700 hover:shadow-lg"}`}>
-                          {applied ? <span className="flex items-center gap-2"><CheckCircle2 size={16} /> Candidature envoyée</span> : <span className="flex items-center gap-2"><Send size={16} /> Postuler</span>}
-                        </button>
+                        {app ? (
+                          <span className={`px-5 py-3 rounded-xl font-semibold text-sm whitespace-nowrap flex items-center gap-2 ${STATUS_STYLES[app.status] || STATUS_STYLES["Envoyée"]}`}><CheckCircle2 size={16} /> {app.status}</span>
+                        ) : (
+                          <button onClick={() => apply(j)} className="px-5 py-3 rounded-xl font-semibold text-sm whitespace-nowrap transition bg-orange-600 text-white hover:bg-orange-700 hover:shadow-lg">
+                            <span className="flex items-center gap-2"><Send size={16} /> Postuler</span>
+                          </button>
+                        )}
                       </div>
                     );
                   })}
@@ -681,14 +828,16 @@ function App() {
 
         {/* ===== MON ESPACE ===== */}
         {page === "profil" && (user
-          ? <ProfileSpace user={user} profile={profile} setProfile={setProfile} pct={pct} fullName={fullName} applications={applications} registrations={registrations} events={events} notify={notify} go={go} />
+          ? <ProfileSpace user={user} profile={profile} setProfile={setProfile} pct={pct} fullName={fullName} applications={myApplications} registrations={myRegs} events={events} notify={notify} go={go} />
           : <main className="max-w-6xl mx-auto px-4 py-20"><Locked onLogin={openLogin} label="à votre espace personnel" /></main>)}
 
         {/* ===== ADMINISTRATION ===== */}
         {page === "admin" && isAdmin && (
           <>
             <PageHero kicker="Réservé aux administrateurs" title="Administration" icon={Shield} />
-            <AdminPanel news={news} setNews={setNews} events={events} setEvents={setEvents} jobs={jobs} setJobs={setJobs} alumni={alumni} setAlumni={setAlumni} applications={applications} notify={notify} />
+            <AdminPanel news={news} setNews={setNews} events={events} setEvents={setEvents} jobs={jobs} setJobs={setJobs} alumni={alumni} setAlumni={setAlumni}
+              applications={applications} setApplications={setApplications} registrations={registrations}
+              accounts={accounts} setAccounts={setAccounts} currentLogin={user.login} notify={notify} />
           </>
         )}
       </div>
@@ -718,7 +867,7 @@ function App() {
         <div className="border-t border-slate-800 text-center text-xs py-5">© 2026 CGE ARSTM · Tous droits réservés</div>
       </footer>
 
-      {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onLogin={(u) => { setUser(u); setLoginOpen(false); notify(`Bienvenue, ${u.name} !`); }} />}
+      {loginOpen && <LoginModal accounts={accounts} onClose={() => setLoginOpen(false)} onLogin={handleLogin} onRegister={handleRegister} />}
     </div>
     </ImgCtx.Provider>
   );
@@ -841,6 +990,7 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct }) {
               <div><h4 className="font-bold text-slate-900">{e.title}</h4><p className="text-sm text-slate-500 mt-1">{e.place} · {e.time}</p></div>
             </button>
           ); })}
+          {upcoming.length === 0 && <p className="text-slate-500 md:col-span-3">Aucun événement à venir pour le moment.</p>}
         </div>
       </section>
 
@@ -977,7 +1127,7 @@ function ProfileSpace({ user, profile, setProfile, pct, fullName, applications, 
                   {applications.map((a) => (
                     <li key={a.id} className="py-4 flex items-center justify-between gap-4">
                       <div><p className="font-bold text-slate-900">{a.title}</p><p className="text-sm text-slate-500">{a.company} · envoyée le {fmtDate(a.date)}</p></div>
-                      <span className="px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-xs font-bold">{a.status}</span>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${STATUS_STYLES[a.status] || STATUS_STYLES["Envoyée"]}`}>{a.status}</span>
                     </li>
                   ))}
                 </ul>
@@ -1003,7 +1153,7 @@ function Dashboard({ profile, pct, fullName, applications, registrations, events
     ["Ajouter vos compétences et langues", "competences", profile.competences.length && profile.langues.length],
     ["Déposer votre CV", "cv", profile.cv],
   ];
-  const myEvents = events.filter((e) => registrations.includes(e.id));
+  const myEvents = events.filter((e) => registrations.includes(e.id)).sort((a, b) => a.date.localeCompare(b.date));
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-3xl shadow-sm p-6 md:p-8 flex flex-col md:flex-row items-center gap-8">
@@ -1035,7 +1185,12 @@ function Dashboard({ profile, pct, fullName, applications, registrations, events
       </Panel>
       {myEvents.length > 0 && (
         <Panel title="Mes événements" Icon={Calendar}>
-          <ul className="space-y-3">{myEvents.map((e) => <li key={e.id} className="flex justify-between text-sm"><span className="font-semibold text-slate-900">{e.title}</span><span className="text-slate-500">{fmtDate(e.date)}</span></li>)}</ul>
+          <ul className="space-y-3">{myEvents.map((e) => (
+            <li key={e.id} className={`flex justify-between gap-3 text-sm ${daysUntil(e.date) < 0 ? "opacity-60" : ""}`}>
+              <span className="font-semibold text-slate-900">{e.title}</span>
+              <span className="text-slate-500 whitespace-nowrap">{fmtDate(e.date)}{daysUntil(e.date) < 0 && " (passé)"}</span>
+            </li>
+          ))}</ul>
         </Panel>
       )}
     </div>
@@ -1051,7 +1206,7 @@ function InfosTab({ profile, update, notify }) {
     compressImage(f, 500).then((data) => setD((x) => ({ ...x, photo: data }))).catch((err) => notify(err.message, "error"));
   };
   const save = () => {
-    if (d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) return notify("Adresse email invalide.", "error");
+    if (d.email && !EMAIL_RE.test(d.email)) return notify("Adresse email invalide.", "error");
     const { formations, experiences, competences, langues, cv, ...infos } = d;
     update(infos); notify("Informations enregistrées.");
   };
@@ -1186,14 +1341,16 @@ function SkillsTab({ profile, update, notify }) {
 }
 
 function CVTab({ profile, update, notify, openPreview }) {
+  // Le CV est converti en texte pour pouvoir être sauvegardé (et téléchargé plus tard par l'administrateur).
   const onCV = (e) => {
     const f = e.target.files && e.target.files[0]; e.target.value = "";
     if (!f) return;
     if (!/\.(pdf|doc|docx)$/i.test(f.name)) return notify("Format accepté : PDF, DOC ou DOCX.", "error");
-    if (f.size > 5 * 1048576) return notify("Fichier trop lourd (5 Mo maximum).", "error");
-    if (profile.cv?.url) URL.revokeObjectURL(profile.cv.url);
-    update({ cv: { name: f.name, size: f.size, url: URL.createObjectURL(f), date: new Date().toISOString().slice(0, 10) } });
-    notify("CV déposé avec succès.");
+    if (f.size > CV_MAX) return notify(`Fichier trop lourd (${fileSize(CV_MAX)} maximum en version démo).`, "error");
+    const reader = new FileReader();
+    reader.onload = () => { update({ cv: { name: f.name, size: f.size, data: reader.result, date: todayISO() } }); notify("CV déposé avec succès."); };
+    reader.onerror = () => notify("Lecture du fichier impossible.", "error");
+    reader.readAsDataURL(f);
   };
   return (
     <div className="space-y-6">
@@ -1206,15 +1363,15 @@ function CVTab({ profile, update, notify, openPreview }) {
               <p className="text-sm text-slate-500">{fileSize(profile.cv.size)} · déposé le {fmtDate(profile.cv.date)}</p>
             </div>
             <div className="flex gap-2">
-              <a href={profile.cv.url} download={profile.cv.name} className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-sm font-semibold flex items-center gap-1"><Download size={15} /> Télécharger</a>
-              <button onClick={() => { URL.revokeObjectURL(profile.cv.url); update({ cv: null }); notify("CV retiré."); }} className="p-2 rounded-xl text-rose-600 hover:bg-rose-100" aria-label="Retirer le CV"><Trash2 size={17} /></button>
+              {profile.cv.data && <a href={profile.cv.data} download={profile.cv.name} className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-sm font-semibold flex items-center gap-1"><Download size={15} /> Télécharger</a>}
+              <button onClick={() => { update({ cv: null }); notify("CV retiré."); }} className="p-2 rounded-xl text-rose-600 hover:bg-rose-100" aria-label="Retirer le CV"><Trash2 size={17} /></button>
             </div>
           </div>
         )}
         <label className="mt-5 cursor-pointer block border-2 border-dashed border-slate-300 rounded-3xl p-10 text-center hover:border-orange-500 hover:bg-orange-50 transition">
           <Upload className="mx-auto text-orange-600" size={36} />
           <p className="font-bold text-slate-900 mt-3">{profile.cv ? "Remplacer mon CV" : "Déposer mon CV"}</p>
-          <p className="text-sm text-slate-500 mt-1">PDF, DOC ou DOCX · 5 Mo maximum</p>
+          <p className="text-sm text-slate-500 mt-1">PDF, DOC ou DOCX · {fileSize(CV_MAX)} maximum</p>
           <input type="file" accept=".pdf,.doc,.docx" onChange={onCV} className="hidden" />
         </label>
       </Panel>
@@ -1238,7 +1395,8 @@ function CVPreview({ profile: p, fullName, onClose }) {
   return (
     <div className="fixed inset-0 z-50 bg-black bg-opacity-60 overflow-y-auto p-4" onClick={onClose}>
       <div className="max-w-3xl mx-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex justify-end gap-2 mb-3">
+        <div className="flex flex-wrap justify-end gap-2 mb-3">
+          {p.cv?.data && <a href={p.cv.data} download={p.cv.name} className="px-4 py-2 rounded-xl bg-white font-semibold flex items-center gap-2"><Download size={16} /> CV déposé</a>}
           <button onClick={() => window.print()} className="px-4 py-2 rounded-xl bg-orange-600 text-white font-semibold flex items-center gap-2"><Printer size={16} /> Imprimer / PDF</button>
           <button onClick={onClose} className="px-4 py-2 rounded-xl bg-white font-semibold">Fermer</button>
         </div>
@@ -1270,7 +1428,7 @@ function CVPreview({ profile: p, fullName, onClose }) {
               {p.langues.length > 0 && <Section title="Langues">{p.langues.map((l) => <p key={l.id} className="text-sm"><strong>{l.langue}</strong> — {l.niveau}</p>)}</Section>}
             </div>
             {!p.bio && !p.experiences.length && !p.formations.length && !p.competences.length && (
-              <p className="text-center text-slate-500 py-8">Complétez votre profil pour remplir votre CV.</p>
+              <p className="text-center text-slate-500 py-8">Ce profil n'est pas encore assez rempli pour générer un CV.</p>
             )}
           </div>
         </div>
@@ -1280,35 +1438,110 @@ function CVPreview({ profile: p, fullName, onClose }) {
 }
 
 // =====================================================================
-// CONNEXION
+// CONNEXION ET INSCRIPTION
 // =====================================================================
-function LoginModal({ onClose, onLogin }) {
+const EMPTY_REG = { prenoms: "", nom: "", matricule: "", email: "", filiere: "", promotion: "", password: "", confirm: "" };
+
+function LoginModal({ accounts, onClose, onLogin, onRegister }) {
+  const [mode, setMode] = useState("login"); // "login" | "register" | "done"
   const [login, setLogin] = useState("");
   const [pwd, setPwd] = useState("");
+  const [reg, setReg] = useState(EMPTY_REG);
   const [err, setErr] = useState("");
+
+  const switchMode = (m) => { setMode(m); setErr(""); };
+
   const submit = () => {
-    const acc = DEMO_ACCOUNTS.find((a) => a.login.toLowerCase() === login.trim().toLowerCase() && a.password === pwd);
-    if (acc) onLogin(acc); else setErr("Identifiant ou mot de passe incorrect.");
+    const acc = accounts.find((a) => a.login.toLowerCase() === login.trim().toLowerCase() && a.password === pwd);
+    if (!acc) return setErr("Matricule ou mot de passe incorrect.");
+    if (acc.status !== "actif") return setErr("Votre compte est en attente de validation par l'administrateur. Réessayez un peu plus tard.");
+    onLogin(acc);
   };
+
+  const register = () => {
+    const r = { ...reg, prenoms: reg.prenoms.trim(), nom: reg.nom.trim(), matricule: reg.matricule.trim(), email: reg.email.trim(), promotion: reg.promotion.trim() };
+    if (!r.prenoms || !r.nom || !r.matricule || !r.email || !r.filiere || !r.promotion) return setErr("Tous les champs sont obligatoires.");
+    if (!EMAIL_RE.test(r.email)) return setErr("Adresse email invalide.");
+    if (r.password.length < 8) return setErr("Le mot de passe doit contenir au moins 8 caractères.");
+    if (r.password !== r.confirm) return setErr("Les deux mots de passe ne correspondent pas.");
+    const error = onRegister({
+      login: r.matricule, password: r.password, name: `${r.prenoms} ${r.nom}`, role: "membre", status: "en_attente",
+      prenoms: r.prenoms, nom: r.nom, email: r.email, filiere: r.filiere, promotion: r.promotion, createdAt: todayISO(),
+    });
+    if (error) return setErr(error);
+    setLogin(r.matricule); setPwd(""); setMode("done");
+  };
+
+  const regField = (label, k, type = "text", placeholder = "") => (
+    <label className="block">
+      <span className="text-xs font-semibold text-slate-600">{label}</span>
+      <input type={type} value={reg[k]} placeholder={placeholder} onChange={(e) => { setReg({ ...reg, [k]: e.target.value }); setErr(""); }} className={inputCls} />
+    </label>
+  );
+
+  const titles = { login: ["Espace membre", "Connectez-vous avec votre matricule."], register: ["Créer un compte", "Réservé aux élèves de l'ARSTM. Votre demande sera validée par le bureau."], done: ["Demande envoyée", "Plus qu'une étape : la validation."] };
+
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-60 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl fade-up" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-60 overflow-y-auto flex items-start sm:items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl fade-up my-8" onClick={(e) => e.stopPropagation()}>
         <div className="relative p-8 text-white" style={{ background: NAVY }}>
           <button onClick={onClose} className="absolute top-4 right-4 text-slate-300 hover:text-white" aria-label="Fermer"><X /></button>
           <Compass size={110} strokeWidth={0.7} className="absolute -right-4 -bottom-6 opacity-10 spin-slow" />
           <Logo size="w-16 h-16" />
-          <h3 className="text-2xl font-extrabold mt-4">Espace membre</h3>
-          <p className="text-sm text-slate-300 mt-1">Connectez-vous avec votre matricule.</p>
+          <h3 className="text-2xl font-extrabold mt-4">{titles[mode][0]}</h3>
+          <p className="text-sm text-slate-300 mt-1">{titles[mode][1]}</p>
         </div>
-        <div className="p-8">
-          <label className="block"><span className="text-xs font-semibold text-slate-600">Matricule</span><input autoFocus value={login} onChange={(e) => { setLogin(e.target.value); setErr(""); }} className={inputCls} /></label>
-          <label className="block mt-4"><span className="text-xs font-semibold text-slate-600">Mot de passe</span><input type="password" value={pwd} onChange={(e) => { setPwd(e.target.value); setErr(""); }} onKeyDown={(e) => e.key === "Enter" && submit()} className={inputCls} /></label>
-          {err && <p className="text-sm text-rose-600 mt-3">{err}</p>}
-          <button onClick={submit} className="w-full mt-6 py-3.5 rounded-xl bg-orange-600 text-white font-bold hover:bg-orange-700 hover:shadow-lg transition">Se connecter</button>
-          <div className="mt-5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
-            <strong>Mode démo :</strong> membre <code>ARSTM-001</code> / <code>demo1234</code> · admin <code>admin</code> / <code>admin1234</code>
+
+        {mode !== "done" && (
+          <div className="grid grid-cols-2 border-b border-slate-200">
+            {[["login", "Connexion"], ["register", "Créer un compte"]].map(([m, l]) => (
+              <button key={m} onClick={() => switchMode(m)} className={`py-3.5 text-sm font-semibold transition ${mode === m ? "text-orange-600 border-b-2 border-orange-600" : "text-slate-500 hover:text-slate-800"}`}>{l}</button>
+            ))}
           </div>
-        </div>
+        )}
+
+        {mode === "login" && (
+          <div className="p-8">
+            <label className="block"><span className="text-xs font-semibold text-slate-600">Matricule</span><input autoFocus value={login} onChange={(e) => { setLogin(e.target.value); setErr(""); }} className={inputCls} /></label>
+            <label className="block mt-4"><span className="text-xs font-semibold text-slate-600">Mot de passe</span><input type="password" value={pwd} onChange={(e) => { setPwd(e.target.value); setErr(""); }} onKeyDown={(e) => e.key === "Enter" && submit()} className={inputCls} /></label>
+            {err && <p className="text-sm text-rose-600 mt-3">{err}</p>}
+            <button onClick={submit} className="w-full mt-6 py-3.5 rounded-xl bg-orange-600 text-white font-bold hover:bg-orange-700 hover:shadow-lg transition">Se connecter</button>
+            <p className="text-xs text-slate-500 mt-4 text-center">Mot de passe oublié ? Contactez le département Informatique de la CGE.</p>
+            <div className="mt-5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
+              <strong>Mode démo :</strong> membre <code>ARSTM-001</code> / <code>demo1234</code> · admin <code>admin</code> / <code>admin1234</code>
+            </div>
+          </div>
+        )}
+
+        {mode === "register" && (
+          <div className="p-8 space-y-4">
+            <div className="grid grid-cols-2 gap-3">{regField("Prénoms", "prenoms")}{regField("Nom", "nom")}</div>
+            {regField("Matricule (servira d'identifiant)", "matricule", "text", "ex. ARSTM-2026-045")}
+            {regField("Email", "email", "email", "prenom.nom@exemple.com")}
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block"><span className="text-xs font-semibold text-slate-600">Filière</span>
+                <select value={reg.filiere} onChange={(e) => { setReg({ ...reg, filiere: e.target.value }); setErr(""); }} className={inputCls}>
+                  <option value="">Choisir...</option>{FILIERES.map((f) => <option key={f}>{f}</option>)}
+                </select>
+              </label>
+              {regField("Promotion", "promotion", "text", "ex. 2026")}
+            </div>
+            {regField("Mot de passe (8 caractères min.)", "password", "password")}
+            {regField("Confirmer le mot de passe", "confirm", "password")}
+            {err && <p className="text-sm text-rose-600">{err}</p>}
+            <button onClick={register} className="w-full py-3.5 rounded-xl bg-orange-600 text-white font-bold hover:bg-orange-700 hover:shadow-lg transition flex items-center justify-center gap-2"><UserPlus size={18} /> Envoyer ma demande</button>
+            <p className="text-xs text-slate-500 text-center">Pour tester : créez un compte, puis connectez-vous en admin → Administration → Membres pour le valider.</p>
+          </div>
+        )}
+
+        {mode === "done" && (
+          <div className="p-8 text-center">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-100 flex items-center justify-center"><Hourglass className="text-emerald-600" /></div>
+            <p className="font-bold text-slate-900 mt-5 text-lg">Votre demande a bien été envoyée !</p>
+            <p className="text-sm text-slate-600 mt-2">Un administrateur de la CGE va vérifier vos informations. Vous pourrez ensuite vous connecter avec votre matricule <strong>{login}</strong>.</p>
+            <button onClick={() => switchMode("login")} className="mt-6 px-6 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700">Retour à la connexion</button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1369,7 +1602,7 @@ function ImagesManager({ notify }) {
     <div className="space-y-6">
       <div className="rounded-2xl bg-sky-50 border border-sky-200 p-5 flex gap-3 text-sm text-sky-900">
         <Info size={20} className="flex-shrink-0 text-sky-600 mt-0.5" />
-        <p><strong>Mode démo :</strong> les images changées ici s'affichent tout de suite, mais disparaissent au rechargement de la page. Dans la version finale, elles seront enregistrées sur le serveur et visibles par tous les visiteurs. Les images sont automatiquement réduites pour rester légères.</p>
+        <p><strong>Mode démo :</strong> les images changées ici sont enregistrées dans ce navigateur uniquement. Dans la version finale, elles seront enregistrées sur le serveur et visibles par tous les visiteurs. Les images sont automatiquement réduites pour rester légères.</p>
       </div>
       {groups.map((g) => (
         <Panel key={g.title} title={g.title} Icon={ImageIcon}>
@@ -1383,74 +1616,219 @@ function ImagesManager({ notify }) {
   );
 }
 
-function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, setAlumni, applications, notify }) {
+function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, setAlumni, applications, setApplications, registrations, accounts, setAccounts, currentLogin, notify }) {
   const [tab, setTab] = useState("news");
   const [form, setForm] = useState({});
+  const [editingId, setEditingId] = useState(null);
+  const [viewing, setViewing] = useState(null); // { profile, name } pour afficher le CV d'un membre
+  const formRef = useRef(null);
+
   const store = { news: [news, setNews], events: [events, setEvents], jobs: [jobs, setJobs], alumni: [alumni, setAlumni] };
   const cfg = ADMIN_SECTIONS[tab];
   const [items, setItems] = store[tab] || [[], () => {}];
+  const pending = accounts.filter((a) => a.status === "en_attente");
+  const active = accounts.filter((a) => a.status === "actif");
 
-  const add = () => {
+  const resetForm = () => { setForm({}); setEditingId(null); };
+  const switchTab = (k) => { setTab(k); resetForm(); };
+
+  // ----- Contenus (actualités, événements, offres, alumni) -----
+  const save = () => {
     const missing = cfg.fields.find(([k, , t]) => t !== "checkbox" && t !== "select" && k !== "text" && !String(form[k] || "").trim());
     if (missing) return notify(`Le champ « ${missing[1]} » est obligatoire.`, "error");
     const defaults = {}; cfg.fields.forEach(([k, , t, opts]) => { if (t === "select") defaults[k] = opts[0]; });
-    setItems([...items, { id: Date.now(), ...defaults, ...form, membersOnly: !!form.membersOnly }]);
-    setForm({}); notify("Ajouté avec succès.");
+    const clean = { ...defaults, ...form };
+    if (tab === "news") clean.membersOnly = !!form.membersOnly;
+    if (editingId) {
+      setItems(items.map((x) => (x.id === editingId ? { ...clean, id: editingId } : x)));
+      notify("Modifications enregistrées.");
+    } else {
+      setItems([...items, { ...clean, id: Date.now() }]);
+      notify("Ajouté avec succès.");
+    }
+    resetForm();
+  };
+  const startEdit = (item) => {
+    setForm({ ...item }); setEditingId(item.id);
+    if (formRef.current) formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const remove = (item) => {
+    setItems(items.filter((x) => x.id !== item.id));
+    if (editingId === item.id) resetForm();
+    notify("Supprimé.");
   };
 
-  const tabs = [...Object.entries(ADMIN_SECTIONS), ["images", { label: "Images & logos", icon: ImageIcon }], ["applications", { label: `Candidatures (${applications.length})`, icon: Send }]];
+  // ----- Membres -----
+  const approve = (acc) => { setAccounts(accounts.map((a) => (a.login === acc.login ? { ...a, status: "actif" } : a))); notify(`Compte validé : ${acc.name}`); };
+  const removeAccount = (acc, msg) => { setAccounts(accounts.filter((a) => a.login !== acc.login)); DB.remove(`profile:${acc.login}`); notify(msg); };
+  const openProfile = (login, name) => {
+    const p = DB.get(`profile:${login}`, null);
+    if (!p) return notify("Ce membre n'a pas encore rempli son profil.", "error");
+    const profile = { ...EMPTY_PROFILE, ...p };
+    setViewing({ profile, name: [profile.prenoms, profile.nom].filter(Boolean).join(" ") || name });
+  };
+
+  // ----- Candidatures -----
+  const setStatus = (id, status) => { setApplications(applications.map((a) => (a.id === id ? { ...a, status } : a))); notify(`Statut mis à jour : ${status}`); };
+
+  const tabs = [
+    ...Object.entries(ADMIN_SECTIONS),
+    ["members", { label: `Membres${pending.length ? ` (${pending.length} en attente)` : ""}`, icon: Users }],
+    ["applications", { label: `Candidatures (${applications.length})`, icon: Send }],
+    ["images", { label: "Images & logos", icon: ImageIcon }],
+  ];
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-12">
-      <p className="text-sm text-slate-500 mb-6">En mode démo, les changements disparaissent quand on recharge la page.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <p className="text-sm text-slate-500">Version démo : les données sont enregistrées dans ce navigateur uniquement.</p>
+        <ConfirmButton onConfirm={() => { DB.clearAll(); window.location.reload(); }} confirmLabel="Tout effacer ?"
+          className="self-start px-4 py-2 rounded-xl bg-white shadow-sm text-sm font-semibold text-slate-600 hover:text-rose-600 flex items-center gap-2">
+          <RotateCcw size={15} /> Réinitialiser la démo
+        </ConfirmButton>
+      </div>
+
+      {pending.length > 0 && tab !== "members" && (
+        <button onClick={() => switchTab("members")} className="w-full mb-6 rounded-2xl bg-amber-50 border border-amber-200 p-4 flex items-center justify-between gap-3 text-left text-sm text-amber-800 hover:bg-amber-100 transition">
+          <span className="flex items-center gap-2"><UserPlus size={18} /> <strong>{pending.length} demande{pending.length > 1 ? "s" : ""} d'inscription</strong> en attente de validation.</span>
+          <ChevronRight size={18} />
+        </button>
+      )}
+
       <div className="flex flex-wrap gap-2 mb-6">
         {tabs.map(([k, s]) => { const I = s.icon; return (
-          <button key={k} onClick={() => { setTab(k); setForm({}); }} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${tab === k ? "bg-orange-600 text-white shadow-md" : "bg-white shadow-sm text-slate-700 hover:text-orange-600"}`}><I size={16} /> {s.label}</button>
+          <button key={k} onClick={() => switchTab(k)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${tab === k ? "bg-orange-600 text-white shadow-md" : "bg-white shadow-sm text-slate-700 hover:text-orange-600"}`}><I size={16} /> {s.label}</button>
         ); })}
       </div>
 
-      {tab === "images" ? <ImagesManager notify={notify} /> : tab === "applications" ? (
+      {tab === "images" && <ImagesManager notify={notify} />}
+
+      {tab === "members" && (
+        <div className="space-y-6">
+          <Panel title={`Demandes d'inscription (${pending.length})`} Icon={UserPlus}>
+            {pending.length === 0 ? <p className="text-sm text-slate-500">Aucune demande en attente.</p> : (
+              <ul className="divide-y divide-slate-100">
+                {pending.map((a) => (
+                  <li key={a.login} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={a.name} size="w-11 h-11" text="text-sm" />
+                      <div>
+                        <p className="font-bold text-slate-900">{a.name}</p>
+                        <p className="text-sm text-slate-500">Matricule <strong>{a.login}</strong> · {a.filiere} · Promo {a.promotion}</p>
+                        <p className="text-xs text-slate-500">{a.email}{a.createdAt && ` · demande du ${fmtDate(a.createdAt)}`}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => approve(a)} className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 flex items-center gap-1"><CheckCircle2 size={15} /> Valider</button>
+                      <ConfirmButton onConfirm={() => removeAccount(a, `Demande refusée : ${a.name}`)} confirmLabel="Refuser ?" className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-sm font-semibold text-slate-600 hover:text-rose-600">Refuser</ConfirmButton>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+          <Panel title={`Membres actifs (${active.length})`} Icon={Users}>
+            <ul className="divide-y divide-slate-100">
+              {active.map((a) => {
+                const demo = isDemoAccount(a.login);
+                return (
+                  <li key={a.login} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={a.name} size="w-10 h-10" text="text-sm" />
+                      <div>
+                        <p className="font-semibold text-slate-900 flex flex-wrap items-center gap-2">
+                          {a.name}
+                          {a.role === "admin" && <span className="text-xs px-2 py-0.5 rounded-full bg-slate-900 text-white">Admin</span>}
+                          {demo && <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Démo</span>}
+                        </p>
+                        <p className="text-xs text-slate-500">{a.login}{a.email && ` · ${a.email}`}{a.promotion && ` · Promo ${a.promotion}`}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => openProfile(a.login, a.name)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1"><Eye size={14} /> Profil</button>
+                      {!demo && a.login !== currentLogin && (
+                        <ConfirmButton onConfirm={() => removeAccount(a, `Membre supprimé : ${a.name}`)} confirmLabel="Supprimer ?" ariaLabel="Supprimer ce membre" className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={16} /></ConfirmButton>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </Panel>
+        </div>
+      )}
+
+      {tab === "applications" && (
         <Panel title="Candidatures reçues" Icon={Send}>
           {applications.length === 0 ? <p className="text-sm text-slate-500">Aucune candidature pour le moment.</p> : (
             <ul className="divide-y divide-slate-100">
-              {applications.map((a) => (
-                <li key={a.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div><p className="font-bold text-slate-900">{a.applicant}</p><p className="text-sm text-slate-500">{a.title} · {a.company}</p></div>
-                  <div className="text-sm text-slate-500 sm:text-right"><p>{a.email || "email non renseigné"}</p><p>{a.cvName ? `CV : ${a.cvName}` : "Pas de CV déposé"} · {fmtDate(a.date)}</p></div>
+              {[...applications].reverse().map((a) => (
+                <li key={a.id} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div>
+                    <p className="font-bold text-slate-900">{a.applicant}</p>
+                    <p className="text-sm text-slate-600">{a.title} · {a.company}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{a.email || "email non renseigné"} · {a.cvName ? `CV : ${a.cvName}` : "pas de CV déposé"} · {fmtDate(a.date)}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select value={a.status} onChange={(e) => setStatus(a.id, e.target.value)} className={`px-3 py-2 rounded-xl text-xs font-bold border-0 focus:ring-2 focus:ring-orange-500 ${STATUS_STYLES[a.status] || ""}`}>
+                      {APP_STATUSES.map((s) => <option key={s}>{s}</option>)}
+                    </select>
+                    {a.login && <button onClick={() => openProfile(a.login, a.applicant)} className="px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1"><Eye size={14} /> Profil & CV</button>}
+                  </div>
                 </li>
               ))}
             </ul>
           )}
         </Panel>
-      ) : (
+      )}
+
+      {cfg && (
         <div className="grid lg:grid-cols-2 gap-6">
-          <Panel title="Ajouter" Icon={Plus}>
-            <div className="space-y-3">
-              {cfg.fields.map(([k, label, type, opts]) => type === "checkbox" ? (
-                <label key={k} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.checked })} className="w-4 h-4 accent-orange-600" /> {label}</label>
-              ) : type === "select" ? (
-                <label key={k} className="block"><span className="text-xs font-semibold text-slate-600">{label}</span><select value={form[k] || opts[0]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className={inputCls}>{opts.map((o) => <option key={o}>{o}</option>)}</select></label>
-              ) : type === "textarea" ? (
-                <label key={k} className="block"><span className="text-xs font-semibold text-slate-600">{label}</span><textarea rows={3} value={form[k] || ""} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className={inputCls} /></label>
-              ) : (
-                <label key={k} className="block"><span className="text-xs font-semibold text-slate-600">{label}</span><input type={type || "text"} value={form[k] || ""} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className={inputCls} /></label>
-              ))}
-              <button onClick={add} className="w-full py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700">Ajouter</button>
-            </div>
-          </Panel>
+          <div ref={formRef} className="scroll-mt-24">
+            <Panel title={editingId ? "Modifier" : "Ajouter"} Icon={editingId ? Pencil : Plus}>
+              <div className="space-y-3">
+                {cfg.fields.map(([k, label, type, opts]) => type === "checkbox" ? (
+                  <label key={k} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.checked })} className="w-4 h-4 accent-orange-600" /> {label}</label>
+                ) : type === "select" ? (
+                  <label key={k} className="block"><span className="text-xs font-semibold text-slate-600">{label}</span><select value={form[k] || opts[0]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className={inputCls}>{opts.map((o) => <option key={o}>{o}</option>)}</select></label>
+                ) : type === "textarea" ? (
+                  <label key={k} className="block"><span className="text-xs font-semibold text-slate-600">{label}</span><textarea rows={3} value={form[k] || ""} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className={inputCls} /></label>
+                ) : (
+                  <label key={k} className="block"><span className="text-xs font-semibold text-slate-600">{label}</span><input type={type || "text"} value={form[k] || ""} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className={inputCls} /></label>
+                ))}
+                <div className="flex gap-2 pt-1">
+                  {editingId && <button onClick={resetForm} className="flex-1 py-3 rounded-xl bg-white border border-slate-300 font-semibold text-slate-700">Annuler</button>}
+                  <button onClick={save} className="flex-1 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700">{editingId ? "Enregistrer les modifications" : "Ajouter"}</button>
+                </div>
+              </div>
+            </Panel>
+          </div>
           <Panel title={`Contenu existant (${items.length})`} Icon={Shield}>
             <ul className="divide-y divide-slate-100">
-              {items.map((i) => (
-                <li key={i.id} className="py-3 flex items-center justify-between gap-3">
-                  <span className="text-sm text-slate-700">{cfg.show(i)}</span>
-                  <button onClick={() => { setItems(items.filter((x) => x.id !== i.id)); notify("Supprimé."); }} className="p-2 rounded-lg text-rose-600 hover:bg-rose-50" aria-label="Supprimer"><Trash2 size={16} /></button>
-                </li>
-              ))}
+              {items.map((i) => {
+                const count = tab === "events" ? registrations.filter((r) => r.eventId === i.id).length : null;
+                const past = tab === "events" && daysUntil(i.date) < 0;
+                return (
+                  <li key={i.id} className={`py-3 flex items-center justify-between gap-3 ${editingId === i.id ? "bg-orange-50 -mx-3 px-3 rounded-xl" : ""}`}>
+                    <div className="text-sm text-slate-700">
+                      <span className={past ? "text-slate-400" : ""}>{cfg.show(i)}</span>
+                      {count !== null && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-semibold whitespace-nowrap">{count} inscrit{count > 1 ? "s" : ""}</span>}
+                      {past && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">passé</span>}
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={() => startEdit(i)} className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-orange-600" aria-label="Modifier" title="Modifier"><Pencil size={16} /></button>
+                      <ConfirmButton onConfirm={() => remove(i)} confirmLabel="Supprimer ?" ariaLabel="Supprimer" className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={16} /></ConfirmButton>
+                    </div>
+                  </li>
+                );
+              })}
               {items.length === 0 && <li className="py-3 text-sm text-slate-500">Rien pour l'instant.</li>}
             </ul>
           </Panel>
         </div>
       )}
+
+      {viewing && <CVPreview profile={viewing.profile} fullName={viewing.name} onClose={() => setViewing(null)} />}
     </main>
   );
 }
@@ -1469,6 +1847,7 @@ class ErrorBoundary extends React.Component {
         <h1 style={{ color: "#e67700", fontSize: 22, fontWeight: 800 }}>Le site a rencontré une erreur</h1>
         <p style={{ marginTop: 12 }}>Faites une capture d'écran de ce message et envoyez-la :</p>
         <pre style={{ marginTop: 12, padding: 16, background: "#fee2e2", borderRadius: 12, whiteSpace: "pre-wrap", fontSize: 13 }}>{String(e && e.message) + "\n\n" + String((e && e.stack) || "").split("\n").slice(0, 6).join("\n")}</pre>
+        <button onClick={() => { DB.clearAll(); window.location.reload(); }} style={{ marginTop: 16, padding: "10px 18px", borderRadius: 10, background: "#e67700", color: "white", fontWeight: 700, border: 0, cursor: "pointer" }}>Effacer les données de démo et recharger</button>
       </div>
     );
   }
