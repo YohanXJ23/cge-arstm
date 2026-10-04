@@ -224,6 +224,14 @@ const TEXT_GROUPS = [
     ["partenaires.cta_titre", "Partenaires : titre de l'encadré orange", "Devenez partenaire de la CGE ARSTM"],
     ["partenaires.cta_texte", "Partenaires : texte de l'encadré orange", "Recrutez nos futurs officiers et ingénieurs, faites connaître votre entreprise et soutenez la formation maritime en Afrique de l'Ouest.", true],
   ] },
+  { titre: "Page « Devenir membre »", champs: [
+    ["intro:Devenir membre", "Phrase d'introduction", "Rejoignez la CGE section ARSTM : un réseau, des opportunités et une vie associative au service des élèves de l'Académie.", true],
+    ["adhesion.avantages", "Pourquoi adhérer (une ligne par avantage, sous la forme Titre | Description)", "Opportunités | Accès complet aux stages, emplois, bourses et formations, et candidature en un clic.\nRéseau | L'annuaire des anciens et le mentorat pour vous guider dans votre parcours.\nVie associative | Les activités, sondages et informations réservés aux membres.\nEngagement | Représenter les élèves et participer aux projets de la CGE.", true],
+    ["adhesion.conditions", "Qui peut adhérer", "L'adhésion est ouverte aux élèves actuels de l'ARSTM inscrits en Licence (Sciences nautiques, Mécanique navale, Génie thermique, Télécommunication / RIT) et à tous les élèves en Master.\n\nUne fois membre, vous le restez : à la fin de vos études, vous rejoignez le réseau des anciens.", true],
+    ["adhesion.etapes", "Les étapes (une par ligne, sous la forme Étape | Description)", "Candidature en ligne | Connectez-vous et déposez votre candidature pendant la période d'adhésion.\nFrais de dossier | Réglez les frais de dossier à la Trésorerie (ou par Mobile Money) pour recevoir le formulaire.\nFormulaire | Remplissez le formulaire papier et rendez-le au bureau.\nEntretien | Les candidats ayant rendu leur formulaire passent l'entretien, le même jour pour tous, à l'Académie.\nCotisation | Si vous êtes admis(e), réglez la cotisation annuelle.\nBienvenue ! | Vous devenez membre de la CGE et recevez votre numéro de membre.", true],
+    ["adhesion.ferme", "Message quand les adhésions sont fermées", "Les adhésions sont fermées pour le moment. Elles ouvrent chaque année à la rentrée : surveillez les actualités !", true],
+    ["adhesion.bandeau", "Bandeau affiché pendant la campagne (accueil, actualités, événements)", "Les adhésions à la CGE section ARSTM sont ouvertes !"],
+  ] },
 ];
 const TEXT_DEFAULTS = Object.fromEntries(TEXT_GROUPS.flatMap((g) => g.champs.map(([k, , d]) => [k, d])));
 // Texte en vigueur : celui de l'administrateur s'il existe, sinon le texte d'origine.
@@ -265,11 +273,14 @@ const PERMISSIONS = [
   ["alumni", "Anciens sans compte", "Ajouter des anciens à l'annuaire."],
   ["messages", "Messages", "Lire et traiter les messages du formulaire de contact."],
   ["textes", "Textes, bureau & images", "Modifier les textes du site, le bureau, les coordonnées, les logos et les photos."],
+  ["adhesions", "Adhésions", "Gérer la campagne d'adhésion, les formulaires remis, les résultats d'entretien et les membres CGE."],
+  ["tresorerie", "Trésorerie", "Confirmer les paiements (frais de dossier et cotisations) et consulter les reçus."],
 ];
 const PERM_LABELS = Object.fromEntries(PERMISSIONS.map(([k, l]) => [k, l]));
 // Modèles rapides pour les postes du bureau (modifiables ensuite case par case).
 const PERM_PRESETS = [
-  ["Secrétariat", ["news", "events", "messages"]],
+  ["Secrétariat", ["news", "events", "messages", "adhesions"]],
+  ["Trésorerie", ["tresorerie"]],
   ["Communication", ["news", "galerie", "documents", "textes"]],
   ["Affaires externes", ["jobs", "candidatures", "partenaires"]],
   ["Organisation / projets", ["events", "sondages", "galerie"]],
@@ -279,7 +290,20 @@ const RUBRIQUES = {
   news: "Actualités", events: "Événements", jobs: "Opportunités", documents: "Documents & vidéos", photos: "Galerie photos",
   sondages: "Sondages", temoignages: "Témoignages", partenaires: "Partenaires", alumni: "Anciens sans compte", messages: "Messages",
   applications: "Candidatures", membres: "Membres", site_settings: "Textes & réglages", site_images: "Images & logos", site: "Site",
+  adhesions: "Adhésions", adhesion_campagnes: "Campagnes d'adhésion",
 };
+// Étapes d'une candidature d'adhésion : code => libellé et couleur (l'ordre est imposé par la base de données).
+const ETAPES = [
+  ["envoyee", "Candidature envoyée", "bg-sky-100 text-sky-700"],
+  ["frais_payes", "Frais de dossier payés", "bg-amber-100 text-amber-700"],
+  ["formulaire_remis", "Formulaire remis · convoqué(e) à l'entretien", "bg-violet-100 text-violet-700"],
+  ["admis", "Admis(e) · cotisation à régler", "bg-emerald-100 text-emerald-700"],
+  ["non_retenu", "Non retenu(e)", "bg-slate-200 text-slate-600"],
+  ["membre", "Membre CGE", "bg-orange-100 text-orange-700"],
+];
+const ETAPE = Object.fromEntries(ETAPES.map(([k, label, cls]) => [k, { label, cls }]));
+const CYCLES = { Licence: ["L1", "L2", "L3"], Master: ["M1", "M2"] };
+const fcfa = (n) => (n || n === 0 ? `${Number(n).toLocaleString("fr-FR")} FCFA` : "montant communiqué par le bureau");
 const ACTIONS = {
   connexion: ["Connexion", "bg-sky-100 text-sky-700"],
   ajout: ["Ajout", "bg-emerald-100 text-emerald-700"],
@@ -564,14 +588,19 @@ const PageHero = ({ kicker, title, sub, icon: Icon = Compass }) => (
   </section>
 );
 
-const Locked = ({ onLogin, label }) => (
-  <div className="max-w-md mx-auto text-center bg-white rounded-3xl shadow-xl p-10 fade-up">
-    <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-orange-500 to-amber-400 flex items-center justify-center shadow-lg"><Lock className="text-white" /></div>
-    <h3 className="text-xl font-bold text-slate-900 mt-5">Espace réservé aux membres</h3>
-    <p className="text-slate-500 mt-2 text-sm">Connectez-vous pour accéder {label}.</p>
-    <button onClick={onLogin} className="mt-6 px-6 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700 hover:shadow-lg transition">Se connecter</button>
-  </div>
-);
+// Encadré « réservé » : invite à se connecter, ou à devenir membre de la CGE si la personne est connectée sans être membre.
+const Locked = ({ onLogin, label }) => {
+  const access = useContext(ImgCtx).access || {};
+  const cgeOnly = access.logged && !access.isCge;
+  return (
+    <div className="max-w-md mx-auto text-center bg-white rounded-3xl shadow-xl p-10 fade-up">
+      <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-orange-500 to-amber-400 flex items-center justify-center shadow-lg"><Lock className="text-white" /></div>
+      <h3 className="text-xl font-bold text-slate-900 mt-5">{cgeOnly ? "Réservé aux membres de la CGE" : "Espace réservé aux membres"}</h3>
+      <p className="text-slate-500 mt-2 text-sm">{cgeOnly ? `Devenez membre de la CGE section ARSTM pour accéder ${label}.` : `Connectez-vous pour accéder ${label}.`}</p>
+      <button onClick={cgeOnly ? access.join : onLogin} className="mt-6 px-6 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700 hover:shadow-lg transition">{cgeOnly ? "Devenir membre" : "Se connecter"}</button>
+    </div>
+  );
+};
 
 const Stat = ({ value, suffix, label }) => {
   const v = useCountUp(Number(value) || 0);
@@ -833,11 +862,13 @@ function App() {
       }
       const active = !!myRow;
       const admin = active && myRow.role === "admin";
+      // Accès complet : membres CGE, anciens, administrateurs et membres du bureau ayant des droits.
+      const cge = active && (!!myRow.membre_cge || myRow.type === "ancien" || admin || (myRow.permissions || []).length > 0);
       const [n, e, j, a, apps, regs, imgs, mem, st, ap, msgs, temo, ann, ment, mAll, docs, pics, parts, polls, vts, res] = await Promise.all([
         q(sb.from("news").select("*").order("date", { ascending: false })),
         q(sb.from("events").select("*").order("date")),
-        active ? q(sb.from("jobs").select("*").order("created_at", { ascending: false })) : [],
-        active ? q(sb.from("alumni").select("*").order("name")) : [],
+        cge ? q(sb.from("jobs").select("*").order("created_at", { ascending: false })) : [],
+        cge ? q(sb.from("alumni").select("*").order("name")) : [],
         active ? q(sb.from("applications").select("*").order("id")) : [],
         active ? q(sb.from("registrations").select("*")) : [],
         q(sb.from("site_images").select("*")),
@@ -846,15 +877,15 @@ function App() {
         q(sb.rpc("opportunites_apercu")),
         admin ? q(sb.from("messages").select("*").order("created_at", { ascending: false })) : [],
         q(sb.from("temoignages").select("*").order("created_at", { ascending: false })),
-        active ? q(sb.rpc("annuaire_anciens")) : [],
-        active ? q(sb.rpc("mes_mentorats")) : [],
+        cge ? q(sb.rpc("annuaire_anciens")) : [],
+        cge ? q(sb.rpc("mes_mentorats")) : [],
         admin ? q(sb.from("mentorat").select("id, statut, created_at")) : [],
         q(sb.from("documents").select("*").order("created_at", { ascending: false })),
         q(sb.from("photos").select("*").order("date", { ascending: false }).order("created_at")),
         q(sb.from("partenaires").select("*").order("ordre").order("created_at")),
-        active ? q(sb.from("sondages").select("*").order("created_at", { ascending: false })) : [],
-        active ? q(sb.from("votes").select("sondage_id, user_id, choix")) : [],
-        active ? q(sb.rpc("resultats_sondages")) : [],
+        cge ? q(sb.from("sondages").select("*").order("created_at", { ascending: false })) : [],
+        cge ? q(sb.from("votes").select("sondage_id, user_id, choix")) : [],
+        cge ? q(sb.rpc("resultats_sondages")) : [],
       ]);
       if (id !== loadId.current) return;
       setMe(myRow);
@@ -938,7 +969,7 @@ function App() {
   };
 
   const navMain = [["actualites", "Actualités"], ["evenements", "Événements"], ["opportunites", "Opportunités"], ["alumni", "Anciens"], ["mediatheque", "Médiathèque"], ["contact", "Contact"]];
-  const navAsso = [["apropos", "À propos"], ["bureau", "Le bureau"], ["partenaires", "Partenaires"]];
+  const navAsso = [["apropos", "À propos"], ["bureau", "Le bureau"], ["adhesion", "Devenir membre"], ["partenaires", "Partenaires"]];
   // Droits délégués : un membre peut gérer certaines rubriques sans être administrateur.
   const perms = (me && me.permissions) || [];
   const can = (p) => isAdmin || perms.includes(p);
@@ -950,9 +981,11 @@ function App() {
   const NavCount = ({ id }) => (newCounts[id] > 0 && page !== id ? <span className="ml-1 min-w-5 h-5 px-1.5 rounded-full bg-orange-600 text-white text-xs font-bold inline-flex items-center justify-center">{newCounts[id]}</span> : null);
 
   // Pour les membres, on utilise la liste complète (toujours à jour) ; pour les visiteurs, l'aperçu public.
-  const homeOpps = user ? [...openJobs].slice(0, 4) : apercu;
+  // Les non-membres (visiteurs et élèves non adhérents) voient l'aperçu public des opportunités.
+  const fullAccess = !!me && (!!me.membre_cge || me.type === "ancien" || isAdmin || perms.length > 0);
+  const homeOpps = fullAccess ? [...openJobs].slice(0, 4) : apercu;
   const homeStats = [
-    [user ? openJobs.length : stats.offres, "", "Opportunités ouvertes"],
+    [fullAccess ? openJobs.length : stats.offres, "", "Opportunités ouvertes"],
     [stats.membres, "", "Membres inscrits"],
     [stats.anciens, "", "Anciens dans le réseau"],
     [new Date().getFullYear() - ANNEE_CREATION, "", `Ans d'existence (depuis ${ANNEE_CREATION})`],
@@ -1167,6 +1200,28 @@ function App() {
     return () => { clearInterval(timer); document.removeEventListener("visibilitychange", ping); };
   }, [me && me.id]);
 
+  // ----- Adhésions : devenir membre de la CGE -----
+  const [campagnes, setCampagnes] = useState([]);
+  const [mesAdhesions, setMesAdhesions] = useState([]);
+  const loadAdhesions = async () => {
+    try {
+      const { data: c } = await sb.from("adhesion_campagnes").select("*").order("ouverture", { ascending: false });
+      setCampagnes(c || []);
+      if (me) {
+        const { data: a } = await sb.from("adhesions").select("*").eq("user_id", me.id).order("created_at", { ascending: false });
+        setMesAdhesions(a || []);
+      } else setMesAdhesions([]);
+    } catch (e) { /* tables absentes (lot 5 pas encore lancé) : rien à afficher */ }
+  };
+  useEffect(() => { loadAdhesions(); }, [me && me.id]);
+  // Accès complet au site : membres CGE, anciens, administrateurs et membres du bureau ayant des droits.
+  const isCge = !!me && (!!me.membre_cge || me.type === "ancien" || isAdmin || perms.length > 0);
+  // Campagne en cours (dates d'ouverture et de clôture incluses), et la prochaine si aucune n'est ouverte.
+  const campagne = campagnes.find((c) => daysUntil(c.ouverture) <= 0 && daysUntil(c.cloture) >= 0) || null;
+  const prochaine = [...campagnes].filter((c) => daysUntil(c.ouverture) > 0).sort((a, b) => a.ouverture.localeCompare(b.ouverture))[0] || null;
+  const maCandidature = mesAdhesions[0] || null;
+  const goAdhesion = () => go("adhesion");
+
   if (firstLoad || !settingsReady) return <FullLoader />;
 
   const navBtn = (id, label) => (
@@ -1181,7 +1236,7 @@ function App() {
   const assoActive = navAsso.some(([id]) => id === page);
 
   return (
-    <ImgCtx.Provider value={{ images, overrides: imgOverrides, saveImage }}>
+    <ImgCtx.Provider value={{ images, overrides: imgOverrides, saveImage, access: { logged: !!user, isCge, join: goAdhesion, numero: me && me.membre_cge ? (me.numero_membre || "") : null } }}>
     <div className="min-h-screen bg-stone-50 text-slate-800 font-sans">
       {toast && (
         <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 max-w-md w-max px-5 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-2 fade-up ${toast.type === "error" ? "bg-rose-600 text-white" : "bg-slate-900 text-white"}`}>
@@ -1255,6 +1310,17 @@ function App() {
       </header>
 
       <div key={page} className="fade-up">
+        {/* Bandeau « adhésions ouvertes » : accueil, actualités et événements, pendant la campagne seulement */}
+        {campagne && !(me && (me.membre_cge || profile.type === "ancien")) && ["accueil", "actualites", "evenements"].includes(page) && (
+          <div className="bg-gradient-to-r from-orange-600 to-amber-500 text-white">
+            <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <p className="text-sm font-semibold flex items-center gap-2"><UserPlus size={18} className="flex-shrink-0" /> {tx("adhesion.bandeau")} Candidatures jusqu'au {fmtDate(campagne.cloture)}.</p>
+              <button onClick={goAdhesion} className="self-start sm:self-auto px-4 py-1.5 rounded-lg bg-white text-orange-700 text-sm font-bold whitespace-nowrap hover:shadow-lg transition">
+                {maCandidature && maCandidature.campagne_id === campagne.id ? "Suivre ma candidature" : "Devenir membre"}
+              </button>
+            </div>
+          </div>
+        )}
         {page === "accueil" && <Home go={go} user={user} openLogin={openLogin} visibleNews={visibleNews} upcoming={upcoming} nextEvent={nextEvent} homeOpps={homeOpps} homeStats={homeStats}
           testimonials={published} partenaires={partenaires} pollsToVote={pollsToVote} countsFor={countsFor} onVote={vote} isNewsNew={(n) => newer(n.created_at, seenOf("actualites"))} />}
 
@@ -1424,13 +1490,18 @@ function App() {
                         <h3 className="text-xl font-bold text-slate-900">{e.title}</h3>
                         <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold">{left === 0 ? "Aujourd'hui" : `J-${left}`}</span>
                         {newer(e.created_at, sinceFor("evenements")) && <NewBadge />}
+                        {e.members_only && <span className="text-xs px-2 py-0.5 rounded-full bg-slate-900 text-white font-semibold flex items-center gap-1"><Lock size={11} /> Membres CGE</span>}
                       </div>
                       <p className="text-sm text-slate-500 mt-1 flex flex-wrap gap-4">{e.time && <span className="flex items-center gap-1"><Clock size={14} /> {e.time}</span>}{e.place && <span className="flex items-center gap-1"><MapPin size={14} /> {e.place}</span>}</p>
                       <p className="text-slate-600 mt-2">{e.text}</p>
                     </div>
-                    <button onClick={() => toggleRegistration(e)} className={`self-start sm:self-center px-5 py-3 rounded-xl font-semibold text-sm whitespace-nowrap transition ${reg ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-orange-600 text-white hover:bg-orange-700 hover:shadow-lg"}`}>
-                      {reg ? <span className="flex items-center gap-2"><CheckCircle2 size={16} /> Inscrit(e)</span> : "Je participe"}
-                    </button>
+                    {e.members_only && user && !isCge && !reg ? (
+                      <button onClick={goAdhesion} className="self-start sm:self-center px-5 py-3 rounded-xl font-semibold text-sm whitespace-nowrap bg-slate-100 text-slate-600 hover:bg-orange-50 hover:text-orange-700 transition flex items-center gap-2"><Lock size={15} /> Réservé aux membres CGE</button>
+                    ) : (
+                      <button onClick={() => toggleRegistration(e)} className={`self-start sm:self-center px-5 py-3 rounded-xl font-semibold text-sm whitespace-nowrap transition ${reg ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-orange-600 text-white hover:bg-orange-700 hover:shadow-lg"}`}>
+                        {reg ? <span className="flex items-center gap-2"><CheckCircle2 size={16} /> Inscrit(e)</span> : "Je participe"}
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -1459,12 +1530,12 @@ function App() {
 
         {/* ===== OPPORTUNITÉS ===== */}
         {page === "opportunites" && (
-          <OpportunitiesPage user={user} jobs={openJobs} apercu={apercu} myApplications={myApplications} pct={pct} apply={apply} go={go} openLogin={openLogin} isNew={(j) => newer(j.created_at, sinceFor("opportunites"))} />
+          <OpportunitiesPage user={isCge ? user : null} jobs={openJobs} apercu={apercu} myApplications={myApplications} pct={pct} apply={apply} go={go} openLogin={openLogin} isNew={(j) => newer(j.created_at, sinceFor("opportunites"))} />
         )}
 
         {/* ===== RÉSEAU DES ANCIENS ===== */}
         {page === "alumni" && (
-          <AlumniPage user={user} profile={profile} published={published} annuaire={annuaire} alumni={alumni} mentorats={mentorats}
+          <AlumniPage user={isCge ? user : null} profile={profile} published={published} annuaire={annuaire} alumni={alumni} mentorats={mentorats}
             onRequest={sendMentorRequest} openLogin={openLogin} go={go} />
         )}
 
@@ -1473,6 +1544,10 @@ function App() {
 
         {/* ===== PARTENAIRES ===== */}
         {page === "partenaires" && <PartnersPage partenaires={partenaires} onBecomePartner={() => goContact("Partenariat / entreprise")} />}
+
+        {/* ===== DEVENIR MEMBRE ===== */}
+        {page === "adhesion" && <AdhesionPage me={me} profile={profile} campagne={campagne} prochaine={prochaine} campagnes={campagnes} candidature={maCandidature}
+          reload={() => { loadAll(); loadAdhesions(); }} notify={notify} openLogin={openLogin} go={go} />}
 
         {/* ===== CONTACT ===== */}
         {page === "contact" && <ContactPage user={user} profile={profile} notify={notify} presetSubject={contactSubject} />}
@@ -2139,6 +2214,259 @@ function MediaPage({ user, documents, photos, notify, openLogin, since }) {
 // =====================================================================
 // PARTENAIRES
 // =====================================================================
+// =====================================================================
+// DEVENIR MEMBRE : présentation, candidature et suivi des étapes
+// =====================================================================
+const ADH_ORDRE = ["envoyee", "frais_payes", "formulaire_remis", "admis", "membre"];
+const ADH_FRISE = ["Candidature", "Frais de dossier", "Formulaire remis", "Entretien réussi", "Membre CGE"];
+const entretienTexte = (c) => (c && c.entretien_date
+  ? `${fmtDate(c.entretien_date)}${c.entretien_heure ? ` à ${c.entretien_heure}` : ""}${c.entretien_lieu ? ` · ${c.entretien_lieu}` : ""}`
+  : "date communiquée prochainement");
+
+function AdhesionPage({ me, profile, campagne, prochaine, campagnes, candidature, reload, notify, openLogin, go }) {
+  const [f, setF] = useState({ cycle: "Licence", filiere: "", niveau: "", motivation: "" });
+  const [busy, setBusy] = useState(false);
+  const [upload, setUpload] = useState(null);
+  const c = campagne;
+  // Une ancienne candidature non retenue n'empêche pas de candidater à une nouvelle campagne.
+  const suivi = candidature && !(candidature.etape === "non_retenu" && c && candidature.campagne_id !== c.id) ? candidature : null;
+  const cc = (suivi && campagnes.find((x) => x.id === suivi.campagne_id)) || c || {};
+  const filieres = f.cycle === "Licence" ? ((c && c.filieres_licence && c.filieres_licence.length) ? c.filieres_licence : FILIERES) : FILIERES;
+  const first = (profile.prenoms || "").split(" ")[0] || "";
+
+  const submit = async () => {
+    if (!f.filiere || !f.niveau) return notify("Choisissez votre filière et votre année d'étude.", "error");
+    if (!profile.telephone) { notify("Ajoutez d'abord votre numéro de téléphone dans Mon espace → Informations personnelles.", "error"); return go("profil"); }
+    setBusy(true);
+    const { error } = await sb.from("adhesions").insert({ campagne_id: c.id, user_id: me.id, cycle: f.cycle, filiere: f.filiere, niveau: f.niveau, motivation: f.motivation.trim().slice(0, 1000) || null });
+    setBusy(false);
+    if (error) return notify(error.code === "23505" ? "Vous avez déjà une candidature pour cette campagne." : error.message, "error");
+    notify("Candidature envoyée ! Suivez son avancement sur cette page.");
+    reload();
+  };
+  const cancel = async (cand) => {
+    const { error } = await sb.from("adhesions").delete().eq("id", cand.id);
+    if (error) return notify("Annulation impossible : " + error.message, "error");
+    notify("Candidature annulée.");
+    reload();
+  };
+  const sendRecu = async (cand, quoi, file) => {
+    if (!file) return;
+    if (file.size > 5 * 1048576) return notify("Fichier trop lourd (5 Mo maximum).", "error");
+    setUpload(quoi);
+    try {
+      let blob = file, ext = "pdf";
+      if (file.type && file.type.startsWith("image/")) { blob = await compressImage(file, 1400, 0.85); ext = blob.type === "image/png" ? "png" : "jpg"; }
+      else if (file.type !== "application/pdf") throw new Error("Envoyez une photo (JPG, PNG) ou un PDF.");
+      const path = `${me.id}/${Date.now()}-${quoi}.${ext}`;
+      const { error } = await sb.storage.from("recus").upload(path, blob, { contentType: blob.type || "application/pdf" });
+      if (error) throw new Error("Envoi impossible : " + error.message);
+      const { error: e2 } = await sb.rpc("adhesion_deposer_recu", { a_id: cand.id, quoi, chemin: path });
+      if (e2) throw new Error(e2.message);
+      notify("Reçu envoyé. La Trésorerie va vérifier votre paiement.");
+      reload();
+    } catch (err) { notify(err.message, "error"); }
+    finally { setUpload(null); }
+  };
+
+  const paiementBox = (montant, label) => (
+    <div className="mt-4 p-4 rounded-2xl bg-orange-50 border border-orange-100 text-sm">
+      <p className="font-bold text-slate-900">{label} : {fcfa(montant)}</p>
+      {cc.paiement_infos && <p className="text-slate-700 mt-1 whitespace-pre-line">{cc.paiement_infos}</p>}
+    </div>
+  );
+  const recuBox = (cand, quoi, path) => (
+    <div className="mt-4 p-4 rounded-2xl bg-white border border-slate-200">
+      <p className="text-sm font-semibold text-slate-900">Vous avez payé par Mobile Money ?</p>
+      <p className="text-xs text-slate-500 mt-1">Envoyez une capture du reçu pour aider la Trésorerie. Si vous payez en espèces à la Trésorerie, vous n'avez rien à envoyer.</p>
+      <div className="flex flex-wrap items-center gap-2 mt-3">
+        <label className={`cursor-pointer px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 ${upload ? "bg-slate-200 text-slate-500" : "bg-orange-600 text-white hover:bg-orange-700"}`}>
+          <Upload size={15} /> {upload === quoi ? "Envoi..." : path ? "Remplacer le reçu" : "Envoyer le reçu"}
+          <input type="file" accept="image/*,application/pdf" disabled={!!upload} className="hidden" onChange={(e) => { const file = e.target.files && e.target.files[0]; e.target.value = ""; sendRecu(cand, quoi, file); }} />
+        </label>
+        {path && <button onClick={() => downloadPrivate("recus", path, null, notify)} className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-sm font-semibold text-slate-700">Voir le reçu envoyé</button>}
+        {path && <span className="text-xs text-emerald-700 font-semibold">Reçu envoyé · en attente de vérification</span>}
+      </div>
+    </div>
+  );
+
+  // Ce qu'il faut faire maintenant, selon l'étape de la candidature.
+  const etapeContent = (s) => {
+    if (s.etape === "envoyee") return (
+      <>
+        <p className="text-slate-700"><strong>Prochaine étape :</strong> réglez les frais de dossier à la Trésorerie (ou par Mobile Money). Une fois le paiement confirmé, vous recevrez le formulaire papier.</p>
+        {paiementBox(cc.frais, "Frais de dossier")}
+        {recuBox(s, "frais", s.frais_recu_path)}
+        <div className="mt-4 flex justify-end"><ConfirmButton onConfirm={() => cancel(s)} confirmLabel="Annuler ?" className="text-xs font-semibold text-slate-500 hover:text-rose-600">Annuler ma candidature</ConfirmButton></div>
+      </>
+    );
+    if (s.etape === "frais_payes") return <p className="text-slate-700"><strong>Frais de dossier confirmés.</strong> Récupérez le formulaire papier auprès du bureau de la CGE, remplissez-le et rendez-le. Vous serez ensuite convoqué(e) à l'entretien.</p>;
+    if (s.etape === "formulaire_remis") return (
+      <div className="p-5 rounded-2xl bg-violet-50 border border-violet-200">
+        <p className="font-bold text-violet-900 flex items-center gap-2"><Calendar size={18} /> Vous êtes convoqué(e) à l'entretien</p>
+        <p className="text-violet-900 mt-2 text-lg font-semibold">{entretienTexte(cc)}</p>
+        <p className="text-sm text-violet-800 mt-2">L'entretien a lieu le même jour pour tous les candidats. Soyez à l'heure !</p>
+      </div>
+    );
+    if (s.etape === "admis") return (
+      <>
+        <p className="text-slate-700"><strong>Félicitations, vous avez réussi l'entretien !</strong> Dernière étape : réglez la cotisation annuelle pour devenir membre de la CGE.</p>
+        {paiementBox(cc.cotisation, "Cotisation annuelle")}
+        {recuBox(s, "cotisation", s.cotisation_recu_path)}
+      </>
+    );
+    if (s.etape === "non_retenu") return <p className="text-slate-700">Votre candidature n'a pas été retenue pour cette campagne. Vous pourrez candidater de nouveau lors de la prochaine campagne d'adhésion.</p>;
+    return <p className="text-slate-700">Votre adhésion est finalisée. Bienvenue à la CGE !</p>;
+  };
+
+  const frise = (s) => {
+    const idx = s.etape === "non_retenu" ? 2 : ADH_ORDRE.indexOf(s.etape);
+    return (
+      <ol className="grid grid-cols-5 gap-1 mb-6">
+        {ADH_FRISE.map((label, i) => {
+          const done = i <= idx;
+          const failed = s.etape === "non_retenu" && i === 3;
+          return (
+            <li key={label} className="text-center">
+              <div className={`mx-auto w-9 h-9 rounded-full flex items-center justify-center text-sm font-extrabold ${failed ? "bg-slate-300 text-slate-600" : done ? "bg-orange-600 text-white" : i === idx + 1 ? "bg-orange-100 text-orange-700 ring-2 ring-orange-400" : "bg-slate-100 text-slate-400"}`}>{failed ? "✕" : done ? "✓" : i + 1}</div>
+              <p className={`text-xs mt-2 leading-tight ${done ? "font-semibold text-slate-900" : "text-slate-500"}`}>{label}</p>
+            </li>
+          );
+        })}
+      </ol>
+    );
+  };
+
+  let action;
+  if (me && me.membre_cge) {
+    action = (
+      <div className="rounded-3xl p-8 text-white shadow-xl bg-gradient-to-br from-orange-500 to-orange-700">
+        <p className="text-sm font-bold uppercase tracking-widest opacity-90">Membre CGE section ARSTM</p>
+        <p className="text-3xl font-extrabold mt-2">Bienvenue{first ? `, ${first}` : ""} !</p>
+        {me.numero_membre && <p className="mt-3 text-lg">Numéro de membre : <strong>{me.numero_membre}</strong></p>}
+        {me.membre_depuis && <p className="text-orange-100 text-sm mt-1">Membre depuis le {fmtDate(me.membre_depuis)}</p>}
+        <div className="flex flex-wrap gap-2 mt-6">
+          <button onClick={() => go("opportunites")} className="px-5 py-2.5 rounded-xl bg-white text-orange-700 font-bold text-sm">Voir les opportunités</button>
+          <button onClick={() => go("alumni")} className="px-5 py-2.5 rounded-xl border border-white border-opacity-50 font-semibold text-sm">Le réseau des anciens</button>
+        </div>
+      </div>
+    );
+  } else if (suivi) {
+    action = (
+      <Panel title={`Ma candidature${cc.annee ? ` · ${cc.annee}` : ""}`} Icon={Send}>
+        {frise(suivi)}
+        <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-4 ${(ETAPE[suivi.etape] || {}).cls || ""}`}>{(ETAPE[suivi.etape] || {}).label || suivi.etape}</span>
+        {etapeContent(suivi)}
+        {suivi.message_bureau && <p className="mt-4 p-4 rounded-2xl bg-sky-50 border border-sky-200 text-sm text-sky-900 whitespace-pre-line"><strong>Message du bureau :</strong> {suivi.message_bureau}</p>}
+        <p className="text-xs text-slate-400 mt-5">{suivi.cycle} · {suivi.filiere}{suivi.niveau && ` · ${suivi.niveau}`} · envoyée le {fmtDate(suivi.created_at)}</p>
+      </Panel>
+    );
+  } else if (!c) {
+    action = (
+      <Panel title="Adhésions fermées" Icon={Clock}>
+        <p className="text-slate-600 whitespace-pre-line">{tx("adhesion.ferme")}</p>
+        {prochaine && <p className="mt-3 font-semibold text-slate-900">Prochaine campagne ({prochaine.annee}) : à partir du {fmtDate(prochaine.ouverture)}.</p>}
+      </Panel>
+    );
+  } else if (!me) {
+    action = (
+      <Panel title="Candidater" Icon={UserPlus}>
+        <p className="text-slate-600">Pour candidater, connectez-vous à votre compte. Pas encore de compte ? Créez-le avec votre matricule : le bureau le validera, puis vous pourrez déposer votre candidature.</p>
+        <button onClick={openLogin} className="mt-5 px-6 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700">Se connecter ou créer un compte</button>
+      </Panel>
+    );
+  } else if (profile.type === "ancien") {
+    action = (
+      <Panel title="Adhésion réservée aux élèves" Icon={Info}>
+        <p className="text-slate-600">L'adhésion est réservée aux élèves actuels de l'ARSTM. En tant qu'ancien, vous avez déjà accès à l'ensemble du site et au réseau.</p>
+      </Panel>
+    );
+  } else {
+    action = (
+      <Panel title={`Candidater · campagne ${c.annee}`} Icon={UserPlus}>
+        <p className="text-sm text-slate-500 -mt-3 mb-5">Vos nom, matricule, email et téléphone sont repris de votre profil. Candidatures ouvertes jusqu'au {fmtDate(c.cloture)}.</p>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-2">
+            {Object.keys(CYCLES).map((cy) => (
+              <button key={cy} type="button" onClick={() => setF({ ...f, cycle: cy, filiere: "", niveau: "" })} className={`py-3 rounded-xl text-sm font-semibold border transition ${f.cycle === cy ? "border-orange-500 bg-orange-50 text-orange-700" : "border-slate-300 text-slate-600"}`}>{cy}</button>
+            ))}
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <label className="block"><span className="text-xs font-semibold text-slate-600">Filière</span>
+              <select value={f.filiere} onChange={(e) => setF({ ...f, filiere: e.target.value })} className={inputCls}><option value="">Choisir...</option>{filieres.map((x) => <option key={x}>{x}</option>)}</select>
+            </label>
+            <label className="block"><span className="text-xs font-semibold text-slate-600">Année d'étude</span>
+              <select value={f.niveau} onChange={(e) => setF({ ...f, niveau: e.target.value })} className={inputCls}><option value="">Choisir...</option>{CYCLES[f.cycle].map((x) => <option key={x}>{x}</option>)}</select>
+            </label>
+          </div>
+          {f.cycle === "Licence" && c.filieres_licence && c.filieres_licence.length > 0 && <p className="text-xs text-slate-500">En Licence, seules ces filières sont éligibles : {c.filieres_licence.join(", ")}.</p>}
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Pourquoi voulez-vous rejoindre la CGE ? <span className="font-normal text-slate-400">(facultatif)</span></span>
+            <textarea rows={4} maxLength={1000} value={f.motivation} onChange={(e) => setF({ ...f, motivation: e.target.value })} className={inputCls} />
+          </label>
+          {paiementBox(c.frais, "Frais de dossier à prévoir")}
+          <button onClick={submit} disabled={busy} className="w-full py-3.5 rounded-xl bg-orange-600 text-white font-bold hover:bg-orange-700 disabled:opacity-60 flex items-center justify-center gap-2"><Send size={17} /> {busy ? "Envoi..." : "Envoyer ma candidature"}</button>
+        </div>
+      </Panel>
+    );
+  }
+
+  const avantages = txLines("adhesion.avantages");
+  const etapes = txLines("adhesion.etapes");
+  return (
+    <>
+      <PageHero kicker="L'association" title="Devenir membre" sub="" icon={UserPlus} />
+      <main className="max-w-6xl mx-auto px-4 py-16 space-y-14">
+        <div className="grid lg:grid-cols-5 gap-6 items-start">
+          <div className="lg:col-span-3">{action}</div>
+          <div className="lg:col-span-2">
+            <Panel title={c ? `Campagne ${c.annee}` : "Campagne d'adhésion"} Icon={Calendar}>
+              {c ? (
+                <ul className="space-y-3 text-sm text-slate-700">
+                  <li className="flex gap-2"><Clock size={16} className="text-orange-600 flex-shrink-0 mt-0.5" /> <span>Candidatures du <strong>{fmtDate(c.ouverture)}</strong> au <strong>{fmtDate(c.cloture)}</strong></span></li>
+                  <li className="flex gap-2"><FileText size={16} className="text-orange-600 flex-shrink-0 mt-0.5" /> <span>Frais de dossier : <strong>{fcfa(c.frais)}</strong></span></li>
+                  <li className="flex gap-2"><Award size={16} className="text-orange-600 flex-shrink-0 mt-0.5" /> <span>Cotisation annuelle (si admis) : <strong>{fcfa(c.cotisation)}</strong></span></li>
+                  <li className="flex gap-2"><MapPin size={16} className="text-orange-600 flex-shrink-0 mt-0.5" /> <span>Entretien : <strong>{entretienTexte(c)}</strong></span></li>
+                </ul>
+              ) : <p className="text-sm text-slate-500">Aucune campagne en cours.{prochaine && ` Prochaine campagne à partir du ${fmtDate(prochaine.ouverture)}.`}</p>}
+            </Panel>
+          </div>
+        </div>
+
+        {avantages.length > 0 && (
+          <div>
+            <SectionTitle kicker="Pourquoi adhérer" title="Ce que la CGE vous apporte" />
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {avantages.map(([t, d = ""], i) => { const Icon = [Briefcase, Users, Sparkles, Megaphone][i % 4]; return (
+                <div key={t} className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl transition">
+                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${CARD_GRADIENTS[i % 4]} flex items-center justify-center shadow-lg`}><Icon className="text-white" size={22} /></div>
+                  <p className="font-bold text-slate-900 mt-4">{t}</p>
+                  <p className="text-sm text-slate-600 mt-1">{d}</p>
+                </div>
+              ); })}
+            </div>
+          </div>
+        )}
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          <Panel title="Qui peut adhérer ?" Icon={GraduationCap}>
+            {tx("adhesion.conditions").split(/\n\s*\n/).map((p, i) => <p key={i} className={`text-slate-600 leading-relaxed whitespace-pre-line ${i ? "mt-3" : ""}`}>{rich(p)}</p>)}
+          </Panel>
+          <Panel title="Les étapes" Icon={CheckCircle2}>
+            <ol className="space-y-4">
+              {etapes.map(([t, d = ""], i) => (
+                <li key={t} className="flex gap-4">
+                  <span className="w-8 h-8 flex-shrink-0 rounded-full bg-orange-600 text-white text-sm font-extrabold flex items-center justify-center">{i + 1}</span>
+                  <span><span className="font-bold text-slate-900 block">{t}</span><span className="text-sm text-slate-600">{d}</span></span>
+                </li>
+              ))}
+            </ol>
+          </Panel>
+        </div>
+      </main>
+    </>
+  );
+}
+
 const splitTags = (s) => String(s || "").split(",").map((t) => t.trim()).filter(Boolean);
 
 function PartnerFeature({ p }) {
@@ -2314,6 +2642,9 @@ function ProfileSpace({ uid, profile, update, pct, fullName, applications, regis
             <h1 className="text-3xl md:text-4xl font-extrabold mt-1">{fullName}</h1>
             <p className="text-slate-300 mt-1">{isAncien ? [profile.poste, profile.entreprise].filter(Boolean).join(" · ") || "Ancien de l'ARSTM" : profile.titre || [profile.filiere, profile.promotion && `Promotion ${profile.promotion}`].filter(Boolean).join(" · ") || "Complétez votre profil pour vous démarquer"}</p>
             <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
+              <ImgCtx.Consumer>{(v) => v.access && v.access.numero !== null && v.access.numero !== undefined && (
+                <span className="px-3 py-1 rounded-full bg-orange-600 text-xs font-bold flex items-center gap-1"><Award size={12} /> Membre CGE{v.access.numero ? ` · ${v.access.numero}` : ""}</span>
+              )}</ImgCtx.Consumer>
               {isAncien && <span className="px-3 py-1 rounded-full bg-white bg-opacity-15 text-xs font-bold">Ancien{profile.promotion && ` · Promo ${profile.promotion}`}</span>}
               {isAncien && profile.mentor && <span className="px-3 py-1 rounded-full bg-emerald-500 text-xs font-bold flex items-center gap-1"><Handshake size={12} /> Mentor</span>}
               {!isAncien && profile.disponible && <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500 text-white text-xs font-bold"><span className="w-2 h-2 rounded-full bg-white pulse-dot" /> Disponible pour un stage</span>}
@@ -3116,8 +3447,9 @@ const ADMIN_SECTIONS = {
       { k: "time", label: "Heure", optional: true, placeholder: "ex. 14h00" },
       { k: "place", label: "Lieu", optional: true },
       { k: "text", label: "Description", type: "textarea", optional: true },
+      { k: "members_only", label: "Réservé aux membres CGE (les autres étudiants le voient mais ne peuvent pas s'inscrire)", type: "checkbox" },
     ],
-    show: (i) => `${i.title} — ${fmtDate(i.date)}`,
+    show: (i) => `${i.title} — ${fmtDate(i.date)}${i.members_only ? " (membres CGE)" : ""}`,
   },
   jobs: {
     table: "jobs", fromDb: plainFromDb, toDb: jobToDb, label: "Opportunités", icon: Briefcase,
@@ -3919,6 +4251,300 @@ function ActivityLog({ members }) {
   );
 }
 
+// =====================================================================
+// ADHÉSIONS (administrateurs, droits « Adhésions » et « Trésorerie »)
+// =====================================================================
+const LICENCE_ELIGIBLES = ["Sciences nautiques", "Mécanique navale", "Génie thermique", "Télécommunication (RIT)"];
+const CAMPAGNE_VIDE = { annee: "", ouverture: "", cloture: "", frais: "", cotisation: "", paiement_infos: "", entretien_date: "", entretien_heure: "", entretien_lieu: "", filieres_licence: LICENCE_ELIGIBLES };
+const sansNull = (o) => Object.fromEntries(Object.entries(o || {}).map(([k, v]) => [k, v === null ? "" : v]));
+
+function CampagneForm({ initial, onDone, notify }) {
+  const [f, setF] = useState(() => ({ ...CAMPAGNE_VIDE, ...sansNull(initial) }));
+  const [busy, setBusy] = useState(false);
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const options = [...new Set([...LICENCE_ELIGIBLES, ...FILIERES, ...(f.filieres_licence || [])])];
+  const toggle = (x) => setF({ ...f, filieres_licence: f.filieres_licence.includes(x) ? f.filieres_licence.filter((y) => y !== x) : [...f.filieres_licence, x] });
+  const save = async () => {
+    const annee = String(f.annee).trim();
+    if (!/^\d{4}-\d{4}$/.test(annee)) return notify("Indiquez l'année académique au format 2026-2027.", "error");
+    if (!f.ouverture || !f.cloture || f.cloture < f.ouverture) return notify("Vérifiez les dates d'ouverture et de clôture.", "error");
+    const num = (v) => (String(v).trim() === "" ? null : Number(String(v).replace(/\s/g, "")));
+    const payload = {
+      annee, ouverture: f.ouverture, cloture: f.cloture, frais: num(f.frais), cotisation: num(f.cotisation),
+      paiement_infos: String(f.paiement_infos).trim() || null, entretien_date: f.entretien_date || null,
+      entretien_heure: String(f.entretien_heure).trim() || null, entretien_lieu: String(f.entretien_lieu).trim() || null,
+      filieres_licence: f.filieres_licence,
+    };
+    if ([payload.frais, payload.cotisation].some((n) => n !== null && (!Number.isFinite(n) || n < 0))) return notify("Montants invalides : chiffres uniquement, sans « FCFA ».", "error");
+    setBusy(true);
+    const { error } = initial && initial.id
+      ? await sb.from("adhesion_campagnes").update(payload).eq("id", initial.id)
+      : await sb.from("adhesion_campagnes").insert(payload);
+    setBusy(false);
+    if (error) return notify(error.code === "23505" ? "Une campagne existe déjà pour cette année." : "Enregistrement impossible : " + error.message, "error");
+    notify("Campagne enregistrée.");
+    onDone();
+  };
+  const L = (label, input) => <label className="block"><span className="text-xs font-semibold text-slate-600">{label}</span>{input}</label>;
+  return (
+    <div className="space-y-4">
+      <div className="grid sm:grid-cols-3 gap-4">
+        {L("Année académique", <input value={f.annee} onChange={set("annee")} placeholder="2026-2027" className={inputCls} />)}
+        {L("Ouverture des candidatures", <input type="date" value={f.ouverture} onChange={set("ouverture")} className={inputCls} />)}
+        {L("Clôture des candidatures", <input type="date" value={f.cloture} onChange={set("cloture")} className={inputCls} />)}
+        {L("Frais de dossier (FCFA)", <input value={f.frais} onChange={set("frais")} placeholder="ex. 5000" className={inputCls} />)}
+        {L("Cotisation annuelle (FCFA)", <input value={f.cotisation} onChange={set("cotisation")} placeholder="ex. 10000" className={inputCls} />)}
+      </div>
+      {L("Moyens de paiement (affichés aux candidats)", <textarea rows={3} value={f.paiement_infos} onChange={set("paiement_infos")} placeholder={"ex. Espèces auprès de la Trésorière Générale\nOrange Money : 07 00 00 00 00 (NOM)\nWave : 05 00 00 00 00"} className={inputCls} />)}
+      <div className="grid sm:grid-cols-3 gap-4">
+        {L("Date de l'entretien", <input type="date" value={f.entretien_date} onChange={set("entretien_date")} className={inputCls} />)}
+        {L("Heure", <input value={f.entretien_heure} onChange={set("entretien_heure")} placeholder="ex. 9h00" className={inputCls} />)}
+        {L("Lieu", <input value={f.entretien_lieu} onChange={set("entretien_lieu")} placeholder="ex. ARSTM, amphithéâtre A" className={inputCls} />)}
+      </div>
+      <div>
+        <p className="text-xs font-semibold text-slate-600">Filières de Licence éligibles (tous les Masters le sont)</p>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {options.map((x) => (
+            <label key={x} className={`px-3 py-2 rounded-xl border text-sm cursor-pointer flex items-center gap-2 ${f.filieres_licence.includes(x) ? "border-orange-500 bg-orange-50 text-orange-800 font-semibold" : "border-slate-200 text-slate-600"}`}>
+              <input type="checkbox" checked={f.filieres_licence.includes(x)} onChange={() => toggle(x)} className="accent-orange-600" /> {x}
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-slate-400 mt-2">Les noms doivent correspondre à ceux de la liste des filières (Textes & réglages → Listes).</p>
+      </div>
+      <div className="flex justify-end gap-2">
+        <button onClick={onDone} className="px-5 py-2.5 rounded-xl bg-white border border-slate-300 text-sm font-semibold">Annuler</button>
+        <button onClick={save} disabled={busy} className="px-6 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-semibold hover:bg-orange-700 disabled:opacity-60">{busy ? "Enregistrement..." : "Enregistrer la campagne"}</button>
+      </div>
+    </div>
+  );
+}
+
+function AdminAdhesions({ can, notify }) {
+  const canA = can("adhesions"), canT = can("tresorerie");
+  const [campagnes, setCampagnes] = useState([]);
+  const [rows, setRows] = useState(null);
+  const [comptes, setComptes] = useState([]);
+  const [campId, setCampId] = useState(null);
+  const [view, setView] = useState("candidats");
+  const [editing, setEditing] = useState(null); // null | "new" | campagne
+  const [fEtape, setFEtape] = useState("");
+  const [q, setQ] = useState("");
+  const [mq, setMq] = useState("");
+  const [busyId, setBusyId] = useState(null);
+
+  const load = async () => {
+    const [c, a, p] = await Promise.all([
+      sb.from("adhesion_campagnes").select("*").order("ouverture", { ascending: false }),
+      sb.from("adhesions").select("*").order("created_at", { ascending: false }),
+      sb.rpc("comptes_adhesion"),
+    ]);
+    if (c.error) { setRows([]); return notify("Adhésions indisponibles : " + c.error.message + ". Le script SQL du lot 5 a-t-il été lancé ?", "error"); }
+    setCampagnes(c.data || []); setRows(a.data || []); setComptes(p.data || []);
+    setCampId((id) => id || (c.data && c.data[0] ? c.data[0].id : null));
+  };
+  useEffect(() => { load(); }, []);
+
+  const act = async (r, action, info = null) => {
+    setBusyId(r.id);
+    const { data, error } = await sb.rpc("adhesion_action", { a_id: r.id, action, info });
+    setBusyId(null);
+    if (error) return notify(error.message, "error");
+    notify(action === "cotisation_ok" && data ? `${r.nom} est maintenant membre CGE : n° ${data}` : "Étape mise à jour.");
+    load();
+  };
+  const removeRow = async (r) => {
+    const { error } = await sb.from("adhesions").delete().eq("id", r.id);
+    if (error) return notify("Suppression impossible : " + error.message, "error");
+    notify("Candidature supprimée."); load();
+  };
+  const editMessage = (r) => {
+    const m = window.prompt(`Message affiché à ${r.nom} dans son suivi (laisser vide pour effacer) :`, r.message_bureau || "");
+    if (m !== null) act(r, "message", m);
+  };
+  const declarer = async (p, oui) => {
+    const { data, error } = await sb.rpc("declarer_membre", { cible: p.id, membre: oui });
+    if (error) return notify(error.message, "error");
+    notify(oui ? `${p.nom} est membre CGE : n° ${data}` : `${p.nom} n'est plus membre CGE.`);
+    load();
+  };
+
+  if (rows === null) return <p className="text-slate-500">Chargement des adhésions...</p>;
+
+  const camp = campagnes.find((c) => c.id === campId) || null;
+  const list = rows.filter((r) => r.campagne_id === campId);
+  const count = (k) => list.filter((r) => r.etape === k).length;
+  const shown = list.filter((r) => (!fEtape || r.etape === fEtape)
+    && (!q || [r.nom, r.matricule, r.filiere, r.email, r.telephone].join(" ").toLowerCase().includes(q.toLowerCase())));
+  const convoques = list.filter((r) => ["formulaire_remis", "admis", "non_retenu"].includes(r.etape)).sort((a, b) => String(a.nom).localeCompare(String(b.nom)));
+  const numeroDe = (uid) => (comptes.find((p) => p.id === uid) || {}).numero_membre;
+  const membres = comptes.filter((p) => p.membre_cge && (!mq || [p.nom, p.numero_membre, p.matricule, p.filiere].join(" ").toLowerCase().includes(mq.toLowerCase())));
+  const aDeclarer = mq.trim().length >= 2 ? comptes.filter((p) => !p.membre_cge && p.type !== "ancien" && [p.nom, p.matricule, p.email].join(" ").toLowerCase().includes(mq.trim().toLowerCase())).slice(0, 8) : [];
+  const btn = "px-3 py-1.5 rounded-lg text-xs font-semibold";
+
+  const actions = (r) => {
+    const out = [];
+    if (r.etape === "envoyee" && canT) out.push(
+      <ConfirmButton key="f1" onConfirm={() => act(r, "frais_ok", "Espèces")} confirmLabel="Confirmer ?" className={btn + " bg-emerald-600 text-white"}>Frais payés · espèces</ConfirmButton>,
+      <ConfirmButton key="f2" onConfirm={() => act(r, "frais_ok", "Mobile Money")} confirmLabel="Confirmer ?" className={btn + " bg-emerald-600 text-white"}>Frais payés · Mobile Money</ConfirmButton>);
+    if (r.etape === "frais_payes" && canA) out.push(<ConfirmButton key="fo" onConfirm={() => act(r, "formulaire")} confirmLabel="Confirmer ?" className={btn + " bg-violet-600 text-white"}>Formulaire remis</ConfirmButton>);
+    if (["formulaire_remis", "admis", "non_retenu"].includes(r.etape) && canA) {
+      if (r.etape !== "admis") out.push(<ConfirmButton key="ad" onConfirm={() => act(r, "admis")} confirmLabel="Admis ?" className={btn + " bg-emerald-600 text-white"}>Admis(e)</ConfirmButton>);
+      if (r.etape !== "non_retenu") out.push(<ConfirmButton key="nr" onConfirm={() => act(r, "non_retenu")} confirmLabel="Non retenu ?" className={btn + " bg-slate-600 text-white"}>Non retenu(e)</ConfirmButton>);
+    }
+    if (r.etape === "admis" && canT) out.push(
+      <ConfirmButton key="c1" onConfirm={() => act(r, "cotisation_ok", "Espèces")} confirmLabel="Confirmer ?" className={btn + " bg-orange-600 text-white"}>Cotisation payée · espèces</ConfirmButton>,
+      <ConfirmButton key="c2" onConfirm={() => act(r, "cotisation_ok", "Mobile Money")} confirmLabel="Confirmer ?" className={btn + " bg-orange-600 text-white"}>Cotisation payée · Mobile Money</ConfirmButton>);
+    if ((r.etape === "frais_payes" && canT) || (["formulaire_remis", "admis", "non_retenu"].includes(r.etape) && canA))
+      out.push(<ConfirmButton key="re" onConfirm={() => act(r, "retour")} confirmLabel="Revenir ?" className={btn + " bg-white border border-slate-300 text-slate-600"}>↩ Étape précédente</ConfirmButton>);
+    if (r.frais_recu_path) out.push(<button key="rf" onClick={() => downloadPrivate("recus", r.frais_recu_path, null, notify)} className={btn + " bg-white border border-slate-300 text-slate-700"}>Reçu frais</button>);
+    if (r.cotisation_recu_path) out.push(<button key="rc" onClick={() => downloadPrivate("recus", r.cotisation_recu_path, null, notify)} className={btn + " bg-white border border-slate-300 text-slate-700"}>Reçu cotisation</button>);
+    if (canA) {
+      out.push(<button key="ms" onClick={() => editMessage(r)} className={btn + " bg-white border border-slate-300 text-slate-700"}>Message</button>);
+      out.push(<ConfirmButton key="de" onConfirm={() => removeRow(r)} confirmLabel="Supprimer ?" ariaLabel="Supprimer la candidature" className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={15} /></ConfirmButton>);
+    }
+    return out;
+  };
+
+  const views = [["candidats", "Candidatures", Send], ["membres", "Membres CGE", Award], ...(canA ? [["campagnes", "Campagnes", Calendar]] : [])];
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl bg-sky-50 border border-sky-200 p-5 flex gap-3 text-sm text-sky-900">
+        <Info size={20} className="flex-shrink-0 text-sky-600 mt-0.5" />
+        <p>Ordre des étapes : <strong>frais de dossier</strong> (Trésorerie) → <strong>formulaire remis</strong> → <strong>entretien</strong> (admis / non retenu) → <strong>cotisation</strong> (Trésorerie) → membre CGE avec son numéro. Le site refuse une étape faite dans le désordre. En cas d'erreur, utilisez « Étape précédente ».</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {views.map(([k, l, I]) => <button key={k} onClick={() => { setView(k); setEditing(null); }} className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition ${view === k ? "bg-slate-900 text-white" : "bg-white shadow-sm text-slate-600 hover:text-orange-600"}`}><I size={15} /> {l}</button>)}
+      </div>
+
+      {view === "candidats" && (campagnes.length === 0 ? (
+        <Panel title="Aucune campagne" Icon={Calendar}>
+          <p className="text-sm text-slate-500">{canA ? "Créez d'abord la campagne de l'année dans l'onglet « Campagnes »." : "Aucune campagne d'adhésion n'a encore été créée."}</p>
+        </Panel>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-2">
+            {campagnes.map((c) => <button key={c.id} onClick={() => setCampId(c.id)} className={`px-4 py-2 rounded-xl text-sm font-semibold ${campId === c.id ? "bg-orange-600 text-white" : "bg-white shadow-sm text-slate-600"}`}>{c.annee}</button>)}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {ETAPES.map(([k, l, cls]) => (
+              <button key={k} onClick={() => setFEtape(fEtape === k ? "" : k)} className={`rounded-2xl p-4 text-left shadow-sm transition ${fEtape === k ? "ring-2 ring-orange-500 bg-white" : "bg-white hover:shadow-md"}`}>
+                <p className="text-2xl font-extrabold text-slate-900">{count(k)}</p>
+                <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-semibold ${cls}`}>{l}</span>
+              </button>
+            ))}
+          </div>
+          <Panel title={`Candidatures ${camp ? camp.annee : ""} (${list.length})`} Icon={Users}
+            action={convoques.length > 0 && <button onClick={() => window.print()} className="px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1"><Printer size={14} /> Liste des convoqués</button>}>
+            <div className="relative mb-4">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nom, matricule, filière, téléphone..." className={inputCls + " mt-0 pl-10"} />
+            </div>
+            {fEtape && <p className="text-sm text-slate-500 mb-3">Filtre : {ETAPE[fEtape].label} · <button onClick={() => setFEtape("")} className="text-orange-600 font-semibold">tout afficher</button></p>}
+            {shown.length === 0 ? <p className="text-sm text-slate-500">Aucune candidature.</p> : (
+              <ul className="divide-y divide-slate-100">
+                {shown.map((r) => (
+                  <li key={r.id} className={`py-4 ${busyId === r.id ? "opacity-50 pointer-events-none" : ""}`}>
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-900 flex flex-wrap items-center gap-2">{r.nom}
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${(ETAPE[r.etape] || {}).cls || ""}`}>{(ETAPE[r.etape] || {}).label || r.etape}</span>
+                          {r.etape === "membre" && numeroDe(r.user_id) && <span className="text-xs px-2 py-0.5 rounded-full bg-slate-900 text-white">{numeroDe(r.user_id)}</span>}
+                        </p>
+                        <p className="text-sm text-slate-600">{[r.matricule, r.cycle, r.filiere, r.niveau].filter(Boolean).join(" · ")}</p>
+                        <p className="text-xs text-slate-500">{[r.telephone, r.email, `envoyée le ${fmtDate(r.created_at)}`].filter(Boolean).join(" · ")}</p>
+                        {(r.frais_confirme_le || r.cotisation_confirme_le) && <p className="text-xs text-slate-500 mt-0.5">{r.frais_confirme_le && `Frais : ${r.frais_mode || "payés"} le ${fmtDate(r.frais_confirme_le)}`}{r.frais_confirme_le && r.cotisation_confirme_le && " · "}{r.cotisation_confirme_le && `Cotisation : ${r.cotisation_mode || "payée"} le ${fmtDate(r.cotisation_confirme_le)}`}</p>}
+                        {r.motivation && <p className="text-xs text-slate-600 mt-1 italic whitespace-pre-line">« {r.motivation} »</p>}
+                        {r.message_bureau && <p className="text-xs text-sky-700 mt-1">Message affiché : {r.message_bureau}</p>}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 md:justify-end md:max-w-sm">{actions(r)}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+          {/* Liste imprimable des convoqués (visible uniquement à l'impression) */}
+          <div className="cv-print hidden print:block p-8 bg-white text-slate-900">
+            <h1 className="text-2xl font-extrabold">CGE section ARSTM · Entretiens d'adhésion {camp && camp.annee}</h1>
+            {camp && <p className="mt-1">{entretienTexte(camp)}</p>}
+            <table className="w-full mt-6 text-sm border-collapse">
+              <thead><tr>{["N°", "Nom", "Matricule", "Filière", "Année", "Téléphone", "Résultat"].map((h) => <th key={h} className="border border-slate-400 px-2 py-1 text-left">{h}</th>)}</tr></thead>
+              <tbody>{convoques.map((r, i) => (
+                <tr key={r.id}><td className="border border-slate-400 px-2 py-1">{i + 1}</td><td className="border border-slate-400 px-2 py-1">{r.nom}</td><td className="border border-slate-400 px-2 py-1">{r.matricule}</td><td className="border border-slate-400 px-2 py-1">{r.filiere}</td><td className="border border-slate-400 px-2 py-1">{r.niveau}</td><td className="border border-slate-400 px-2 py-1">{r.telephone}</td><td className="border border-slate-400 px-2 py-1 w-32"></td></tr>
+              ))}</tbody>
+            </table>
+          </div>
+        </>
+      ))}
+
+      {view === "membres" && (
+        <Panel title={`Membres CGE (${comptes.filter((p) => p.membre_cge).length})`} Icon={Award}>
+          <div className="relative mb-4">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input value={mq} onChange={(e) => setMq(e.target.value)} placeholder="Rechercher un membre, ou un élève à déclarer membre..." className={inputCls + " mt-0 pl-10"} />
+          </div>
+          {canA && aDeclarer.length > 0 && (
+            <div className="mb-5 p-4 rounded-2xl bg-orange-50 border border-orange-100">
+              <p className="text-sm font-semibold text-slate-900">Élèves non membres correspondant à la recherche</p>
+              <p className="text-xs text-slate-500 mb-3">Pour les élèves qui étaient déjà adhérents avant le site : ils reçoivent directement leur numéro de membre.</p>
+              <ul className="space-y-2">
+                {aDeclarer.map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-3 text-sm">
+                    <span><strong>{p.nom}</strong> <span className="text-slate-500">{[p.matricule, p.filiere, p.promotion && `Promo ${p.promotion}`].filter(Boolean).join(" · ")}</span></span>
+                    <ConfirmButton onConfirm={() => declarer(p, true)} confirmLabel="Déclarer ?" className={btn + " bg-orange-600 text-white whitespace-nowrap"}>Déclarer membre (déjà adhérent)</ConfirmButton>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {membres.length === 0 ? <p className="text-sm text-slate-500">Aucun membre ne correspond.</p> : (
+            <ul className="divide-y divide-slate-100">
+              {membres.map((p) => (
+                <li key={p.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <p className="font-semibold text-slate-900 flex flex-wrap items-center gap-2">{p.nom}{p.numero_membre && <span className="text-xs px-2 py-0.5 rounded-full bg-slate-900 text-white">{p.numero_membre}</span>}{p.type === "ancien" && <span className="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">Ancien</span>}</p>
+                    <p className="text-xs text-slate-500">{[p.matricule, p.filiere, p.promotion && `Promo ${p.promotion}`, p.membre_depuis && `membre depuis le ${fmtDate(p.membre_depuis)}`].filter(Boolean).join(" · ")}</p>
+                  </div>
+                  {canA && <ConfirmButton onConfirm={() => declarer(p, false)} confirmLabel="Retirer ?" className={btn + " bg-white border border-slate-300 text-rose-600"}>Retirer le statut de membre</ConfirmButton>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      )}
+
+      {view === "campagnes" && canA && (
+        editing ? (
+          <Panel title={editing === "new" ? "Nouvelle campagne" : `Modifier la campagne ${editing.annee}`} Icon={Calendar}>
+            <CampagneForm initial={editing === "new" ? null : editing} notify={notify} onDone={() => { setEditing(null); load(); }} />
+          </Panel>
+        ) : (
+          <Panel title={`Campagnes (${campagnes.length})`} Icon={Calendar} action={<button onClick={() => setEditing("new")} className="px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-semibold flex items-center gap-1"><Plus size={16} /> Nouvelle campagne</button>}>
+            {campagnes.length === 0 ? <p className="text-sm text-slate-500">Aucune campagne. Créez celle de l'année en cours.</p> : (
+              <ul className="divide-y divide-slate-100">
+                {campagnes.map((c) => {
+                  const ouverte = daysUntil(c.ouverture) <= 0 && daysUntil(c.cloture) >= 0;
+                  return (
+                    <li key={c.id} className="py-3 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-slate-900 flex items-center gap-2">{c.annee}<span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${ouverte ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{ouverte ? "ouverte" : daysUntil(c.ouverture) > 0 ? "à venir" : "terminée"}</span></p>
+                        <p className="text-xs text-slate-500">Du {fmtDate(c.ouverture)} au {fmtDate(c.cloture)} · frais {fcfa(c.frais)} · cotisation {fcfa(c.cotisation)} · entretien : {entretienTexte(c)}</p>
+                      </div>
+                      <button onClick={() => setEditing(c)} className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-orange-600" aria-label="Modifier" title="Modifier"><Pencil size={16} /></button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Panel>
+        )
+      )}
+    </div>
+  );
+}
+
 // Tableau de bord du bureau : les chiffres clés en un coup d'œil.
 function AdminDashboard({ members, jobs, applications, registrations, events, messages, temoignages, mentoratAll, sondages, onOpen }) {
   const actifs = members.filter((m) => m.statut === "actif");
@@ -4131,6 +4757,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
     ["sondages", { label: "Sondages", icon: Vote }],
     sec("temoignages"), sec("partenaires"), sec("alumni"),
     ["members", { label: `Membres${pending.length ? ` (${pending.length} en attente)` : ""}`, icon: Users }],
+    ["adhesions", { label: "Adhésions", icon: UserPlus }],
     ["applications", { label: `Candidatures (${applications.length})`, icon: Send }],
     ["messages", { label: `Messages${unread ? ` (${unread})` : ""}`, icon: Inbox }],
     ["reglages", { label: "Textes & réglages", icon: SettingsIcon }],
@@ -4179,6 +4806,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
       {tab === "reglages" && <SettingsManager settings={settings} saveSettings={saveSettings} notify={notify} />}
       {tab === "droits" && <RightsManager members={members} updateMember={updateMember} />}
       {tab === "journal" && <ActivityLog members={members} />}
+      {tab === "adhesions" && <AdminAdhesions can={can} notify={notify} />}
       {tab === "reglages" && <SettingsManager settings={settings} saveSettings={saveSettings} notify={notify} />}
       {tab === "droits" && <RightsManager members={members} updateMember={updateMember} />}
       {tab === "journal" && <ActivityLog members={members} />}
@@ -4254,6 +4882,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                           {ancien && m.data?.mentor && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Mentor</span>}
                           {!ancien && m.data?.disponible && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Dispo stage</span>}
                           {m.role !== "admin" && (m.permissions || []).length > 0 && <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Droits délégués</span>}
+                          {m.membre_cge && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Membre CGE{m.numero_membre ? ` · ${m.numero_membre}` : ""}</span>}
                           {m.role !== "admin" && (m.permissions || []).length > 0 && <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Droits délégués</span>}
                           {self && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Vous</span>}
                         </p>
