@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>CGE ARSTM — Conférence des Grandes Écoles</title>
-<meta name="description" content="Section ARSTM de la Conférence des Grandes Écoles de Côte d'Ivoire : actualités, bureau exécutif, événements, opportunités, réseau des anciens, mentorat et espace membre." />
+<meta name="description" content="Section ARSTM de la Conférence des Grandes Écoles de Côte d'Ivoire : actualités, événements, opportunités, réseau des anciens, mentorat, médiathèque et espace membre." />
 <meta name="theme-color" content="#ff8a00" />
 <link rel="icon" type="image/svg+xml" href="logos/cge-arstm.svg" />
 
@@ -90,7 +90,8 @@ const pickIcon = (...names) => { for (const n of names) if (LR[n]) return LR[n];
 const Anchor = pickIcon("Anchor"), Menu = pickIcon("Menu"), X = pickIcon("X"), Calendar = pickIcon("Calendar"), Briefcase = pickIcon("Briefcase"),
   GraduationCap = pickIcon("GraduationCap"), Users = pickIcon("Users"), Newspaper = pickIcon("Newspaper"), Lock = pickIcon("Lock"), LogOut = pickIcon("LogOut"),
   Plus = pickIcon("Plus"), Trash2 = pickIcon("Trash2", "Trash"), MapPin = pickIcon("MapPin"), Mail = pickIcon("Mail"), Phone = pickIcon("Phone"),
-  ChevronRight = pickIcon("ChevronRight"), Target = pickIcon("Target"), Heart = pickIcon("Heart"), Lightbulb = pickIcon("Lightbulb"), User = pickIcon("User"),
+  ChevronRight = pickIcon("ChevronRight"), ChevronLeft = pickIcon("ChevronLeft"), ChevronDown = pickIcon("ChevronDown"), Target = pickIcon("Target"),
+  Heart = pickIcon("Heart"), Lightbulb = pickIcon("Lightbulb"), User = pickIcon("User"),
   Building2 = pickIcon("Building2", "Building"), Clock = pickIcon("Clock"), Shield = pickIcon("Shield"), Upload = pickIcon("Upload"), FileText = pickIcon("FileText"),
   Camera = pickIcon("Camera"), Award = pickIcon("Award"), CheckCircle2 = pickIcon("CheckCircle2", "CircleCheck", "CheckCircle"), Sparkles = pickIcon("Sparkles"),
   Compass = pickIcon("Compass"), Send = pickIcon("Send"), Download = pickIcon("Download"), Printer = pickIcon("Printer"), ArrowRight = pickIcon("ArrowRight"),
@@ -101,7 +102,9 @@ const Anchor = pickIcon("Anchor"), Menu = pickIcon("Menu"), X = pickIcon("X"), C
   BookOpen = pickIcon("BookOpen", "Book"), Trophy = pickIcon("Trophy", "Award"), Repeat = pickIcon("Repeat", "RefreshCw"),
   ExternalLink = pickIcon("ExternalLink"), BarChart3 = pickIcon("BarChart3", "BarChart"), Inbox = pickIcon("Inbox", "Mail"),
   Flame = pickIcon("Flame", "Sparkles"), MailOpen = pickIcon("MailOpen", "Mail"), UserCheck = pickIcon("UserCheck", "User"),
-  MessageCircle = pickIcon("MessageCircle", "MessageSquare"), Linkedin = pickIcon("Linkedin", "Globe");
+  MessageCircle = pickIcon("MessageCircle", "MessageSquare"), Linkedin = pickIcon("Linkedin", "Globe"),
+  Vote = pickIcon("Vote", "CheckSquare"), Video = pickIcon("Video", "PlayCircle"), PlayCircle = pickIcon("PlayCircle", "Play"),
+  Link2 = pickIcon("Link2", "Link"), FolderOpen = pickIcon("FolderOpen", "Folder");
 
 // =====================================================================
 // À PERSONNALISER — textes, coordonnées et images par défaut
@@ -121,15 +124,7 @@ const CONTACT = {
   facebook: "https://www.facebook.com/ci.cge/",
 };
 
-// Partenaires : ajouter d'autres partenaires sur le même modèle.
-const PARTENAIRES = [
-  {
-    name: "Fondation Benianh International", short: "BENIANH", role: "Partenaire officiel", logo: null, // ex. "logos/benianh.png"
-    url: "https://fondationbenianh.org", // à vérifier
-    text: "Fondation ivoirienne créée en 1996 et reconnue d'utilité publique en 2012, elle œuvre pour la promotion de l'excellence et du mérite : bourses d'études, soutien aux associations d'étudiants et accompagnement des programmes de formation et d'emploi.",
-    tags: ["Bourses d'excellence", "Soutien aux associations étudiantes", "Formation & emploi"],
-  },
-];
+// Les partenaires se gèrent désormais depuis Administration → Partenaires.
 
 const PRESIDENT = {
   name: "NANGUI AKRE",
@@ -141,12 +136,14 @@ const ANNEE_CREATION = 1992;
 // Filières (bandeau défilant + profils des membres) : à adapter
 const FILIERES = ["Navigation maritime", "Mécanique navale", "Génie thermique", "Électromécanique", "Logistique & transport", "Administration maritime", "Sécurité maritime", "Hydrographie"];
 
-// Listes utilisées pour les opportunités et les actualités : à adapter
+// Listes utilisées dans le site : à adapter
 const JOB_TYPES = ["Stage", "Emploi", "Alternance", "Formation", "Bourse", "Concours"];
 const DOMAINES = ["Sciences nautiques", "Mécanique navale", "Génie thermique", "Électromécanique", "Offshore", "Logistique & transport", "Industrie", "Administration maritime", "Autre"];
 const ZONES = ["Côte d'Ivoire", "Afrique", "Europe", "International"];
 const NEWS_CATEGORIES = ["Vie de la CGE", "Annonce", "ARSTM", "Carrière", "Événement", "Interne"];
 const CONTACT_SUBJECTS = ["Renseignement", "Partenariat / entreprise", "Proposer une offre", "Adhésion", "Autre"];
+const DOC_CATEGORIES = ["Documents CGE", "Comptes rendus", "Guides pratiques", "Réglementation", "Formations", "Autre"];
+const PARTNER_ROLES = ["Partenaire officiel", "Partenaire", "Entreprise partenaire", "Institution", "Média"];
 
 const BUREAU = [
   { dept: "Présidence", members: [["NANGUI AKRE", "Président"], ["SYLLA YACOUBA", "Vice-Président"]] },
@@ -197,6 +194,7 @@ const TYPE_STYLES = {
 };
 
 const CV_MAX = 5 * 1048576;
+const DOC_MAX = 10 * 1048576;
 const CV_TYPES = { pdf: "application/pdf", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
 
 // =====================================================================
@@ -218,6 +216,16 @@ const newsFromDb = ({ members_only, ...r }) => ({ ...r, membersOnly: !!members_o
 const newsToDb = ({ id, created_at, membersOnly, ...r }) => ({ ...r, members_only: !!membersOnly });
 const jobToDb = ({ id, created_at, ...r }) => ({ ...r, cloture: r.cloture || null, lien: r.lien ? r.lien.trim() : null });
 const temoToDb = ({ id, created_at, author_id, ...r }) => ({ ...r, publie: !!r.publie, photo: r.photo || null });
+const partnerToDb = ({ id, created_at, ...r }) => ({ ...r, logo: r.logo || null, site: r.site ? r.site.trim() : null });
+const docToDb = ({ id, created_at, fichier, ...r }) => {
+  const type = r.type || "fichier";
+  const isFile = type === "fichier";
+  return {
+    ...r, type, members_only: !!r.members_only, categorie: type === "video" ? "Vidéos" : r.categorie,
+    fichier_path: isFile ? r.fichier_path || null : null, fichier_nom: isFile ? r.fichier_nom || null : null,
+    taille: isFile ? r.taille || null : null, lien: isFile ? null : (r.lien || "").trim(),
+  };
+};
 const appFromDb = (r) => ({ id: r.id, jobId: r.job_id, userId: r.user_id, title: r.title, company: r.company, status: r.status, applicant: r.applicant, email: r.email, cvName: r.cv_name, date: r.date });
 const regFromDb = (r) => ({ eventId: r.event_id, userId: r.user_id, name: r.name });
 
@@ -237,21 +245,20 @@ const authMessage = (error) => {
 
 // =====================================================================
 // IMAGES MODIFIABLES PAR L'ADMINISTRATEUR
-// Clés : "logo", "ecole:ENSEA", "partenaire:<nom>", "membre:<nom>"
+// Clés : "logo", "ecole:ENSEA", "membre:<nom>" (les logos des partenaires sont dans Administration → Partenaires)
 // =====================================================================
 const DEFAULT_IMAGES = {
   logo: LOGO_SRC,
   ...Object.fromEntries(Object.entries(LOGOS_ECOLES).map(([k, v]) => [`ecole:${k}`, v])),
-  ...Object.fromEntries(PARTENAIRES.map((p) => [`partenaire:${p.name}`, p.logo])),
   ...Object.fromEntries(Object.entries(PHOTOS_BUREAU).map(([k, v]) => [`membre:${k}`, v])),
 };
 const ImgCtx = createContext({ images: DEFAULT_IMAGES, overrides: {}, saveImage: async () => {} });
 const useImages = () => useContext(ImgCtx).images;
 
-// Réduit une image avant l'envoi (une photo de téléphone de 5 Mo devient ~100 Ko).
-const compressImage = (file, max = 700) => new Promise((resolve, reject) => {
+// Réduit une image avant l'envoi (une photo de téléphone de 5 Mo devient ~100 à 400 Ko).
+const compressImage = (file, max = 700, quality = 0.85) => new Promise((resolve, reject) => {
   if (!file || !file.type || !file.type.startsWith("image/")) return reject(new Error("Ce fichier n'est pas une image."));
-  if (file.size > 10 * 1048576) return reject(new Error("Image trop lourde (10 Mo maximum)."));
+  if (file.size > 15 * 1048576) return reject(new Error("Image trop lourde (15 Mo maximum)."));
   const url = URL.createObjectURL(file);
   const img = new window.Image();
   img.onload = () => {
@@ -262,30 +269,37 @@ const compressImage = (file, max = 700) => new Promise((resolve, reject) => {
     c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
     URL.revokeObjectURL(url);
     const type = /png|webp|svg|gif/.test(file.type) ? "image/png" : "image/jpeg";
-    c.toBlob((b) => (b ? resolve(b) : reject(new Error("Conversion de l'image impossible."))), type, 0.85);
+    c.toBlob((b) => (b ? resolve(b) : reject(new Error("Conversion de l'image impossible."))), type, quality);
   };
   img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Image illisible. Essayez une image JPG ou PNG.")); };
   img.src = url;
 });
 
 const slugify = (s) => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const safeFileName = (n) => String(n).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "_");
 
-// Envoie une image dans l'espace public "images" et renvoie son adresse.
-const uploadPublicImage = async (folder, blob) => {
+// Envoie une image dans l'espace public "images" et renvoie { url, path }.
+const uploadImage = async (folder, blob) => {
   const ext = blob.type === "image/png" ? "png" : "jpg";
   const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
   const { error } = await sb.storage.from("images").upload(path, blob, { contentType: blob.type });
   if (error) throw new Error("Envoi de l'image impossible : " + error.message);
-  return sb.storage.from("images").getPublicUrl(path).data.publicUrl;
+  return { url: sb.storage.from("images").getPublicUrl(path).data.publicUrl, path };
 };
+const uploadPublicImage = async (folder, blob) => (await uploadImage(folder, blob)).url;
 
-// Télécharge un CV privé grâce à un lien temporaire (valable 2 minutes).
-const downloadCV = async (cv, notify) => {
-  if (!cv?.path) return notify && notify("CV introuvable.", "error");
-  const { data, error } = await sb.storage.from("cvs").createSignedUrl(cv.path, 120, { download: cv.name || true });
+// Télécharge un fichier privé grâce à un lien temporaire (valable 2 minutes).
+const downloadPrivate = async (bucket, path, name, notify) => {
+  if (!path) return notify && notify("Fichier introuvable.", "error");
+  const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 120, { download: name || true });
   if (error) return notify && notify("Téléchargement impossible : " + error.message, "error");
   window.location.href = data.signedUrl;
 };
+const downloadCV = (cv, notify) => downloadPrivate("cvs", cv?.path, cv?.name, notify);
+const downloadDoc = (d, notify) => downloadPrivate("documents", d?.fichier_path, d?.fichier_nom, notify);
+
+// Miniature d'une vidéo YouTube (si le lien en est une).
+const youtubeId = (url) => { const m = String(url || "").match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/); return m ? m[1] : null; };
 
 // =====================================================================
 // OUTILS
@@ -300,11 +314,22 @@ const fmtDate = (iso) => (iso ? new Date(String(iso).slice(0, 10) + "T12:00:00")
 const dayMonth = (iso) => { const d = new Date(iso + "T12:00:00"); return [d.getDate(), d.toLocaleDateString("fr-FR", { month: "short" }).replace(".", "")]; };
 // Nombre de jours entre aujourd'hui et la date (0 = aujourd'hui, négatif = passé).
 const daysUntil = (iso) => { const t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((new Date(String(iso).slice(0, 10) + "T00:00:00") - t) / 86400000); };
-const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
-const fileSize = (b) => (b > 1048576 ? (b / 1048576).toFixed(1) + " Mo" : Math.round(b / 1024) + " Ko");
+const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const todayISO = () => isoDate(new Date());
+const isoOffset = (days) => { const d = new Date(); d.setDate(d.getDate() + days); return isoDate(d); };
+const fileSize = (b) => (!b ? "" : b > 1048576 ? (b / 1048576).toFixed(1) + " Mo" : Math.round(b / 1024) + " Ko");
 const isExpired = (j) => !!j.cloture && daysUntil(j.cloture) < 0;
+const isOpenPoll = (s) => !s.cloture || daysUntil(s.cloture) >= 0;
 // Tri des offres : celles qui ferment bientôt d'abord, puis celles sans date limite.
 const byDeadline = (a, b) => (a.cloture && b.cloture ? a.cloture.localeCompare(b.cloture) : a.cloture ? -1 : b.cloture ? 1 : 0);
+// Vrai si la date "a" est plus récente que "b".
+const newer = (a, b) => !!a && new Date(a) > new Date(b);
+
+// Pastilles « Nouveau » : on retient dans le navigateur la date de la dernière visite de chaque rubrique.
+const SEEN_KEY = "cge-arstm:vu";
+const readSeen = () => { try { return JSON.parse(window.localStorage.getItem(SEEN_KEY)) || {}; } catch (e) { return {}; } };
+const writeSeen = (s) => { try { window.localStorage.setItem(SEEN_KEY, JSON.stringify(s)); } catch (e) { /* navigateur sans stockage : tant pis */ } };
+const TRACKED = ["actualites", "evenements", "opportunites", "mediatheque"];
 
 function completion(p) {
   const checks = [p.photo, p.prenoms && p.nom, p.telephone, p.email, p.filiere, p.promotion, p.ville, p.bio, p.titre, p.objectif,
@@ -329,7 +354,7 @@ function useCountUp(target, duration = 1600) {
 function SafeImg({ src, alt, className, fallback }) {
   const [failed, setFailed] = useState(null);
   if (!src || failed === src) return fallback;
-  return <img src={src} alt={alt} onError={() => setFailed(src)} className={className} />;
+  return <img src={src} alt={alt} onError={() => setFailed(src)} className={className} loading="lazy" />;
 }
 
 // Bouton à double clic : le premier clic demande confirmation, le second exécute.
@@ -340,6 +365,8 @@ function ConfirmButton({ onConfirm, children, className = "", confirmLabel = "Co
     ? <button onClick={() => { setArmed(false); onConfirm(); }} className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold whitespace-nowrap">{confirmLabel}</button>
     : <button onClick={() => setArmed(true)} className={className} aria-label={ariaLabel} title={ariaLabel}>{children}</button>;
 }
+
+const NewBadge = ({ className = "" }) => <span className={`inline-flex items-center px-2 py-0.5 rounded-full bg-orange-600 text-white text-xs font-bold ${className}`}>Nouveau</span>;
 
 const Logo = ({ size = "w-11 h-11" }) => {
   const images = useImages();
@@ -358,6 +385,13 @@ const MemberPhoto = ({ name, size = "w-20 h-20", text = "text-xl", gradient = "f
   const images = useImages();
   return <SafeImg src={images[`membre:${name}`]} alt={name} className={`${size} rounded-full object-cover ${className}`}
     fallback={<div className={`${size} ${text} rounded-full bg-gradient-to-br ${gradient} text-white font-extrabold flex items-center justify-center ${className}`}>{initials(name)}</div>} />;
+};
+
+// Logo d'un partenaire (ou son sigle s'il n'y a pas de logo).
+const PartnerLogo = ({ p, className = "max-h-36 object-contain", fallbackCls = "w-36 h-36 text-lg" }) => {
+  const images = useImages();
+  return <SafeImg src={p.logo || images[`partenaire:${p.nom}`]} alt={`Logo ${p.nom}`} className={className}
+    fallback={<div className={`${fallbackCls} rounded-3xl bg-gradient-to-br from-orange-500 to-orange-700 text-white flex items-center justify-center font-extrabold tracking-wider shadow-lg text-center p-2`}>{p.sigle || initials(p.nom)}</div>} />;
 };
 
 const Avatar = ({ photo, name, size = "w-12 h-12", text = "text-base" }) =>
@@ -477,6 +511,87 @@ function TestimonialCard({ t }) {
   );
 }
 
+// Sondage : formulaire de vote, puis résultats (si le bureau les rend publics).
+function PollCard({ poll, myVote, counts, onVote }) {
+  const open = isOpenPoll(poll);
+  const voted = myVote !== undefined && myVote !== null;
+  const [choice, setChoice] = useState(voted ? myVote : null);
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const showForm = open && (!voted || editing);
+  const total = counts ? counts.reduce((a, b) => a + b, 0) : 0;
+  const submit = async () => {
+    if (choice === null) return;
+    setBusy(true);
+    const ok = await onVote(poll, choice);
+    setBusy(false);
+    if (ok) setEditing(false);
+  };
+  return (
+    <div className="bg-white rounded-3xl p-6 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <p className="font-bold text-slate-900 text-lg leading-snug">{poll.question}</p>
+        <span className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-full font-semibold ${open ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"}`}>{open ? (poll.cloture ? `Jusqu'au ${fmtDate(poll.cloture)}` : "Ouvert") : "Clos"}</span>
+      </div>
+      {showForm ? (
+        <div className="mt-4 space-y-2">
+          {poll.options.map((o, i) => (
+            <label key={i} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition ${choice === i ? "border-orange-500 bg-orange-50" : "border-slate-200 hover:border-orange-300"}`}>
+              <input type="radio" name={`poll-${poll.id}`} checked={choice === i} onChange={() => setChoice(i)} className="accent-orange-600" />
+              <span className="text-sm text-slate-800">{o}</span>
+            </label>
+          ))}
+          <div className="flex justify-end gap-2 pt-1">
+            {editing && <button onClick={() => { setEditing(false); setChoice(myVote); }} className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-sm">Annuler</button>}
+            <button disabled={choice === null || busy} onClick={submit} className="px-5 py-2 rounded-xl bg-orange-600 text-white text-sm font-semibold hover:bg-orange-700 disabled:opacity-50">{busy ? "Envoi..." : voted ? "Modifier mon vote" : "Voter"}</button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {counts ? poll.options.map((o, i) => {
+            const n = counts[i] || 0;
+            const p = total ? Math.round((n * 100) / total) : 0;
+            return (
+              <div key={i}>
+                <div className="flex justify-between gap-3 text-sm"><span className={myVote === i ? "font-bold text-orange-700" : "text-slate-700"}>{o}{myVote === i && " (votre choix)"}</span><span className="font-semibold text-slate-900">{p} %</span></div>
+                <div className="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" style={{ width: `${p}%` }} /></div>
+              </div>
+            );
+          }) : <p className="text-sm text-slate-500">{voted ? "Merci pour votre vote ! Les résultats seront communiqués par le bureau." : "Ce sondage est clos."}</p>}
+          {counts && <p className="text-xs text-slate-400">{total} participant{total > 1 ? "s" : ""}</p>}
+          {open && voted && <button onClick={() => setEditing(true)} className="text-sm text-orange-600 font-semibold">Modifier mon vote</button>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Visionneuse de photos plein écran (flèches du clavier pour naviguer, Échap pour fermer).
+function Lightbox({ photos, index, onClose, onIndex }) {
+  const p = photos[index];
+  const prev = () => onIndex((index - 1 + photos.length) % photos.length);
+  const next = () => onIndex((index + 1) % photos.length);
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); if (e.key === "ArrowRight") next(); if (e.key === "ArrowLeft") prev(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [index, photos.length]);
+  if (!p) return null;
+  return (
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={onClose}>
+      <button onClick={onClose} className="absolute top-4 right-4 text-white opacity-80 hover:opacity-100" aria-label="Fermer"><X size={30} /></button>
+      <img src={p.url} alt={p.legende || p.album} className="max-h-[80vh] max-w-full object-contain rounded-lg shadow-2xl" onClick={(e) => e.stopPropagation()} />
+      <p className="text-white text-sm mt-4 text-center max-w-2xl" onClick={(e) => e.stopPropagation()}>{p.legende && <span className="font-semibold">{p.legende} · </span>}<span className="opacity-60">{index + 1} / {photos.length}</span></p>
+      {photos.length > 1 && (
+        <>
+          <button onClick={(e) => { e.stopPropagation(); prev(); }} className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white bg-opacity-15 hover:bg-opacity-30 text-white flex items-center justify-center" aria-label="Photo précédente"><ChevronLeft size={26} /></button>
+          <button onClick={(e) => { e.stopPropagation(); next(); }} className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white bg-opacity-15 hover:bg-opacity-30 text-white flex items-center justify-center" aria-label="Photo suivante"><ChevronRight size={26} /></button>
+        </>
+      )}
+    </div>
+  );
+}
+
 // =====================================================================
 // APPLICATION
 // =====================================================================
@@ -486,6 +601,7 @@ function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [recovery, setRecovery] = useState(false);
   const [toast, setToast] = useState(null);
+  const [contactSubject, setContactSubject] = useState(CONTACT_SUBJECTS[0]);
   const toastTimer = useRef(null);
 
   const [session, setSession] = useState(null);
@@ -502,6 +618,12 @@ function App() {
   const [annuaire, setAnnuaire] = useState([]);       // anciens ayant un compte
   const [mentorats, setMentorats] = useState([]);     // mes demandes de mentorat (envoyées et reçues)
   const [temoignages, setTemoignages] = useState([]); // publiés + les miens (+ tous pour l'admin)
+  const [documents, setDocuments] = useState([]);
+  const [photos, setPhotos] = useState([]);
+  const [partenaires, setPartenaires] = useState([]);
+  const [sondages, setSondages] = useState([]);
+  const [votes, setVotes] = useState([]);             // mes votes (tous les votes pour l'admin)
+  const [resultats, setResultats] = useState([]);
   const [applications, setApplications] = useState([]);
   const [registrations, setRegistrations] = useState([]);
   const [members, setMembers] = useState([]);         // admins uniquement
@@ -511,6 +633,9 @@ function App() {
   const [apercu, setApercu] = useState([]);           // aperçu public des opportunités
   const [imgOverrides, setImgOverrides] = useState({});
   const [newsFilter, setNewsFilter] = useState("Toutes");
+  const [seen, setSeen] = useState(readSeen);
+  const [baseline, setBaseline] = useState({});
+  const defaultSeen = useRef(new Date(Date.now() - 14 * 86400000).toISOString()).current;
   const loadId = useRef(0);
   const quietUntil = useRef(0);
   const busy = useRef(new Set());
@@ -562,7 +687,7 @@ function App() {
       }
       const active = !!myRow;
       const admin = active && myRow.role === "admin";
-      const [n, e, j, a, apps, regs, imgs, mem, st, ap, msgs, temo, ann, ment, mAll] = await Promise.all([
+      const [n, e, j, a, apps, regs, imgs, mem, st, ap, msgs, temo, ann, ment, mAll, docs, pics, parts, polls, vts, res] = await Promise.all([
         q(sb.from("news").select("*").order("date", { ascending: false })),
         q(sb.from("events").select("*").order("date")),
         active ? q(sb.from("jobs").select("*").order("created_at", { ascending: false })) : [],
@@ -578,6 +703,12 @@ function App() {
         active ? q(sb.rpc("annuaire_anciens")) : [],
         active ? q(sb.rpc("mes_mentorats")) : [],
         admin ? q(sb.from("mentorat").select("id, statut, created_at")) : [],
+        q(sb.from("documents").select("*").order("created_at", { ascending: false })),
+        q(sb.from("photos").select("*").order("date", { ascending: false }).order("created_at")),
+        q(sb.from("partenaires").select("*").order("ordre").order("created_at")),
+        active ? q(sb.from("sondages").select("*").order("created_at", { ascending: false })) : [],
+        active ? q(sb.from("votes").select("sondage_id, user_id, choix")) : [],
+        active ? q(sb.rpc("resultats_sondages")) : [],
       ]);
       if (id !== loadId.current) return;
       setMe(myRow);
@@ -589,6 +720,7 @@ function App() {
       setStats(st && !Array.isArray(st) ? st : {});
       setApercu(Array.isArray(ap) ? ap : []);
       setTemoignages(temo); setAnnuaire(ann); setMentorats(ment); setMentoratAll(mAll);
+      setDocuments(docs); setPhotos(pics); setPartenaires(parts); setSondages(polls); setVotes(vts); setResultats(res);
       if (errors.length) notify("Connexion à la base incomplète : " + errors[0].message, "error");
     } catch (err) {
       console.error(err);
@@ -605,8 +737,21 @@ function App() {
     if (link && images.logo) link.href = images.logo;
   }, [images.logo]);
 
-  const go = (p) => { setPage(p); setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  // ----- Navigation et pastilles « Nouveau » -----
+  const seenOf = (s) => seen[s] || defaultSeen;
+  const sinceFor = (s) => baseline[s] || seenOf(s);
+  const go = (p) => {
+    if (TRACKED.includes(p)) {
+      setBaseline((b) => ({ ...b, [p]: seenOf(p) }));
+      const next = { ...seen, [p]: new Date().toISOString() };
+      setSeen(next);
+      writeSeen(next);
+    }
+    setPage(p); setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const goContact = (subject) => { setContactSubject(subject || CONTACT_SUBJECTS[0]); go("contact"); };
   const openLogin = () => { setLoginOpen(true); setMenuOpen(false); };
+
   const user = me ? { id: me.id, name: accountName(me), role: me.role, email: me.email, type: profile.type } : null;
   const isAdmin = user?.role === "admin";
   const pct = completion(profile);
@@ -618,11 +763,16 @@ function App() {
   const myApplications = user ? applications.filter((a) => a.userId === user.id) : [];
   const myRegs = user ? registrations.filter((r) => r.userId === user.id).map((r) => r.eventId) : [];
 
-  const nav = [
-    ["accueil", "Accueil"], ["apropos", "À propos"], ["bureau", "Bureau"], ["actualites", "Actualités"],
-    ["evenements", "Événements"], ["opportunites", "Opportunités"], ["alumni", "Anciens"], ["contact", "Contact"],
-    ...(isAdmin ? [["admin", `Administration${adminAlerts ? ` (${adminAlerts})` : ""}`]] : []),
-  ];
+  // Sondages
+  const myVoteOf = (id) => { const v = votes.find((x) => x.sondage_id === id && x.user_id === user?.id); return v ? v.choix : undefined; };
+  const countsFor = (id) => {
+    const rows = resultats.filter((r) => r.sondage_id === id);
+    if (!rows.length) return null;
+    const poll = sondages.find((s) => s.id === id);
+    return (poll?.options || []).map((_, i) => Number(rows.find((r) => r.choix === i)?.nb || 0));
+  };
+  const openPolls = sondages.filter(isOpenPoll);
+  const pollsToVote = user ? openPolls.filter((s) => myVoteOf(s.id) === undefined) : [];
 
   const visibleNews = [...news].sort((a, b) => b.date.localeCompare(a.date));
   const sortedEvents = [...events].sort((a, b) => a.date.localeCompare(b.date));
@@ -631,6 +781,21 @@ function App() {
   const nextEvent = upcoming[0];
   const categories = ["Toutes", ...new Set(visibleNews.map((n) => n.category))];
   const openJobs = jobs.filter((j) => !isExpired(j));
+  const official = partenaires.filter((p) => p.role === "Partenaire officiel");
+
+  const newCounts = {
+    actualites: visibleNews.filter((n) => newer(n.created_at, seenOf("actualites"))).length + pollsToVote.length,
+    evenements: upcoming.filter((e) => newer(e.created_at, seenOf("evenements"))).length,
+    opportunites: user ? openJobs.filter((j) => newer(j.created_at, seenOf("opportunites"))).length : 0,
+    mediatheque: documents.filter((d) => newer(d.created_at, seenOf("mediatheque"))).length
+      + new Set(photos.filter((p) => newer(p.created_at, seenOf("mediatheque"))).map((p) => p.album)).size,
+  };
+
+  const navMain = [["actualites", "Actualités"], ["evenements", "Événements"], ["opportunites", "Opportunités"], ["alumni", "Anciens"], ["mediatheque", "Médiathèque"], ["contact", "Contact"]];
+  const navAsso = [["apropos", "À propos"], ["bureau", "Le bureau"], ["partenaires", "Partenaires"]];
+  const adminNav = isAdmin ? [["admin", `Administration${adminAlerts ? ` (${adminAlerts})` : ""}`]] : [];
+  const NavCount = ({ id }) => (newCounts[id] > 0 && page !== id ? <span className="ml-1 min-w-5 h-5 px-1.5 rounded-full bg-orange-600 text-white text-xs font-bold inline-flex items-center justify-center">{newCounts[id]}</span> : null);
+
   // Pour les membres, on utilise la liste complète (toujours à jour) ; pour les visiteurs, l'aperçu public.
   const homeOpps = user ? [...openJobs].slice(0, 4) : apercu;
   const homeStats = [
@@ -743,6 +908,17 @@ function App() {
     });
   };
 
+  // ----- Sondages -----
+  const vote = async (poll, choix) => {
+    const { error } = await sb.from("votes").upsert({ sondage_id: poll.id, user_id: user.id, choix }, { onConflict: "sondage_id,user_id" });
+    if (error) { notify("Vote impossible : " + error.message, "error"); return false; }
+    setVotes((list) => [...list.filter((v) => !(v.sondage_id === poll.id && v.user_id === user.id)), { sondage_id: poll.id, user_id: user.id, choix }]);
+    const { data } = await sb.rpc("resultats_sondages");
+    if (data) setResultats(data);
+    notify("Merci pour votre vote !");
+    return true;
+  };
+
   // ----- Mentorat -----
   const refreshMentorats = async () => {
     const { data, error } = await sb.rpc("mes_mentorats");
@@ -786,6 +962,17 @@ function App() {
 
   if (firstLoad) return <FullLoader />;
 
+  const navBtn = (id, label) => (
+    <button key={id} onClick={() => go(id)} className={`relative px-2.5 py-2 text-sm font-medium transition whitespace-nowrap inline-flex items-center ${page === id ? "text-orange-600" : "text-slate-600 hover:text-slate-900"}`}>
+      {label}<NavCount id={id} />
+      {page === id && <span className="absolute left-2.5 right-2.5 -bottom-0.5 h-0.5 rounded-full bg-orange-600" />}
+    </button>
+  );
+  const mobileBtn = (id, label) => (
+    <button key={id} onClick={() => go(id)} className={`text-left px-3 py-3 rounded-lg flex items-center ${page === id ? "text-orange-600 bg-orange-50 font-semibold" : "text-slate-700"}`}>{label}<NavCount id={id} /></button>
+  );
+  const assoActive = navAsso.some(([id]) => id === page);
+
   return (
     <ImgCtx.Provider value={{ images, overrides: imgOverrides, saveImage }}>
     <div className="min-h-screen bg-stone-50 text-slate-800 font-sans">
@@ -806,12 +993,19 @@ function App() {
             </div>
           </button>
           <nav className="hidden xl:flex items-center gap-0.5">
-            {nav.map(([id, label]) => (
-              <button key={id} onClick={() => go(id)} className={`relative px-2.5 py-2 text-sm font-medium transition whitespace-nowrap ${page === id ? "text-orange-600" : "text-slate-600 hover:text-slate-900"}`}>
-                {label}
-                {page === id && <span className="absolute left-2.5 right-2.5 -bottom-0.5 h-0.5 rounded-full bg-orange-600" />}
-              </button>
-            ))}
+            {navBtn("accueil", "Accueil")}
+            <div className="relative group">
+              <button className={`px-2.5 py-2 text-sm font-medium inline-flex items-center gap-1 transition ${assoActive ? "text-orange-600" : "text-slate-600 hover:text-slate-900"}`}>L'association <ChevronDown size={14} /></button>
+              <div className="absolute left-0 top-full pt-2 hidden group-hover:block group-focus-within:block">
+                <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-2 w-48">
+                  {navAsso.map(([id, label]) => (
+                    <button key={id} onClick={() => { go(id); if (document.activeElement) document.activeElement.blur(); }} className={`block w-full text-left px-3 py-2 rounded-lg text-sm transition ${page === id ? "bg-orange-50 text-orange-600 font-semibold" : "text-slate-700 hover:bg-orange-50"}`}>{label}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            {navMain.map(([id, label]) => navBtn(id, label))}
+            {adminNav.map(([id, label]) => navBtn(id, label))}
           </nav>
           <div className="flex items-center gap-2">
             {user ? (
@@ -828,14 +1022,19 @@ function App() {
                 <User size={16} /> Espace membre
               </button>
             )}
-            <button onClick={() => setMenuOpen(!menuOpen)} className="xl:hidden p-2" aria-label="Menu">{menuOpen ? <X /> : <Menu />}</button>
+            <button onClick={() => setMenuOpen(!menuOpen)} className="xl:hidden p-2 relative" aria-label="Menu">
+              {menuOpen ? <X /> : <Menu />}
+              {!menuOpen && Object.values(newCounts).some((n) => n > 0) && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-orange-600" />}
+            </button>
           </div>
         </div>
         {menuOpen && (
           <div className="xl:hidden border-t border-slate-200 bg-white px-4 py-3 flex flex-col max-h-[80vh] overflow-y-auto">
-            {nav.map(([id, label]) => (
-              <button key={id} onClick={() => go(id)} className={`text-left px-3 py-3 rounded-lg ${page === id ? "text-orange-600 bg-orange-50 font-semibold" : "text-slate-700"}`}>{label}</button>
-            ))}
+            {mobileBtn("accueil", "Accueil")}
+            {navMain.map(([id, label]) => mobileBtn(id, label))}
+            <p className="px-3 pt-3 pb-1 text-xs font-bold uppercase tracking-wider text-slate-400">L'association</p>
+            {navAsso.map(([id, label]) => mobileBtn(id, label))}
+            {adminNav.map(([id, label]) => mobileBtn(id, label))}
             {user ? (
               <>
                 <button onClick={() => go("profil")} className="mt-2 px-3 py-3 rounded-lg bg-orange-600 text-white font-semibold text-left">Mon espace{receivedPending > 0 && ` (${receivedPending})`}</button>
@@ -849,7 +1048,8 @@ function App() {
       </header>
 
       <div key={page} className="fade-up">
-        {page === "accueil" && <Home go={go} user={user} openLogin={openLogin} visibleNews={visibleNews} upcoming={upcoming} nextEvent={nextEvent} pct={pct} homeOpps={homeOpps} homeStats={homeStats} testimonials={published} />}
+        {page === "accueil" && <Home go={go} user={user} openLogin={openLogin} visibleNews={visibleNews} upcoming={upcoming} nextEvent={nextEvent} homeOpps={homeOpps} homeStats={homeStats}
+          testimonials={published} partenaires={partenaires} pollsToVote={pollsToVote} countsFor={countsFor} onVote={vote} isNewsNew={(n) => newer(n.created_at, seenOf("actualites"))} />}
 
         {/* ===== À PROPOS ===== */}
         {page === "apropos" && (
@@ -869,6 +1069,16 @@ function App() {
                   <p className="text-slate-600 mt-3 leading-relaxed">La CGE ARSTM en est la section au sein de l'Académie Régionale des Sciences et Techniques de la Mer d'Abidjan.</p>
                   <p className="text-slate-600 mt-3 leading-relaxed">Parmi ses initiatives : la <strong>Journée de l'Ingénieur</strong>, lancée en 2013 pour rapprocher élèves ingénieurs et entreprises, ainsi que des visites en entreprise pour préparer l'insertion professionnelle.</p>
                 </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-5">
+                {[[Users, "Le bureau exécutif", "Les élèves élus qui font vivre la CGE cette année.", "bureau"], [Handshake, "Nos partenaires", "Les fondations, entreprises et institutions qui nous accompagnent.", "partenaires"]].map(([Icon, t, d, p]) => (
+                  <button key={p} onClick={() => go(p)} className="group text-left bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl transition flex items-center gap-5">
+                    <div className="w-14 h-14 flex-shrink-0 rounded-2xl bg-orange-100 flex items-center justify-center group-hover:bg-orange-600 transition"><Icon className="text-orange-600 group-hover:text-white transition" /></div>
+                    <div className="flex-1"><p className="font-bold text-slate-900 text-lg">{t}</p><p className="text-sm text-slate-500">{d}</p></div>
+                    <ArrowRight className="text-orange-600 group-hover:translate-x-1 transition" />
+                  </button>
+                ))}
               </div>
 
               <div>
@@ -961,20 +1171,30 @@ function App() {
           </>
         )}
 
-        {/* ===== ACTUALITÉS ===== */}
+        {/* ===== ACTUALITÉS (+ sondages pour les membres) ===== */}
         {page === "actualites" && (
           <>
             <PageHero kicker="Informations" title="Actualités" sub={user ? "Vous voyez aussi les actualités réservées aux membres." : "Connectez-vous pour voir aussi les actualités réservées aux membres."} icon={Megaphone} />
-            <main className="max-w-6xl mx-auto px-4 py-16">
-              <div className="flex flex-wrap gap-2 mb-8">
-                {categories.map((c) => (
-                  <button key={c} onClick={() => setNewsFilter(c)} className={`px-4 py-2 rounded-full text-sm font-semibold transition ${newsFilter === c ? "bg-orange-600 text-white shadow-md" : "bg-white text-slate-600 hover:text-orange-600 shadow-sm"}`}>{c}</button>
-                ))}
+            <main className="max-w-6xl mx-auto px-4 py-16 space-y-14">
+              {user && sondages.length > 0 && (
+                <div>
+                  <SectionTitle kicker="Sondages du bureau" title="Votre avis compte" />
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {[...openPolls, ...sondages.filter((s) => !isOpenPoll(s))].map((s) => <PollCard key={s.id} poll={s} myVote={myVoteOf(s.id)} counts={countsFor(s.id)} onVote={vote} />)}
+                  </div>
+                </div>
+              )}
+              <div>
+                <div className="flex flex-wrap gap-2 mb-8">
+                  {categories.map((c) => (
+                    <button key={c} onClick={() => setNewsFilter(c)} className={`px-4 py-2 rounded-full text-sm font-semibold transition ${newsFilter === c ? "bg-orange-600 text-white shadow-md" : "bg-white text-slate-600 hover:text-orange-600 shadow-sm"}`}>{c}</button>
+                  ))}
+                </div>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {visibleNews.filter((n) => newsFilter === "Toutes" || n.category === newsFilter).map((n, i) => <NewsCard key={n.id} n={n} i={i} isNew={newer(n.created_at, sinceFor("actualites"))} />)}
+                </div>
+                {visibleNews.length === 0 && <p className="text-slate-500 text-center">Aucune actualité pour le moment.</p>}
               </div>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {visibleNews.filter((n) => newsFilter === "Toutes" || n.category === newsFilter).map((n, i) => <NewsCard key={n.id} n={n} i={i} />)}
-              </div>
-              {visibleNews.length === 0 && <p className="text-slate-500 text-center">Aucune actualité pour le moment.</p>}
             </main>
           </>
         )}
@@ -995,6 +1215,7 @@ function App() {
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-xl font-bold text-slate-900">{e.title}</h3>
                         <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold">{left === 0 ? "Aujourd'hui" : `J-${left}`}</span>
+                        {newer(e.created_at, sinceFor("evenements")) && <NewBadge />}
                       </div>
                       <p className="text-sm text-slate-500 mt-1 flex flex-wrap gap-4">{e.time && <span className="flex items-center gap-1"><Clock size={14} /> {e.time}</span>}{e.place && <span className="flex items-center gap-1"><MapPin size={14} /> {e.place}</span>}</p>
                       <p className="text-slate-600 mt-2">{e.text}</p>
@@ -1021,6 +1242,7 @@ function App() {
                       </div>
                     ); })}
                   </div>
+                  {photos.length > 0 && <button onClick={() => go("mediatheque")} className="mt-5 text-orange-600 font-semibold flex items-center gap-1 hover:gap-2 transition-all">Revoir les photos de nos événements <ChevronRight size={18} /></button>}
                 </div>
               )}
             </main>
@@ -1029,7 +1251,7 @@ function App() {
 
         {/* ===== OPPORTUNITÉS ===== */}
         {page === "opportunites" && (
-          <OpportunitiesPage user={user} jobs={openJobs} apercu={apercu} myApplications={myApplications} pct={pct} apply={apply} go={go} openLogin={openLogin} />
+          <OpportunitiesPage user={user} jobs={openJobs} apercu={apercu} myApplications={myApplications} pct={pct} apply={apply} go={go} openLogin={openLogin} isNew={(j) => newer(j.created_at, sinceFor("opportunites"))} />
         )}
 
         {/* ===== RÉSEAU DES ANCIENS ===== */}
@@ -1038,8 +1260,14 @@ function App() {
             onRequest={sendMentorRequest} openLogin={openLogin} go={go} />
         )}
 
+        {/* ===== MÉDIATHÈQUE ===== */}
+        {page === "mediatheque" && <MediaPage user={user} documents={documents} photos={photos} notify={notify} openLogin={openLogin} since={sinceFor("mediatheque")} />}
+
+        {/* ===== PARTENAIRES ===== */}
+        {page === "partenaires" && <PartnersPage partenaires={partenaires} onBecomePartner={() => goContact("Partenariat / entreprise")} />}
+
         {/* ===== CONTACT ===== */}
-        {page === "contact" && <ContactPage user={user} profile={profile} notify={notify} />}
+        {page === "contact" && <ContactPage user={user} profile={profile} notify={notify} presetSubject={contactSubject} />}
 
         {/* ===== MON ESPACE ===== */}
         {page === "profil" && (user
@@ -1053,6 +1281,8 @@ function App() {
             <PageHero kicker="Réservé aux administrateurs" title="Administration" icon={Shield} />
             <AdminPanel news={news} setNews={setNews} events={events} setEvents={setEvents} jobs={jobs} setJobs={setJobs} alumni={alumni} setAlumni={setAlumni}
               temoignages={temoignages} setTemoignages={setTemoignages} mentoratAll={mentoratAll}
+              documents={documents} setDocuments={setDocuments} photos={photos} setPhotos={setPhotos}
+              partenaires={partenaires} setPartenaires={setPartenaires} sondages={sondages} setSondages={setSondages} resultats={resultats} countsFor={countsFor}
               applications={applications} setApplications={setApplications} registrations={registrations}
               members={members} setMembers={setMembers} messages={messages} setMessages={setMessages}
               currentId={user.id} notify={notify} reload={loadAll} />
@@ -1073,13 +1303,13 @@ function App() {
             {CONTACT.email && <a href={`mailto:${CONTACT.email}`} className="text-sm flex items-center gap-2 mt-2 hover:text-orange-400 transition"><Mail size={14} className="text-orange-500" /> {CONTACT.email}</a>}
             {CONTACT.telephone && <a href={`tel:${CONTACT.telephone.replace(/\s/g, "")}`} className="text-sm flex items-center gap-2 mt-2 hover:text-orange-400 transition"><Phone size={14} className="text-orange-500" /> {CONTACT.telephone}</a>}
             {CONTACT.facebook && <a href={CONTACT.facebook} target="_blank" rel="noopener noreferrer" className="text-sm flex items-center gap-2 mt-2 hover:text-orange-400 transition"><Globe size={14} className="text-orange-500" /> Facebook CGE Côte d'Ivoire</a>}
-            <button onClick={() => go("contact")} className="text-sm flex items-center gap-2 mt-2 hover:text-orange-400 transition"><Send size={14} className="text-orange-500" /> Nous écrire</button>
-            <p className="text-sm flex items-center gap-2 mt-4"><Handshake size={14} className="text-orange-500 flex-shrink-0" /> Partenaire officiel : Fondation Benianh International</p>
+            <button onClick={() => goContact()} className="text-sm flex items-center gap-2 mt-2 hover:text-orange-400 transition"><Send size={14} className="text-orange-500" /> Nous écrire</button>
+            {official[0] && <button onClick={() => go("partenaires")} className="text-sm flex items-center gap-2 mt-4 text-left hover:text-orange-400 transition"><Handshake size={14} className="text-orange-500 flex-shrink-0" /> Partenaire officiel : {official[0].nom}</button>}
           </div>
           <div>
             <h4 className="text-white font-semibold mb-4">Liens rapides</h4>
             <div className="flex flex-col gap-2 text-sm">
-              {nav.slice(1, 8).map(([id, label]) => <button key={id} onClick={() => go(id)} className="text-left hover:text-orange-400 transition">{label}</button>)}
+              {[...navAsso, ...navMain].map(([id, label]) => <button key={id} onClick={() => go(id)} className="text-left hover:text-orange-400 transition">{label}</button>)}
             </div>
           </div>
         </div>
@@ -1096,9 +1326,10 @@ function App() {
 // =====================================================================
 // PAGE D'ACCUEIL
 // =====================================================================
-function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct, homeOpps, homeStats, testimonials }) {
-  const images = useImages();
+function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, homeOpps, homeStats, testimonials, partenaires, pollsToVote, countsFor, onVote, isNewsNew }) {
   const left = nextEvent ? daysUntil(nextEvent.date) : null;
+  const official = partenaires.filter((p) => p.role === "Partenaire officiel");
+  const others = partenaires.filter((p) => p.role !== "Partenaire officiel");
   return (
     <>
       <section className="relative text-white overflow-hidden" style={{ background: NAVY }}>
@@ -1156,6 +1387,15 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct, home
         </div>
       </section>
 
+      {pollsToVote.length > 0 && (
+        <section className="max-w-6xl mx-auto px-4 pt-20">
+          <SectionTitle kicker="Sondage du bureau" title="Votre avis compte" action="Tous les sondages" onAction={() => go("actualites")} />
+          <div className="grid md:grid-cols-2 gap-6">
+            {pollsToVote.slice(0, 2).map((s) => <PollCard key={s.id} poll={s} counts={countsFor(s.id)} onVote={onVote} />)}
+          </div>
+        </section>
+      )}
+
       {/* OPPORTUNITÉS DU MOMENT */}
       <section className="max-w-6xl mx-auto px-4 pt-20">
         <SectionTitle kicker="Ne les ratez pas" title="Opportunités du moment" action="Toutes les opportunités" onAction={() => go("opportunites")} />
@@ -1194,7 +1434,7 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct, home
       <section className="max-w-6xl mx-auto px-4 pt-20">
         <SectionTitle kicker="En ce moment" title="Dernières actualités" action="Tout voir" onAction={() => go("actualites")} />
         <div className="grid md:grid-cols-3 gap-6">
-          {visibleNews.slice(0, 3).map((n, i) => <NewsCard key={n.id} n={n} i={i} />)}
+          {visibleNews.slice(0, 3).map((n, i) => <NewsCard key={n.id} n={n} i={i} isNew={isNewsNew(n)} />)}
         </div>
       </section>
 
@@ -1240,28 +1480,22 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct, home
         </div>
       </section>
 
-      {/* PARTENAIRE OFFICIEL */}
-      <section className="max-w-6xl mx-auto px-4 pb-16">
-        <div className="text-center max-w-2xl mx-auto mb-10">
-          <p className="text-orange-600 font-bold text-sm uppercase tracking-widest">Ils nous accompagnent</p>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mt-2">Notre partenaire officiel</h2>
-        </div>
-        {PARTENAIRES.map((p) => (
-          <div key={p.name} className="bg-white rounded-3xl shadow-xl overflow-hidden grid md:grid-cols-3 hover:shadow-2xl transition duration-300">
-            <div className="flex items-center justify-center p-10 bg-gradient-to-br from-orange-50 to-amber-100">
-              <SafeImg src={images[`partenaire:${p.name}`]} alt={`Logo ${p.name}`} className="max-h-36 object-contain"
-                fallback={<div className="w-36 h-36 rounded-3xl bg-gradient-to-br from-orange-500 to-orange-700 text-white flex items-center justify-center text-lg font-extrabold tracking-wider shadow-lg">{p.short}</div>} />
+      {/* PARTENAIRES */}
+      {partenaires.length > 0 && (
+        <section className="max-w-6xl mx-auto px-4 pb-16">
+          <SectionTitle kicker="Ils nous accompagnent" title={official.length ? (official.length > 1 ? "Nos partenaires officiels" : "Notre partenaire officiel") : "Nos partenaires"} action="Tous nos partenaires" onAction={() => go("partenaires")} />
+          <div className="space-y-6">{official.map((p) => <PartnerFeature key={p.id} p={p} />)}</div>
+          {others.length > 0 && (
+            <div className="mt-8 bg-white rounded-3xl shadow-sm p-6 flex flex-wrap items-center justify-center gap-8">
+              {others.map((p) => (
+                <button key={p.id} onClick={() => go("partenaires")} title={p.nom} className="opacity-80 hover:opacity-100 transition">
+                  <PartnerLogo p={p} className="h-14 max-w-[9rem] object-contain" fallbackCls="w-14 h-14 text-xs" />
+                </button>
+              ))}
             </div>
-            <div className="md:col-span-2 p-8 md:p-10">
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-bold uppercase tracking-wider"><Handshake size={14} /> {p.role}</span>
-              <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 mt-4">{p.name}</h3>
-              <p className="text-slate-600 mt-3 leading-relaxed">{p.text}</p>
-              <div className="flex flex-wrap gap-2 mt-5">{p.tags.map((t) => <span key={t} className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium">{t}</span>)}</div>
-              {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-6 text-orange-600 font-semibold hover:gap-3 transition-all">Découvrir la fondation <ArrowRight size={18} /></a>}
-            </div>
-          </div>
-        ))}
-      </section>
+          )}
+        </section>
+      )}
 
       <section className="max-w-6xl mx-auto px-4 pb-20">
         <div className="relative rounded-3xl overflow-hidden p-10 md:p-14 text-white shadow-2xl bg-gradient-to-br from-orange-500 via-orange-600 to-orange-800">
@@ -1279,7 +1513,7 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct, home
   );
 }
 
-function NewsCard({ n, i }) {
+function NewsCard({ n, i, isNew }) {
   const icons = [Newspaper, Megaphone, Briefcase, Sparkles];
   const Icon = icons[i % icons.length];
   return (
@@ -1287,6 +1521,7 @@ function NewsCard({ n, i }) {
       <div className={`relative h-36 bg-gradient-to-br ${CARD_GRADIENTS[i % 4]} flex items-center justify-center overflow-hidden`}>
         <Icon size={56} className="text-white opacity-90 group-hover:scale-125 transition duration-500" />
         <div className="absolute -right-8 -bottom-8 w-32 h-32 rounded-full bg-white opacity-10" />
+        {isNew && <NewBadge className="absolute top-3 left-3 shadow" />}
         {n.membersOnly && <span className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-slate-900 text-white text-xs font-semibold flex items-center gap-1"><Lock size={11} /> Membres</span>}
       </div>
       <div className="p-6 flex-1 flex flex-col">
@@ -1295,7 +1530,7 @@ function NewsCard({ n, i }) {
           <span className="text-slate-500">{fmtDate(n.date)}</span>
         </div>
         <h3 className="text-lg font-bold text-slate-900 mt-3 group-hover:text-orange-600 transition">{n.title}</h3>
-        <p className="text-slate-600 text-sm mt-2">{n.text}</p>
+        <p className="text-slate-600 text-sm mt-2 whitespace-pre-line">{n.text}</p>
       </div>
     </article>
   );
@@ -1304,13 +1539,14 @@ function NewsCard({ n, i }) {
 // =====================================================================
 // OPPORTUNITÉS
 // =====================================================================
-function JobCard({ j, app, onApply }) {
+function JobCard({ j, app, onApply, isNew }) {
   const [grad, Icon] = TYPE_STYLES[j.type] || TYPE_STYLES.Stage;
   return (
     <div className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl transition flex flex-col md:flex-row md:items-center gap-5">
       <div className={`w-14 h-14 flex-shrink-0 rounded-2xl bg-gradient-to-br ${grad} flex items-center justify-center shadow-md`}><Icon className="text-white" /></div>
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap gap-2 text-xs font-semibold">
+          {isNew && <NewBadge />}
           <TypeBadge type={j.type} />
           {j.domaine && <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600">{j.domaine}</span>}
           {j.zone && <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600">{j.zone}</span>}
@@ -1322,7 +1558,7 @@ function JobCard({ j, app, onApply }) {
           {j.company && <span className="flex items-center gap-1"><Building2 size={14} /> {j.company}</span>}
           {j.place && <span className="flex items-center gap-1"><MapPin size={14} /> {j.place}</span>}
         </p>
-        {j.text && <p className="text-slate-600 text-sm mt-2">{j.text}</p>}
+        {j.text && <p className="text-slate-600 text-sm mt-2 whitespace-pre-line">{j.text}</p>}
         <div className="mt-3"><Deadline date={j.cloture} /></div>
       </div>
       <div className="flex flex-col gap-2 md:items-end">
@@ -1337,7 +1573,7 @@ function JobCard({ j, app, onApply }) {
   );
 }
 
-function OpportunitiesPage({ user, jobs, apercu, myApplications, pct, apply, go, openLogin }) {
+function OpportunitiesPage({ user, jobs, apercu, myApplications, pct, apply, go, openLogin, isNew }) {
   const [type, setType] = useState("Tous");
   const [domaine, setDomaine] = useState("");
   const [zone, setZone] = useState("");
@@ -1381,8 +1617,6 @@ function OpportunitiesPage({ user, jobs, apercu, myApplications, pct, apply, go,
                 <button onClick={() => go("profil")} className="px-4 py-2 rounded-xl bg-amber-500 text-white font-semibold text-sm">Compléter mon profil</button>
               </div>
             )}
-
-            {/* Filtres */}
             <div className="bg-white rounded-3xl shadow-sm p-5 space-y-4">
               <div className="flex flex-wrap gap-2">
                 {["Tous", ...typesPresent].map((t) => {
@@ -1413,8 +1647,7 @@ function OpportunitiesPage({ user, jobs, apercu, myApplications, pct, apply, go,
                 </div>
               )}
             </div>
-
-            {filtered.map((j) => <JobCard key={j.id} j={j} app={myApplications.find((a) => a.jobId === j.id)} onApply={apply} />)}
+            {filtered.map((j) => <JobCard key={j.id} j={j} app={myApplications.find((a) => a.jobId === j.id)} onApply={apply} isNew={isNew(j)} />)}
             {jobs.length === 0 && <p className="text-slate-500 text-center py-8">Aucune opportunité ouverte pour le moment. Revenez bientôt !</p>}
             {jobs.length > 0 && filtered.length === 0 && <p className="text-slate-500 text-center py-8">Aucune opportunité ne correspond à ces filtres.</p>}
           </div>
@@ -1561,13 +1794,211 @@ function MentorRequestModal({ mentor, profile, onClose, onSend }) {
 }
 
 // =====================================================================
+// MÉDIATHÈQUE : photos, documents, vidéos
+// =====================================================================
+function MediaPage({ user, documents, photos, notify, openLogin, since }) {
+  const [tab, setTab] = useState("photos");
+  const [album, setAlbum] = useState(null);
+  const [lightbox, setLightbox] = useState(null);
+  const [cat, setCat] = useState("Toutes");
+  const [q, setQ] = useState("");
+
+  const albums = Object.values(photos.reduce((acc, p) => {
+    if (!acc[p.album]) acc[p.album] = { nom: p.album, photos: [], date: p.date };
+    acc[p.album].photos.push(p);
+    if (p.date > acc[p.album].date) acc[p.album].date = p.date;
+    return acc;
+  }, {})).sort((a, b) => b.date.localeCompare(a.date));
+  const current = album && albums.find((a) => a.nom === album);
+  const files = documents.filter((d) => d.type !== "video");
+  const videos = documents.filter((d) => d.type === "video");
+  const cats = ["Toutes", ...new Set(files.map((d) => d.categorie))];
+  const shownFiles = files.filter((d) => (cat === "Toutes" || d.categorie === cat) && (!q || [d.titre, d.description].join(" ").toLowerCase().includes(q.toLowerCase())));
+  const openDoc = (d) => (d.type === "lien" ? window.open(d.lien, "_blank", "noopener") : downloadDoc(d, notify));
+  const tabs = [["photos", `Photos (${photos.length})`, Camera], ["documents", `Documents (${files.length})`, FileText], ["videos", `Vidéos (${videos.length})`, Video]];
+
+  return (
+    <>
+      <PageHero kicker="Souvenirs & ressources" title="Médiathèque" sub="Les photos de nos événements, les documents utiles et nos vidéos." icon={ImageIcon} />
+      <main className="max-w-6xl mx-auto px-4 py-16">
+        <div className="flex flex-wrap gap-2 mb-8">
+          {tabs.map(([k, l, I]) => (
+            <button key={k} onClick={() => { setTab(k); setAlbum(null); }} className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition ${tab === k ? "bg-orange-600 text-white shadow-md" : "bg-white text-slate-600 hover:text-orange-600 shadow-sm"}`}><I size={16} /> {l}</button>
+          ))}
+        </div>
+
+        {tab === "photos" && !current && (
+          albums.length === 0 ? <p className="text-slate-500 text-center py-10">Aucune photo pour le moment.</p> : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {albums.map((a) => (
+                <button key={a.nom} onClick={() => setAlbum(a.nom)} className="group text-left bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-1 transition duration-300">
+                  <div className="relative aspect-video bg-slate-100 overflow-hidden">
+                    <img src={a.photos[0].url} alt={a.nom} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                    <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black bg-opacity-60 text-white text-xs font-semibold flex items-center gap-1"><Camera size={12} /> {a.photos.length}</span>
+                    {a.photos.some((p) => newer(p.created_at, since)) && <NewBadge className="absolute top-3 left-3 shadow" />}
+                  </div>
+                  <div className="p-5"><p className="font-bold text-slate-900 group-hover:text-orange-600 transition">{a.nom}</p><p className="text-sm text-slate-500 mt-1">{fmtDate(a.date)}</p></div>
+                </button>
+              ))}
+            </div>
+          )
+        )}
+
+        {tab === "photos" && current && (
+          <div>
+            <button onClick={() => setAlbum(null)} className="mb-6 text-orange-600 font-semibold flex items-center gap-1 hover:gap-2 transition-all"><ChevronLeft size={18} /> Tous les albums</button>
+            <h2 className="text-2xl font-extrabold text-slate-900">{current.nom}</h2>
+            <p className="text-slate-500 mt-1 mb-6">{current.photos.length} photo{current.photos.length > 1 ? "s" : ""} · {fmtDate(current.date)}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {current.photos.map((p, i) => (
+                <button key={p.id} onClick={() => setLightbox(i)} className="group relative aspect-square rounded-2xl overflow-hidden bg-slate-100">
+                  <img src={p.url} alt={p.legende || current.nom} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition duration-500" />
+                  {p.legende && <span className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black to-transparent text-white text-xs text-left opacity-0 group-hover:opacity-100 transition">{p.legende}</span>}
+                </button>
+              ))}
+            </div>
+            {lightbox !== null && <Lightbox photos={current.photos} index={lightbox} onIndex={setLightbox} onClose={() => setLightbox(null)} />}
+          </div>
+        )}
+
+        {tab === "documents" && (
+          <div className="space-y-5">
+            {!user && (
+              <div className="rounded-2xl bg-sky-50 border border-sky-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm text-sky-900">
+                <span className="flex items-center gap-2"><Lock size={16} /> Certains documents sont réservés aux membres.</span>
+                <button onClick={openLogin} className="px-4 py-2 rounded-xl bg-white border border-sky-300 font-semibold">Se connecter</button>
+              </div>
+            )}
+            <div className="bg-white rounded-3xl shadow-sm p-5 flex flex-col md:flex-row gap-3">
+              <div className="flex flex-wrap gap-2">
+                {cats.map((c) => <button key={c} onClick={() => setCat(c)} className={`px-4 py-2 rounded-full text-sm font-semibold transition ${cat === c ? "bg-orange-600 text-white" : "bg-slate-100 text-slate-600 hover:text-orange-600"}`}>{c}</button>)}
+              </div>
+              <div className="relative flex-1 min-w-[12rem]">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un document..." className={inputCls + " mt-0 pl-10"} />
+              </div>
+            </div>
+            {shownFiles.map((d) => (
+              <div key={d.id} className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-lg transition flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="w-12 h-12 flex-shrink-0 rounded-xl bg-orange-100 flex items-center justify-center">{d.type === "lien" ? <Link2 className="text-orange-600" /> : <FileText className="text-orange-600" />}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-bold text-slate-900">{d.titre}</p>
+                    {newer(d.created_at, since) && <NewBadge />}
+                    {d.members_only && <span className="px-2 py-0.5 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center gap-1"><Lock size={10} /> Membres</span>}
+                  </div>
+                  {d.description && <p className="text-sm text-slate-600 mt-1">{d.description}</p>}
+                  <p className="text-xs text-slate-400 mt-1">{[d.categorie, d.type === "fichier" && fileSize(d.taille), fmtDate(d.created_at)].filter(Boolean).join(" · ")}</p>
+                </div>
+                <button onClick={() => openDoc(d)} className="px-4 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-semibold hover:bg-orange-700 flex items-center justify-center gap-2 whitespace-nowrap">
+                  {d.type === "lien" ? <><ExternalLink size={15} /> Ouvrir</> : <><Download size={15} /> Télécharger</>}
+                </button>
+              </div>
+            ))}
+            {shownFiles.length === 0 && <p className="text-slate-500 text-center py-8">{files.length ? "Aucun document ne correspond." : "Aucun document pour le moment."}</p>}
+          </div>
+        )}
+
+        {tab === "videos" && (
+          videos.length === 0 ? <p className="text-slate-500 text-center py-10">Aucune vidéo pour le moment.</p> : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {videos.map((v) => {
+                const yt = youtubeId(v.lien);
+                return (
+                  <a key={v.id} href={v.lien} target="_blank" rel="noopener noreferrer" className="group bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-1 transition duration-300">
+                    <div className="relative aspect-video overflow-hidden" style={yt ? {} : { background: NAVY }}>
+                      {yt && <img src={`https://img.youtube.com/vi/${yt}/hqdefault.jpg`} alt={v.titre} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20 group-hover:bg-opacity-30 transition"><PlayCircle size={56} className="text-white drop-shadow-lg" /></div>
+                      {newer(v.created_at, since) && <NewBadge className="absolute top-3 left-3 shadow" />}
+                      {v.members_only && <span className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-slate-900 text-white text-xs font-semibold flex items-center gap-1"><Lock size={11} /> Membres</span>}
+                    </div>
+                    <div className="p-5">
+                      <p className="font-bold text-slate-900 group-hover:text-orange-600 transition">{v.titre}</p>
+                      {v.description && <p className="text-sm text-slate-600 mt-1">{v.description}</p>}
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          )
+        )}
+      </main>
+    </>
+  );
+}
+
+// =====================================================================
+// PARTENAIRES
+// =====================================================================
+const splitTags = (s) => String(s || "").split(",").map((t) => t.trim()).filter(Boolean);
+
+function PartnerFeature({ p }) {
+  return (
+    <div className="bg-white rounded-3xl shadow-xl overflow-hidden grid md:grid-cols-3 hover:shadow-2xl transition duration-300">
+      <div className="flex items-center justify-center p-10 bg-gradient-to-br from-orange-50 to-amber-100"><PartnerLogo p={p} /></div>
+      <div className="md:col-span-2 p-8 md:p-10">
+        <div className="flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-bold uppercase tracking-wider"><Handshake size={14} /> {p.role}</span>
+          {p.depuis && <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">Depuis {p.depuis}</span>}
+        </div>
+        <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 mt-4">{p.nom}</h3>
+        {p.secteur && <p className="text-sm text-slate-500 mt-1">{p.secteur}</p>}
+        {p.description && <p className="text-slate-600 mt-3 leading-relaxed whitespace-pre-line">{p.description}</p>}
+        {splitTags(p.tags).length > 0 && <div className="flex flex-wrap gap-2 mt-5">{splitTags(p.tags).map((t) => <span key={t} className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium">{t}</span>)}</div>}
+        {p.site && <a href={p.site} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-6 text-orange-600 font-semibold hover:gap-3 transition-all">Visiter le site <ArrowRight size={18} /></a>}
+      </div>
+    </div>
+  );
+}
+
+function PartnersPage({ partenaires, onBecomePartner }) {
+  const official = partenaires.filter((p) => p.role === "Partenaire officiel");
+  const others = partenaires.filter((p) => p.role !== "Partenaire officiel");
+  return (
+    <>
+      <PageHero kicker="Ils nous accompagnent" title="Nos partenaires" sub="Fondations, entreprises et institutions qui soutiennent les élèves de l'ARSTM : stages, visites, conférences, bourses." icon={Handshake} />
+      <main className="max-w-6xl mx-auto px-4 py-16 space-y-12">
+        {official.length > 0 && <div className="space-y-6">{official.map((p) => <PartnerFeature key={p.id} p={p} />)}</div>}
+        {others.length > 0 && (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {others.map((p) => (
+              <div key={p.id} className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl transition flex flex-col">
+                <div className="h-24 flex items-center justify-center rounded-2xl bg-slate-50"><PartnerLogo p={p} className="max-h-20 max-w-full object-contain" fallbackCls="w-20 h-20 text-sm" /></div>
+                <div className="flex flex-wrap gap-2 mt-5">
+                  <span className="px-2.5 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-bold">{p.role}</span>
+                  {p.depuis && <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">Depuis {p.depuis}</span>}
+                </div>
+                <p className="font-bold text-slate-900 text-lg mt-3">{p.nom}</p>
+                {p.secteur && <p className="text-sm text-slate-500">{p.secteur}</p>}
+                {p.description && <p className="text-sm text-slate-600 mt-2">{p.description}</p>}
+                {splitTags(p.tags).length > 0 && <div className="flex flex-wrap gap-1.5 mt-3">{splitTags(p.tags).map((t) => <span key={t} className="px-2 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs">{t}</span>)}</div>}
+                {p.site && <a href={p.site} target="_blank" rel="noopener noreferrer" className="mt-auto pt-4 text-orange-600 text-sm font-semibold flex items-center gap-1">Visiter le site <ExternalLink size={13} /></a>}
+              </div>
+            ))}
+          </div>
+        )}
+        {partenaires.length === 0 && <p className="text-slate-500 text-center">La liste de nos partenaires arrive bientôt.</p>}
+        <div className="relative rounded-3xl overflow-hidden p-10 md:p-12 text-white shadow-2xl bg-gradient-to-br from-orange-500 via-orange-600 to-orange-800">
+          <Handshake size={200} strokeWidth={0.8} className="absolute -right-6 -bottom-8 opacity-20" />
+          <div className="relative max-w-xl">
+            <h2 className="text-3xl font-extrabold">Devenez partenaire de la CGE ARSTM</h2>
+            <p className="mt-3 text-orange-50">Recrutez nos futurs officiers et ingénieurs, faites connaître votre entreprise et soutenez la formation maritime en Afrique de l'Ouest.</p>
+            <button onClick={onBecomePartner} className="mt-6 px-6 py-3 rounded-xl bg-white text-orange-700 font-bold hover:shadow-xl transition flex items-center gap-2">Nous contacter <ArrowRight size={18} /></button>
+          </div>
+        </div>
+      </main>
+    </>
+  );
+}
+
+// =====================================================================
 // CONTACT
 // =====================================================================
-function ContactPage({ user, profile, notify }) {
+function ContactPage({ user, profile, notify, presetSubject }) {
   const init = {
     name: user ? [profile.prenoms, profile.nom].filter(Boolean).join(" ") : "",
     email: user ? profile.email || user.email || "" : "",
-    subject: CONTACT_SUBJECTS[0], body: "", website: "",
+    subject: presetSubject || CONTACT_SUBJECTS[0], body: "", website: "",
   };
   const [f, setF] = useState(init);
   const [busy, setBusy] = useState(false);
@@ -1751,7 +2182,6 @@ function MentoratTab({ profile, update, notify, mentorats, onUpdate, myTemoignag
   return (
     <div className="space-y-6">
       {isAncien && <AncienPanel profile={profile} update={update} notify={notify} />}
-
       {isAncien && (
         <Panel title={`Demandes reçues (${received.length})`} Icon={UserCheck}>
           {received.length === 0
@@ -1759,7 +2189,6 @@ function MentoratTab({ profile, update, notify, mentorats, onUpdate, myTemoignag
             : <ul className="space-y-4">{received.map((m) => <MentoratItem key={m.id} m={m} onUpdate={onUpdate} />)}</ul>}
         </Panel>
       )}
-
       <Panel title="Mes demandes de mentorat" Icon={Handshake}>
         {sent.length === 0 ? (
           <div className="text-center py-6">
@@ -1768,7 +2197,6 @@ function MentoratTab({ profile, update, notify, mentorats, onUpdate, myTemoignag
           </div>
         ) : <ul className="space-y-4">{sent.map((m) => <MentoratItem key={m.id} m={m} onUpdate={onUpdate} />)}</ul>}
       </Panel>
-
       {isAncien
         ? <TemoignagePanel mine={myTemoignages} onSubmit={onSubmitTemoignage} onDelete={onDeleteTemoignage} notify={notify} />
         : (
@@ -1845,7 +2273,6 @@ function AncienPanel({ profile, update, notify }) {
         <label className="block"><span className="text-xs font-semibold text-slate-600">Pays</span><input value={d.pays || ""} onChange={set("pays")} placeholder="ex. Côte d'Ivoire" className={inputCls} /></label>
       </div>
       <p className="text-xs text-slate-500 mt-2">La ville et le lien LinkedIn se règlent dans « Informations personnelles ».</p>
-
       <div className="mt-6 space-y-3">
         <label className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition ${d.annuaire !== false ? "border-orange-300 bg-orange-50" : "border-slate-200"}`}>
           <input type="checkbox" checked={d.annuaire !== false} onChange={(e) => setD({ ...d, annuaire: e.target.checked, mentor: e.target.checked ? d.mentor : false })} className="w-5 h-5 mt-0.5 accent-orange-600" />
@@ -1856,7 +2283,6 @@ function AncienPanel({ profile, update, notify }) {
           <span><span className="font-semibold text-slate-900 block">Je souhaite être mentor</span><span className="text-xs text-slate-500">Les élèves pourront vous envoyer une demande. Vous choisissez librement d'accepter ou non, et vous pouvez arrêter à tout moment.</span></span>
         </label>
       </div>
-
       {d.mentor && d.annuaire !== false && (
         <div className="mt-4 space-y-4">
           <label className="block"><span className="text-xs font-semibold text-slate-600">Sujets sur lesquels vous pouvez aider</span><input value={d.mentor_domaines || ""} onChange={set("mentor_domaines")} placeholder="ex. Mécanique navale, offshore, recherche de stage, travail à l'étranger" className={inputCls} /></label>
@@ -1895,7 +2321,7 @@ function TemoignagePanel({ mine, onSubmit, onDelete, notify }) {
                   <p className="font-semibold text-slate-900">{t.titre || "Mon parcours"}</p>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${t.publie ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{t.publie ? "Publié" : "En attente de validation"}</span>
                 </div>
-                <p className="text-sm text-slate-600 mt-1 line-clamp-2">{t.texte}</p>
+                <p className="text-sm text-slate-600 mt-1">{t.texte.length > 160 ? t.texte.slice(0, 160) + "…" : t.texte}</p>
               </div>
               {!t.publie && <ConfirmButton onConfirm={() => onDelete(t.id)} confirmLabel="Retirer ?" ariaLabel="Retirer ce témoignage" className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={16} /></ConfirmButton>}
             </li>
@@ -2175,8 +2601,7 @@ function CVTab({ uid, profile, update, notify, openPreview }) {
     if (!CV_TYPES[ext]) return notify("Format accepté : PDF, DOC ou DOCX.", "error");
     if (f.size > CV_MAX) return notify(`Fichier trop lourd (${fileSize(CV_MAX)} maximum).`, "error");
     setBusy(true);
-    const safe = f.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "_");
-    const path = `${uid}/${Date.now()}-${safe}`;
+    const path = `${uid}/${Date.now()}-${safeFileName(f.name)}`;
     const { error } = await sb.storage.from("cvs").upload(path, f, { contentType: CV_TYPES[ext] });
     if (error) { setBusy(false); return notify("Envoi du CV impossible : " + error.message, "error"); }
     const old = profile.cv?.path;
@@ -2459,7 +2884,8 @@ function NewPasswordModal({ onClose, notify }) {
 // =====================================================================
 // ADMINISTRATION
 // =====================================================================
-// Champs des formulaires : k = nom, type = text/date/url/select/textarea/checkbox/image, optional = facultatif
+// Champs des formulaires : k = nom, type = text/date/url/select/textarea/checkbox/image/file,
+// optional = facultatif, showIf = n'afficher le champ que dans certains cas.
 const ADMIN_SECTIONS = {
   news: {
     table: "news", fromDb: newsFromDb, toDb: newsToDb, label: "Actualités", icon: Newspaper,
@@ -2500,6 +2926,21 @@ const ADMIN_SECTIONS = {
     ],
     show: (i) => `${i.title}${i.company ? ` — ${i.company}` : ""}`,
   },
+  documents: {
+    table: "documents", fromDb: plainFromDb, toDb: docToDb, label: "Documents & vidéos", icon: FileText,
+    fields: [
+      { k: "titre", label: "Titre" },
+      { k: "type", label: "Type", type: "select", opts: ["fichier", "lien", "video"], labels: { fichier: "Fichier à télécharger", lien: "Lien vers un site", video: "Vidéo (YouTube, Facebook…)" } },
+      { k: "categorie", label: "Catégorie", type: "select", opts: DOC_CATEGORIES, showIf: (f) => (f.type || "fichier") !== "video" },
+      { k: "fichier", label: "Fichier (10 Mo maximum)", type: "file", showIf: (f) => (f.type || "fichier") === "fichier" },
+      { k: "lien", label: "Adresse", type: "url", placeholder: "https://...", showIf: (f) => (f.type || "fichier") !== "fichier" },
+      { k: "description", label: "Description", type: "textarea", optional: true },
+      { k: "members_only", label: "Réservé aux membres", type: "checkbox" },
+    ],
+    validate: (f) => ((f.type || "fichier") === "fichier" && !f.fichier_path ? "Ajoutez un fichier avant d'enregistrer." : null),
+    onDelete: async (i) => { if (i.fichier_path) await sb.storage.from("documents").remove([i.fichier_path]); },
+    show: (i) => i.titre,
+  },
   temoignages: {
     table: "temoignages", fromDb: plainFromDb, toDb: temoToDb, label: "Témoignages", icon: Quote,
     fields: [
@@ -2514,6 +2955,21 @@ const ADMIN_SECTIONS = {
     ],
     show: (i) => `${i.nom}${i.titre ? ` — ${i.titre}` : ""}`,
   },
+  partenaires: {
+    table: "partenaires", fromDb: plainFromDb, toDb: partnerToDb, label: "Partenaires", icon: Handshake,
+    fields: [
+      { k: "nom", label: "Nom" },
+      { k: "role", label: "Type de partenariat", type: "select", opts: PARTNER_ROLES },
+      { k: "logo", label: "Logo (PNG à fond transparent idéalement)", type: "image", folder: "site/partenaires", shape: "logo", optional: true },
+      { k: "sigle", label: "Sigle (affiché s'il n'y a pas de logo)", optional: true },
+      { k: "secteur", label: "Secteur", optional: true, placeholder: "ex. Maritime / Offshore" },
+      { k: "description", label: "Présentation", type: "textarea", optional: true },
+      { k: "tags", label: "Ce que le partenariat apporte", optional: true, placeholder: "séparés par des virgules : Stages, Visites, Conférences" },
+      { k: "depuis", label: "Partenaire depuis", optional: true, placeholder: "ex. 2026" },
+      { k: "site", label: "Site web", type: "url", optional: true, placeholder: "https://..." },
+    ],
+    show: (i) => `${i.nom} — ${i.role}`,
+  },
   alumni: {
     table: "alumni", fromDb: plainFromDb, toDb: plainToDb, label: "Anciens (sans compte)", icon: GraduationCap,
     fields: [
@@ -2526,14 +2982,14 @@ const ADMIN_SECTIONS = {
   },
 };
 
-// Champ « image » des formulaires d'administration : envoi immédiat, puis l'adresse est gardée dans le formulaire.
-function ImageField({ label, value, onChange, folder, notify }) {
+// Champ « image » : envoi immédiat, puis l'adresse est gardée dans le formulaire.
+function ImageField({ label, value, onChange, folder, shape, notify }) {
   const [busy, setBusy] = useState(false);
   const onFile = async (e) => {
     const f = e.target.files && e.target.files[0]; e.target.value = "";
     if (!f) return;
     setBusy(true);
-    try { onChange(await uploadPublicImage(folder, await compressImage(f, 500))); }
+    try { onChange(await uploadPublicImage(folder, await compressImage(f, shape === "logo" ? 600 : 500))); }
     catch (err) { notify(err.message, "error"); }
     finally { setBusy(false); }
   };
@@ -2541,12 +2997,44 @@ function ImageField({ label, value, onChange, folder, notify }) {
     <div className="block">
       {label}
       <div className="mt-1 flex items-center gap-3">
-        <Avatar photo={value} name="?" size="w-14 h-14" />
+        {shape === "logo"
+          ? <div className="w-20 h-14 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden">{value ? <img src={value} alt="" className="max-w-full max-h-full object-contain" /> : <ImageIcon size={20} className="text-slate-300" />}</div>
+          : <Avatar photo={value} name="?" size="w-14 h-14" />}
         <label className={`cursor-pointer px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1 ${busy ? "bg-slate-200 text-slate-500" : "bg-orange-600 text-white hover:bg-orange-700"}`}>
-          <Camera size={14} /> {busy ? "Envoi..." : value ? "Changer" : "Ajouter une photo"}
+          <Camera size={14} /> {busy ? "Envoi..." : value ? "Changer" : "Ajouter"}
           <input type="file" accept="image/*" onChange={onFile} disabled={busy} className="hidden" />
         </label>
         {value && !busy && <button type="button" onClick={() => onChange(null)} className="px-3 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-300 text-slate-600">Retirer</button>}
+      </div>
+    </div>
+  );
+}
+
+// Champ « fichier » des documents : envoi immédiat dans l'espace privé « documents ».
+function FileField({ label, form, setForm, notify }) {
+  const [busy, setBusy] = useState(false);
+  const onFile = async (e) => {
+    const f = e.target.files && e.target.files[0]; e.target.value = "";
+    if (!f) return;
+    if (f.size > DOC_MAX) return notify(`Fichier trop lourd (${fileSize(DOC_MAX)} maximum).`, "error");
+    setBusy(true);
+    const path = `${Date.now()}-${safeFileName(f.name)}`;
+    const { error } = await sb.storage.from("documents").upload(path, f, { contentType: f.type || "application/octet-stream" });
+    setBusy(false);
+    if (error) return notify("Envoi du fichier impossible : " + error.message, "error");
+    setForm((prev) => ({ ...prev, fichier_path: path, fichier_nom: f.name, taille: f.size }));
+  };
+  return (
+    <div className="block">
+      {label}
+      <div className="mt-1 flex flex-wrap items-center gap-3 p-3 rounded-xl border border-dashed border-slate-300">
+        {form.fichier_nom
+          ? <span className="text-sm font-semibold text-slate-800 flex items-center gap-2 min-w-0"><FileText size={16} className="text-orange-600 flex-shrink-0" /> <span className="truncate">{form.fichier_nom}</span> <span className="text-slate-400 font-normal">{fileSize(form.taille)}</span></span>
+          : <span className="text-sm text-slate-400">Aucun fichier choisi</span>}
+        <label className={`cursor-pointer ml-auto px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1 ${busy ? "bg-slate-200 text-slate-500" : "bg-orange-600 text-white hover:bg-orange-700"}`}>
+          <Upload size={14} /> {busy ? "Envoi..." : form.fichier_nom ? "Remplacer" : "Choisir un fichier"}
+          <input type="file" onChange={onFile} disabled={busy} className="hidden" />
+        </label>
       </div>
     </div>
   );
@@ -2595,14 +3083,13 @@ function ImagesManager({ notify }) {
   const groups = [
     { title: "Logo de la CGE-ARSTM", hint: "Par défaut, le site utilise le fichier logos/cge-arstm.svg. Ne le remplacez ici que si nécessaire (l'image envoyée est convertie en PNG).", items: [["logo", "Logo CGE-ARSTM"]] },
     { title: "Logos des écoles membres", hint: "Affichés dans la page « À propos ».", items: Object.keys(LOGOS_ECOLES).map((k) => [`ecole:${k}`, k, ["ESA", "ESCAE", "ESI", "ESMG", "ESTP"].includes(k) ? "École de l'INP-HB" : null]) },
-    { title: "Logos des partenaires", hint: "Affichés dans la section « Notre partenaire officiel » de l'accueil.", items: PARTENAIRES.map((p) => [`partenaire:${p.name}`, p.name, p.role]) },
     { title: "Photos du bureau exécutif", hint: "Photo portrait, visage centré. Recadrée automatiquement en rond.", round: true, items: BUREAU.flatMap((g) => g.members.map(([n, r]) => [`membre:${n}`, n, `${r} · ${g.dept}`])) },
   ];
   return (
     <div className="space-y-6">
       <div className="rounded-2xl bg-sky-50 border border-sky-200 p-5 flex gap-3 text-sm text-sky-900">
         <Info size={20} className="flex-shrink-0 text-sky-600 mt-0.5" />
-        <p>Les images sont enregistrées en ligne et deviennent visibles immédiatement pour tous les visiteurs. Elles sont automatiquement réduites pour rester légères.</p>
+        <p>Les images sont enregistrées en ligne et deviennent visibles immédiatement pour tous les visiteurs. Les logos des partenaires se gèrent dans l'onglet « Partenaires ».</p>
       </div>
       {groups.map((g) => (
         <Panel key={g.title} title={g.title} Icon={ImageIcon}>
@@ -2616,8 +3103,180 @@ function ImagesManager({ notify }) {
   );
 }
 
+// Galerie : ajout de photos par album (plusieurs à la fois), légendes, suppression.
+function AdminGallery({ photos, setPhotos, notify }) {
+  const albumNames = [...new Set(photos.map((p) => p.album))];
+  const [album, setAlbum] = useState(albumNames[0] || "__new");
+  const [newAlbum, setNewAlbum] = useState("");
+  const [date, setDate] = useState(todayISO());
+  const [progress, setProgress] = useState(null);
+  const target = album === "__new" ? newAlbum.trim() : album;
+
+  const onFiles = async (e) => {
+    const files = Array.from(e.target.files || []); e.target.value = "";
+    if (!files.length) return;
+    if (!target) return notify("Choisissez un album ou donnez un nom au nouvel album.", "error");
+    const added = []; let fails = 0;
+    for (let i = 0; i < files.length; i++) {
+      setProgress(`${i + 1} / ${files.length}`);
+      try {
+        const { url, path } = await uploadImage(`site/galerie/${slugify(target)}`, await compressImage(files[i], 1600, 0.8));
+        const { data, error } = await sb.from("photos").insert({ album: target, url, path, date }).select().single();
+        if (error) throw error;
+        added.push(data);
+      } catch (err) { fails++; console.warn(err); }
+    }
+    setProgress(null);
+    setPhotos((list) => [...added, ...list]);
+    notify(fails ? `${added.length} photo(s) ajoutée(s), ${fails} échec(s).` : `${added.length} photo(s) ajoutée(s) à « ${target} ».`, fails ? "error" : "success");
+    if (album === "__new") { setAlbum(target); setNewAlbum(""); }
+  };
+  const removePhotos = async (list, msg) => {
+    const paths = list.map((p) => p.path).filter(Boolean);
+    const { error } = await sb.from("photos").delete().in("id", list.map((p) => p.id));
+    if (error) return notify("Suppression impossible : " + error.message, "error");
+    if (paths.length) await sb.storage.from("images").remove(paths);
+    const ids = new Set(list.map((p) => p.id));
+    setPhotos((all) => all.filter((p) => !ids.has(p.id)));
+    notify(msg);
+  };
+  const saveLegende = async (p, legende) => {
+    if (legende === p.legende) return;
+    const { error } = await sb.from("photos").update({ legende }).eq("id", p.id);
+    if (error) return notify("Légende non enregistrée : " + error.message, "error");
+    setPhotos((all) => all.map((x) => (x.id === p.id ? { ...x, legende } : x)));
+  };
+
+  return (
+    <div className="space-y-6">
+      <Panel title="Ajouter des photos" Icon={Camera}>
+        <div className="grid sm:grid-cols-3 gap-3">
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Album</span>
+            <select value={album} onChange={(e) => setAlbum(e.target.value)} className={inputCls}>
+              {albumNames.map((a) => <option key={a} value={a}>{a}</option>)}
+              <option value="__new">+ Nouvel album…</option>
+            </select>
+          </label>
+          {album === "__new" && <label className="block"><span className="text-xs font-semibold text-slate-600">Nom du nouvel album</span><input value={newAlbum} onChange={(e) => setNewAlbum(e.target.value)} placeholder="ex. Journée de l'Ingénieur 2026" className={inputCls} /></label>}
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Date de l'événement</span><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} /></label>
+        </div>
+        <label className={`mt-5 block border-2 border-dashed rounded-3xl p-8 text-center transition ${progress ? "border-slate-200 bg-slate-50 cursor-wait" : "cursor-pointer border-slate-300 hover:border-orange-500 hover:bg-orange-50"}`}>
+          <Upload className="mx-auto text-orange-600" size={32} />
+          <p className="font-bold text-slate-900 mt-2">{progress ? `Envoi en cours… ${progress}` : "Choisir des photos (plusieurs possibles)"}</p>
+          <p className="text-xs text-slate-500 mt-1">Elles sont automatiquement réduites (environ 300 Ko chacune). L'offre gratuite de Supabase offre 1 Go de stockage, soit quelques milliers de photos.</p>
+          <input type="file" accept="image/*" multiple onChange={onFiles} disabled={!!progress} className="hidden" />
+        </label>
+      </Panel>
+      {albumNames.map((a) => {
+        const list = photos.filter((p) => p.album === a);
+        return (
+          <Panel key={a} title={`${a} (${list.length})`} Icon={FolderOpen}
+            action={<ConfirmButton onConfirm={() => removePhotos(list, `Album « ${a} » supprimé.`)} confirmLabel="Tout supprimer ?" className="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50">Supprimer l'album</ConfirmButton>}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {list.map((p) => (
+                <div key={p.id} className="space-y-1.5">
+                  <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-100">
+                    <img src={p.url} alt={p.legende} loading="lazy" className="w-full h-full object-cover" />
+                    <div className="absolute top-1.5 right-1.5"><ConfirmButton onConfirm={() => removePhotos([p], "Photo supprimée.")} confirmLabel="Suppr. ?" ariaLabel="Supprimer la photo" className="w-8 h-8 rounded-lg bg-white bg-opacity-90 text-rose-600 flex items-center justify-center shadow"><Trash2 size={15} /></ConfirmButton></div>
+                  </div>
+                  <input defaultValue={p.legende} onBlur={(e) => saveLegende(p, e.target.value.trim())} placeholder="Légende…" className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                </div>
+              ))}
+            </div>
+          </Panel>
+        );
+      })}
+    </div>
+  );
+}
+
+// Sondages : création, résultats en direct, clôture.
+function AdminPolls({ sondages, setSondages, countsFor, notify }) {
+  const [question, setQuestion] = useState("");
+  const [opts, setOpts] = useState("");
+  const [cloture, setCloture] = useState("");
+  const [pub, setPub] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const create = async () => {
+    const options = opts.split("\n").map((s) => s.trim()).filter(Boolean);
+    if (question.trim().length < 5) return notify("La question est trop courte.", "error");
+    if (options.length < 2 || options.length > 10) return notify("Indiquez entre 2 et 10 réponses possibles, une par ligne.", "error");
+    setBusy(true);
+    const { data, error } = await sb.from("sondages").insert({ question: question.trim(), options, cloture: cloture || null, resultats_publics: pub }).select().single();
+    setBusy(false);
+    if (error) return notify("Création impossible : " + error.message, "error");
+    setSondages((list) => [data, ...list]);
+    setQuestion(""); setOpts(""); setCloture(""); setPub(true);
+    notify("Sondage publié ! Les membres le verront dans Actualités et sur l'accueil.");
+  };
+  const closeNow = async (s) => {
+    const { data, error } = await sb.from("sondages").update({ cloture: isoOffset(-1) }).eq("id", s.id).select().single();
+    if (error) return notify("Action impossible : " + error.message, "error");
+    setSondages((list) => list.map((x) => (x.id === s.id ? data : x)));
+    notify("Sondage clos.");
+  };
+  const remove = async (s) => {
+    const { error } = await sb.from("sondages").delete().eq("id", s.id);
+    if (error) return notify("Suppression impossible : " + error.message, "error");
+    setSondages((list) => list.filter((x) => x.id !== s.id));
+    notify("Sondage supprimé.");
+  };
+  return (
+    <div className="grid lg:grid-cols-2 gap-6">
+      <Panel title="Nouveau sondage" Icon={Plus}>
+        <div className="space-y-3">
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Question</span><input value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={300} placeholder="ex. Quelle formation voulez-vous en novembre ?" className={inputCls} /></label>
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Réponses possibles (une par ligne, de 2 à 10)</span>
+            <textarea rows={5} value={opts} onChange={(e) => setOpts(e.target.value)} placeholder={"Prise de parole\nCV & entretien\nLeadership\nAutoCAD"} className={inputCls} />
+          </label>
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Date de clôture <span className="font-normal text-slate-400">(facultatif)</span></span><input type="date" value={cloture} onChange={(e) => setCloture(e.target.value)} className={inputCls} /></label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={pub} onChange={(e) => setPub(e.target.checked)} className="w-4 h-4 accent-orange-600" /> Montrer les résultats aux membres après leur vote</label>
+          <button onClick={create} disabled={busy} className="w-full py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700 disabled:opacity-60">{busy ? "Publication..." : "Publier le sondage"}</button>
+        </div>
+      </Panel>
+      <Panel title={`Sondages (${sondages.length})`} Icon={Vote}>
+        {sondages.length === 0 ? <p className="text-sm text-slate-500">Aucun sondage pour le moment.</p> : (
+          <ul className="space-y-5">
+            {sondages.map((s) => {
+              const counts = countsFor(s.id) || s.options.map(() => 0);
+              const total = counts.reduce((a, b) => a + b, 0);
+              const open = isOpenPoll(s);
+              return (
+                <li key={s.id} className="p-4 rounded-2xl border border-slate-200">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold text-slate-900">{s.question}</p>
+                    <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full font-semibold ${open ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"}`}>{open ? "Ouvert" : "Clos"}</span>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {s.options.map((o, i) => {
+                      const p = total ? Math.round((counts[i] * 100) / total) : 0;
+                      return (
+                        <div key={i}>
+                          <div className="flex justify-between text-xs"><span className="text-slate-700">{o}</span><span className="font-semibold">{counts[i]} · {p} %</span></div>
+                          <div className="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-orange-500" style={{ width: `${p}%` }} /></div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
+                    <span className="text-xs text-slate-500">{total} vote{total > 1 ? "s" : ""}{s.cloture && ` · clôture ${fmtDate(s.cloture)}`}{!s.resultats_publics && " · résultats privés"}</span>
+                    <div className="flex gap-1">
+                      {open && <ConfirmButton onConfirm={() => closeNow(s)} confirmLabel="Clore ?" className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 text-slate-600">Clore</ConfirmButton>}
+                      <ConfirmButton onConfirm={() => remove(s)} confirmLabel="Supprimer ?" ariaLabel="Supprimer le sondage" className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={15} /></ConfirmButton>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Panel>
+    </div>
+  );
+}
+
 // Tableau de bord du bureau : les chiffres clés en un coup d'œil.
-function AdminDashboard({ members, jobs, applications, registrations, events, messages, temoignages, mentoratAll, onOpen }) {
+function AdminDashboard({ members, jobs, applications, registrations, events, messages, temoignages, mentoratAll, sondages, onOpen }) {
   const actifs = members.filter((m) => m.statut === "actif");
   const pending = members.filter((m) => m.statut === "en_attente").length;
   const anciens = actifs.filter((m) => m.type === "ancien").length;
@@ -2630,7 +3289,7 @@ function AdminDashboard({ members, jobs, applications, registrations, events, me
   const unread = messages.filter((m) => !m.lu).length;
   const temoPending = temoignages.filter((t) => !t.publie).length;
   const mentoratPending = mentoratAll.filter((m) => m.statut === "en_attente").length;
-  const mentoratActifs = mentoratAll.filter((m) => m.statut === "acceptee" || m.statut === "terminee").length;
+  const pollsOpen = sondages.filter(isOpenPoll).length;
   const closingSoon = open.filter((j) => j.cloture && daysUntil(j.cloture) <= 7).sort(byDeadline);
 
   const cards = [
@@ -2641,11 +3300,11 @@ function AdminDashboard({ members, jobs, applications, registrations, events, me
     [GraduationCap, anciens, "Anciens inscrits", () => onOpen("members", { type: "ancien" })],
     [Handshake, mentors, "Mentors disponibles", () => onOpen("members", { type: "ancien" })],
     [MessageCircle, mentoratPending, "Demandes de mentorat sans réponse"],
-    [UserCheck, mentoratActifs, "Mentorats acceptés"],
+    [Target, dispo, "Élèves disponibles pour un stage", () => onOpen("members", { dispo: true })],
     [Briefcase, open.length, "Opportunités ouvertes", () => onOpen("jobs")],
     [Send, applications.length, "Candidatures reçues", () => onOpen("applications")],
     [Trophy, retenues, "Candidatures retenues", () => onOpen("applications")],
-    [Target, dispo, "Élèves disponibles pour un stage", () => onOpen("members", { dispo: true })],
+    [Vote, pollsOpen, "Sondages ouverts", () => onOpen("sondages")],
   ];
 
   return (
@@ -2675,8 +3334,8 @@ function AdminDashboard({ members, jobs, applications, registrations, events, me
             </div>
           )}
         </Panel>
-        <Panel title="Offres qui ferment bientôt" Icon={Flame}>
-          {closingSoon.length === 0 ? <p className="text-sm text-slate-500">Aucune offre ne ferme dans les 7 prochains jours.</p> : (
+        <Panel title="À surveiller cette semaine" Icon={Flame}>
+          {closingSoon.length === 0 && insc === 0 ? <p className="text-sm text-slate-500">Rien d'urgent : aucune offre ne ferme dans les 7 prochains jours.</p> : (
             <ul className="divide-y divide-slate-100">
               {closingSoon.map((j) => (
                 <li key={j.id} className="py-3 flex items-center justify-between gap-3">
@@ -2684,6 +3343,7 @@ function AdminDashboard({ members, jobs, applications, registrations, events, me
                   <Deadline date={j.cloture} />
                 </li>
               ))}
+              {insc > 0 && <li className="py-3 text-sm text-slate-700"><strong>{insc}</strong> inscription{insc > 1 ? "s" : ""} aux événements à venir.</li>}
             </ul>
           )}
         </Panel>
@@ -2692,12 +3352,12 @@ function AdminDashboard({ members, jobs, applications, registrations, events, me
   );
 }
 
-function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, setAlumni, temoignages, setTemoignages, mentoratAll, applications, setApplications, registrations, members, setMembers, messages, setMessages, currentId, notify, reload }) {
+function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, setAlumni, temoignages, setTemoignages, mentoratAll, documents, setDocuments, photos, setPhotos, partenaires, setPartenaires, sondages, setSondages, countsFor, applications, setApplications, registrations, members, setMembers, messages, setMessages, currentId, notify, reload }) {
   const [tab, setTab] = useState("dashboard");
   const [form, setForm] = useState({});
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [viewing, setViewing] = useState(null); // { profile, name } pour afficher le CV d'un membre
+  const [viewing, setViewing] = useState(null);
   const [mq, setMq] = useState("");
   const [mf, setMf] = useState("");
   const [mt, setMt] = useState("");
@@ -2705,7 +3365,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
   const [bulkPromo, setBulkPromo] = useState("");
   const formRef = useRef(null);
 
-  const store = { news: [news, setNews], events: [events, setEvents], jobs: [jobs, setJobs], temoignages: [temoignages, setTemoignages], alumni: [alumni, setAlumni] };
+  const store = { news: [news, setNews], events: [events, setEvents], jobs: [jobs, setJobs], documents: [documents, setDocuments], temoignages: [temoignages, setTemoignages], partenaires: [partenaires, setPartenaires], alumni: [alumni, setAlumni] };
   const cfg = ADMIN_SECTIONS[tab];
   const [items, setItems] = store[tab] || [[], () => {}];
   const pending = members.filter((m) => m.statut === "en_attente");
@@ -2715,24 +3375,23 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
   const shownMembers = active.filter((m) =>
     (!mf || m.filiere === mf) && (!mt || (m.type || "eleve") === mt) && (!dispoOnly || m.data?.disponible)
     && (!mq || [accountName(m), m.email, m.matricule, m.promotion, m.data?.objectif, m.data?.poste, m.data?.entreprise].join(" ").toLowerCase().includes(mq.toLowerCase())));
-  // Promotions qui comptent encore des élèves (pour le passage en anciens en fin d'année)
   const elevePromos = [...new Set(active.filter((m) => m.type !== "ancien" && m.promotion).map((m) => m.promotion))].sort();
+  const visibleField = (f) => !f.showIf || f.showIf(form);
 
   const resetForm = () => { setForm({}); setEditingId(null); };
   const switchTab = (k) => { setTab(k); resetForm(); };
-  const openFromDashboard = (k, opts = {}) => {
-    if (opts.dispo) setDispoOnly(true);
-    if (opts.type) setMt(opts.type);
-    switchTab(k);
-  };
+  const openFromDashboard = (k, opts = {}) => { if (opts.dispo) setDispoOnly(true); if (opts.type) setMt(opts.type); switchTab(k); };
 
-  // ----- Contenus (actualités, événements, opportunités, témoignages, anciens) -----
+  // ----- Contenus génériques -----
   const save = async () => {
     if (saving) return;
-    const missing = cfg.fields.find((f) => !f.optional && !["checkbox", "select", "image"].includes(f.type) && !String(form[f.k] ?? "").trim());
+    const fields = cfg.fields.filter(visibleField);
+    const missing = fields.find((f) => !f.optional && !["checkbox", "select", "image", "file"].includes(f.type) && !String(form[f.k] ?? "").trim());
     if (missing) return notify(`Le champ « ${missing.label} » est obligatoire.`, "error");
-    const badUrl = cfg.fields.find((f) => f.type === "url" && form[f.k] && !/^https?:\/\//i.test(String(form[f.k]).trim()));
+    const badUrl = fields.find((f) => f.type === "url" && form[f.k] && !/^https?:\/\//i.test(String(form[f.k]).trim()));
     if (badUrl) return notify(`Le champ « ${badUrl.label} » doit commencer par https://`, "error");
+    const custom = cfg.validate && cfg.validate(form);
+    if (custom) return notify(custom, "error");
     const defaults = {}; cfg.fields.forEach((f) => { if (f.type === "select") defaults[f.k] = f.opts[0]; });
     const payload = cfg.toDb({ ...defaults, ...form });
     setSaving(true);
@@ -2753,6 +3412,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
   const remove = async (item) => {
     const { error } = await sb.from(cfg.table).delete().eq("id", item.id);
     if (error) return notify("Suppression impossible : " + error.message, "error");
+    if (cfg.onDelete) await cfg.onDelete(item);
     setItems((list) => list.filter((x) => x.id !== item.id));
     if (editingId === item.id) resetForm();
     notify("Supprimé.");
@@ -2792,15 +3452,13 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
     setViewing({ profile: rowToProfile(m), name: accountName(m) });
   };
 
-  // ----- Candidatures -----
+  // ----- Candidatures et messages -----
   const setStatus = async (id, status) => {
     const { error } = await sb.from("applications").update({ status }).eq("id", id);
     if (error) return notify("Mise à jour impossible : " + error.message, "error");
     setApplications((list) => list.map((a) => (a.id === id ? { ...a, status } : a)));
     notify(`Statut mis à jour : ${status}`);
   };
-
-  // ----- Messages -----
   const toggleRead = async (m) => {
     const { error } = await sb.from("messages").update({ lu: !m.lu }).eq("id", m.id);
     if (error) return notify("Mise à jour impossible : " + error.message, "error");
@@ -2813,9 +3471,13 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
     notify("Message supprimé.");
   };
 
+  const sec = (k) => [k, k === "temoignages" && temoPending ? { ...ADMIN_SECTIONS[k], label: `${ADMIN_SECTIONS[k].label} (${temoPending})` } : ADMIN_SECTIONS[k]];
   const tabs = [
     ["dashboard", { label: "Tableau de bord", icon: BarChart3 }],
-    ...Object.entries(ADMIN_SECTIONS).map(([k, s]) => [k, k === "temoignages" && temoPending ? { ...s, label: `${s.label} (${temoPending})` } : s]),
+    sec("news"), sec("events"), sec("jobs"), sec("documents"),
+    ["galerie", { label: "Galerie photos", icon: Camera }],
+    ["sondages", { label: "Sondages", icon: Vote }],
+    sec("temoignages"), sec("partenaires"), sec("alumni"),
     ["members", { label: `Membres${pending.length ? ` (${pending.length} en attente)` : ""}`, icon: Users }],
     ["applications", { label: `Candidatures (${applications.length})`, icon: Send }],
     ["messages", { label: `Messages${unread ? ` (${unread})` : ""}`, icon: Inbox }],
@@ -2823,14 +3485,23 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
   ];
 
   const renderField = (f) => {
+    if (!visibleField(f)) return null;
     const val = form[f.k];
     const lab = <span className="text-xs font-semibold text-slate-600">{f.label}{f.optional && <span className="font-normal text-slate-400"> (facultatif)</span>}</span>;
-    if (f.type === "image") return <ImageField key={f.k} label={lab} value={val} folder={f.folder} notify={notify} onChange={(url) => setForm((prev) => ({ ...prev, [f.k]: url }))} />;
+    if (f.type === "image") return <ImageField key={f.k} label={lab} value={val} folder={f.folder} shape={f.shape} notify={notify} onChange={(url) => setForm((prev) => ({ ...prev, [f.k]: url }))} />;
+    if (f.type === "file") return <FileField key={f.k} label={lab} form={form} setForm={setForm} notify={notify} />;
     const onChange = (e) => setForm({ ...form, [f.k]: f.type === "checkbox" ? e.target.checked : e.target.value });
     if (f.type === "checkbox") return <label key={f.k} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!val} onChange={onChange} className="w-4 h-4 accent-orange-600" /> {f.label}</label>;
-    if (f.type === "select") return <label key={f.k} className="block">{lab}<select value={val ?? f.opts[0]} onChange={onChange} className={inputCls}>{f.opts.map((o) => <option key={o} value={o}>{o || "— Non précisé —"}</option>)}</select></label>;
+    if (f.type === "select") return <label key={f.k} className="block">{lab}<select value={val ?? f.opts[0]} onChange={onChange} className={inputCls}>{f.opts.map((o) => <option key={o} value={o}>{(f.labels && f.labels[o]) || o || "— Non précisé —"}</option>)}</select></label>;
     if (f.type === "textarea") return <label key={f.k} className="block">{lab}<textarea rows={f.k === "texte" ? 6 : 3} value={val ?? ""} onChange={onChange} placeholder={f.placeholder} className={inputCls} /></label>;
     return <label key={f.k} className="block">{lab}<input type={f.type === "url" ? "url" : f.type || "text"} value={val ?? ""} onChange={onChange} placeholder={f.placeholder} className={inputCls} /></label>;
+  };
+
+  const hints = {
+    temoignages: "Les anciens inscrits peuvent aussi proposer leur témoignage depuis leur espace : il apparaît alors ici, à valider.",
+    alumni: "Pour les anciens qui n'ont pas (encore) de compte. Ceux qui s'inscrivent sur le site apparaissent automatiquement dans l'annuaire.",
+    documents: "Les fichiers sont privés : chaque téléchargement passe par un lien temporaire. Les documents « réservés aux membres » sont invisibles pour les visiteurs.",
+    partenaires: "Les partenaires « officiels » sont mis en avant sur l'accueil ; les autres apparaissent en logos et sur la page Partenaires.",
   };
 
   return (
@@ -2846,9 +3517,10 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
         ); })}
       </div>
 
-      {tab === "dashboard" && <AdminDashboard members={members} jobs={jobs} applications={applications} registrations={registrations} events={events} messages={messages} temoignages={temoignages} mentoratAll={mentoratAll} onOpen={openFromDashboard} />}
-
+      {tab === "dashboard" && <AdminDashboard members={members} jobs={jobs} applications={applications} registrations={registrations} events={events} messages={messages} temoignages={temoignages} mentoratAll={mentoratAll} sondages={sondages} onOpen={openFromDashboard} />}
       {tab === "images" && <ImagesManager notify={notify} />}
+      {tab === "galerie" && <AdminGallery photos={photos} setPhotos={setPhotos} notify={notify} />}
+      {tab === "sondages" && <AdminPolls sondages={sondages} setSondages={setSondages} countsFor={countsFor} notify={notify} />}
 
       {tab === "members" && (
         <div className="space-y-6">
@@ -2939,9 +3611,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                           <Shield size={14} /> {m.role === "admin" ? "Retirer admin" : "Nommer admin"}
                         </ConfirmButton>
                       )}
-                      {!self && (
-                        <ConfirmButton onConfirm={() => deleteMember(m, `Membre supprimé : ${accountName(m)}`)} confirmLabel="Supprimer ?" ariaLabel="Supprimer ce membre" className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={16} /></ConfirmButton>
-                      )}
+                      {!self && <ConfirmButton onConfirm={() => deleteMember(m, `Membre supprimé : ${accountName(m)}`)} confirmLabel="Supprimer ?" ariaLabel="Supprimer ce membre" className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={16} /></ConfirmButton>}
                     </div>
                   </li>
                 );
@@ -2984,7 +3654,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                 <li key={m.id} className={`p-5 rounded-2xl border transition ${m.lu ? "border-slate-200" : "border-orange-300 bg-orange-50"}`}>
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
                     <div>
-                      <p className="font-bold text-slate-900 flex flex-wrap items-center gap-2">{m.name} {!m.lu && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-600 text-white">Nouveau</span>}</p>
+                      <p className="font-bold text-slate-900 flex flex-wrap items-center gap-2">{m.name} {!m.lu && <NewBadge />}</p>
                       <p className="text-xs text-slate-500">{m.email} · {m.subject} · {fmtDate(m.created_at)}</p>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
@@ -3005,8 +3675,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
         <div className="grid lg:grid-cols-2 gap-6">
           <div ref={formRef} className="scroll-mt-24">
             <Panel title={editingId ? "Modifier" : "Ajouter"} Icon={editingId ? Pencil : Plus}>
-              {tab === "temoignages" && !editingId && <p className="text-sm text-slate-500 -mt-3 mb-4">Les anciens inscrits peuvent aussi proposer leur témoignage depuis leur espace : il apparaît alors ici, à valider.</p>}
-              {tab === "alumni" && <p className="text-sm text-slate-500 -mt-3 mb-4">Pour les anciens qui n'ont pas (encore) de compte. Ceux qui s'inscrivent sur le site apparaissent automatiquement dans l'annuaire.</p>}
+              {hints[tab] && !editingId && <p className="text-sm text-slate-500 -mt-3 mb-4">{hints[tab]}</p>}
               <div className="space-y-3">
                 {cfg.fields.map(renderField)}
                 <div className="flex gap-2 pt-1">
@@ -3028,6 +3697,8 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                       <span className={past ? "text-slate-400" : ""}>{cfg.show(i)}</span>
                       {count !== null && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-semibold whitespace-nowrap">{count} inscrit{count > 1 ? "s" : ""}</span>}
                       {past && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">{tab === "jobs" ? "clôturée" : "passé"}</span>}
+                      {tab === "documents" && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">{{ fichier: "fichier", lien: "lien", video: "vidéo" }[i.type] || i.type}</span>}
+                      {tab === "documents" && i.members_only && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-slate-900 text-white font-semibold">membres</span>}
                       {tab === "temoignages" && <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-semibold ${i.publie ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{i.publie ? "publié" : "à valider"}</span>}
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
