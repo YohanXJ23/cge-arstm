@@ -117,24 +117,165 @@ const Anchor = pickIcon("Anchor"), Menu = pickIcon("Menu"), X = pickIcon("X"), C
   Flame = pickIcon("Flame", "Sparkles"), MailOpen = pickIcon("MailOpen", "Mail"), UserCheck = pickIcon("UserCheck", "User"),
   MessageCircle = pickIcon("MessageCircle", "MessageSquare"), Linkedin = pickIcon("Linkedin", "Globe"),
   Vote = pickIcon("Vote", "CheckSquare"), Video = pickIcon("Video", "PlayCircle"), PlayCircle = pickIcon("PlayCircle", "Play"),
-  Link2 = pickIcon("Link2", "Link"), FolderOpen = pickIcon("FolderOpen", "Folder");
+  Link2 = pickIcon("Link2", "Link"), FolderOpen = pickIcon("FolderOpen", "Folder"),
+  HistoryIcon = pickIcon("History", "Clock"), SettingsIcon = pickIcon("Settings", "SlidersHorizontal"), UserCog = pickIcon("UserCog", "Shield"),
+  ArrowUp = pickIcon("ArrowUp", "ChevronUp"), ArrowDown = pickIcon("ArrowDown", "ChevronDown");
 
 // =====================================================================
-// Valeurs venant de config.js (avec une valeur de secours si une ligne manque)
+// Valeurs d'origine : fichier config.js. L'administrateur peut ensuite les modifier depuis le site
+// (Administration → Textes & réglages) : ses modifications sont gardées dans la base et passent devant.
 // =====================================================================
 const LOGO_SRC = CFG.LOGO_SRC || "logos/cge-arstm.svg";
 const LOGOS_ECOLES = CFG.LOGOS_ECOLES || {};
 const PHOTOS_BUREAU = CFG.PHOTOS_BUREAU || {};
-const CONTACT = { adresse: "", email: "", telephone: "", facebook: "", ...(CFG.CONTACT || {}) };
-const PRESIDENT = { name: "", message: "", ...(CFG.PRESIDENT || {}) };
-const MANDAT = CFG.MANDAT || "";
-const ANNEE_CREATION = Number(CFG.ANNEE_CREATION) || 1992;
-const FILIERES = CFG.FILIERES || [];
-const DOMAINES = CFG.DOMAINES || ["Autre"];
-const ZONES = CFG.ZONES || ["Côte d'Ivoire"];
-const NEWS_CATEGORIES = CFG.NEWS_CATEGORIES || ["Annonce"];
-const DOC_CATEGORIES = CFG.DOC_CATEGORIES || ["Autre"];
-const BUREAU = CFG.BUREAU || [];
+const copy = (v) => JSON.parse(JSON.stringify(v));
+const DEFAULTS = {
+  MANDAT: CFG.MANDAT || "",
+  PRESIDENT: { name: "", message: "", ...(CFG.PRESIDENT || {}) },
+  BUREAU: CFG.BUREAU || [],
+  CONTACT: { adresse: "", email: "", telephone: "", facebook: "", ...(CFG.CONTACT || {}) },
+  ANNEE_CREATION: Number(CFG.ANNEE_CREATION) || 1992,
+  FILIERES: CFG.FILIERES || [],
+  DOMAINES: CFG.DOMAINES || ["Autre"],
+  ZONES: CFG.ZONES || ["Côte d'Ivoire"],
+  NEWS_CATEGORIES: CFG.NEWS_CATEGORIES || ["Annonce"],
+  DOC_CATEGORIES: CFG.DOC_CATEGORIES || ["Autre"],
+};
+// Valeurs en vigueur : mises à jour « sur place » par applySettings pour que tout le site les voie.
+let MANDAT = DEFAULTS.MANDAT;
+let ANNEE_CREATION = DEFAULTS.ANNEE_CREATION;
+let TEXTES = {};
+const PRESIDENT = copy(DEFAULTS.PRESIDENT);
+const CONTACT = copy(DEFAULTS.CONTACT);
+const BUREAU = copy(DEFAULTS.BUREAU);
+const FILIERES = [...DEFAULTS.FILIERES];
+const DOMAINES = [...DEFAULTS.DOMAINES];
+const ZONES = [...DEFAULTS.ZONES];
+const NEWS_CATEGORIES = [...DEFAULTS.NEWS_CATEGORIES];
+const DOC_CATEGORIES = [...DEFAULTS.DOC_CATEGORIES];
+const fillArray = (target, v) => target.splice(0, target.length, ...v);
+const fillObject = (target, v) => { Object.keys(target).forEach((k) => delete target[k]); Object.assign(target, v); };
+const applySettings = (settings) => {
+  const pick = (k) => {
+    const v = settings[k], d = DEFAULTS[k];
+    return v === undefined || v === null || Array.isArray(v) !== Array.isArray(d) || typeof v !== typeof d ? d : v;
+  };
+  MANDAT = pick("MANDAT");
+  ANNEE_CREATION = Number(pick("ANNEE_CREATION")) || DEFAULTS.ANNEE_CREATION;
+  fillObject(PRESIDENT, { ...DEFAULTS.PRESIDENT, ...pick("PRESIDENT") });
+  fillObject(CONTACT, { ...DEFAULTS.CONTACT, ...pick("CONTACT") });
+  fillArray(BUREAU, copy(pick("BUREAU")));
+  [["FILIERES", FILIERES], ["DOMAINES", DOMAINES], ["ZONES", ZONES], ["NEWS_CATEGORIES", NEWS_CATEGORIES], ["DOC_CATEGORIES", DOC_CATEGORIES]]
+    .forEach(([k, arr]) => fillArray(arr, pick(k)));
+  TEXTES = Object.fromEntries(Object.entries(settings).filter(([k]) => k.startsWith("texte:")).map(([k, v]) => [k.slice(6), v]));
+};
+const SETTING_LABELS = {
+  MANDAT: "Mandat du bureau", PRESIDENT: "Président et son mot", BUREAU: "Bureau exécutif", CONTACT: "Coordonnées",
+  ANNEE_CREATION: "Année de création", FILIERES: "Filières", DOMAINES: "Domaines des opportunités", ZONES: "Zones des opportunités",
+  NEWS_CATEGORIES: "Catégories d'actualités", DOC_CATEGORIES: "Catégories de documents",
+};
+
+// Textes modifiables depuis le site : [clé, libellé dans l'administration, texte d'origine, texte long ?]
+const TEXT_GROUPS = [
+  { titre: "Page d'accueil", champs: [
+    ["accueil.titre", "Grand titre", "Unis pour naviguer vers"],
+    ["accueil.titre_couleur", "Fin du grand titre (en orange)", "l'excellence"],
+    ["accueil.sous_titre", "Phrase sous le titre", "Connecter les talents de l'ARSTM, créer des opportunités et construire ensemble l'avenir maritime.", true],
+    ["accueil.cta_titre", "Bandeau orange en bas de page : titre", "Votre profil, votre vitrine professionnelle"],
+    ["accueil.cta_texte", "Bandeau orange en bas de page : texte", "Renseignez vos informations, votre objectif et déposez votre CV. Postulez ensuite aux opportunités en un seul clic.", true],
+  ] },
+  { titre: "Page « À propos »", champs: [
+    ["apropos.creation", "Date de création (encadré orange)", "Mai 1992"],
+    ["apropos.creation_texte", "Phrase sous la date", "Plus de 30 ans au service des futurs ingénieurs"],
+    ["apropos.histoire_titre", "Titre de « Notre histoire »", "Une association nationale, une section ARSTM"],
+    ["apropos.histoire", "Notre histoire (une ligne vide entre deux paragraphes, **mots** pour mettre en gras)", "La Conférence des Grandes Écoles de Côte d'Ivoire est une association née en mai 1992 qui regroupe les ingénieurs de conception des grandes écoles publiques.\n\nLa CGE ARSTM en est la section au sein de l'Académie Régionale des Sciences et Techniques de la Mer d'Abidjan.\n\nParmi ses initiatives : la **Journée de l'Ingénieur**, lancée en 2013 pour rapprocher élèves ingénieurs et entreprises, ainsi que des visites en entreprise pour préparer l'insertion professionnelle.", true],
+    ["apropos.mission", "Notre mission", "Représenter les élèves, défendre leurs intérêts et améliorer leur quotidien à l'Académie.", true],
+    ["apropos.valeurs", "Nos valeurs", "Solidarité, excellence, respect et ouverture entre filières, promotions et nationalités.", true],
+    ["apropos.vision", "Notre vision", "Former une communauté soudée qui accompagne chaque élève jusqu'à son insertion professionnelle.", true],
+    ["apropos.calendrier", "« Une année avec la CGE » (une étape par ligne, sous la forme Mois | Activité)", "Octobre | Rentrée & assemblée générale\nNovembre | Conférences métiers & sport\nFévrier | Forum entreprises & stages\nJuin | Gala & remise des diplômes", true],
+  ] },
+  { titre: "Phrases d'introduction des pages", champs: [
+    ["intro:La CGE ARSTM", "À propos", "Section ARSTM de la Conférence des Grandes Écoles de Côte d'Ivoire, association des ingénieurs de conception des grandes écoles publiques.", true],
+    ["intro:Le Bureau Exécutif", "Le bureau", "Des élèves élus et engagés au service de leurs camarades."],
+    ["intro:Événements", "Événements", "Inscrivez-vous en un clic aux activités de la CGE."],
+    ["intro:Opportunités", "Opportunités", "Stages, emplois, alternances, formations, bourses et concours sélectionnés pour les élèves de l'ARSTM.", true],
+    ["intro:Les anciens de l'ARSTM", "Anciens", "Des parcours pour vous inspirer, un annuaire pour garder le lien et des mentors pour vous guider.", true],
+    ["intro:Médiathèque", "Médiathèque", "Les photos de nos événements, les documents utiles et nos vidéos."],
+    ["intro:Nos partenaires", "Partenaires", "Fondations, entreprises et institutions qui soutiennent les élèves de l'ARSTM : stages, visites, conférences, bourses.", true],
+    ["intro:Contact", "Contact", "Une question, une proposition de partenariat ou une offre à partager ? Le bureau vous répond.", true],
+  ] },
+  { titre: "Pied de page", champs: [
+    ["footer.description", "Présentation dans le pied de page", "Section ARSTM de la Conférence des Grandes Écoles de Côte d'Ivoire, association des ingénieurs de conception des grandes écoles publiques, créée en mai 1992.", true],
+  ] },
+];
+const TEXT_DEFAULTS = Object.fromEntries(TEXT_GROUPS.flatMap((g) => g.champs.map(([k, , d]) => [k, d])));
+// Texte en vigueur : celui de l'administrateur s'il existe, sinon le texte d'origine.
+const tx = (k, fallback = "") => { const v = TEXTES[k]; return typeof v === "string" && v.trim() ? v : TEXT_DEFAULTS[k] ?? fallback; };
+// Met en gras les passages écrits **comme ceci**.
+const rich = (s) => String(s || "").split("**").map((p, i) => (i % 2 ? <strong key={i}>{p}</strong> : p));
+const imageLabel = (key) => {
+  const k = String(key || "");
+  if (k === "logo") return "Logo de la CGE";
+  if (k.startsWith("ecole:")) return `Logo de l'école ${k.slice(6)}`;
+  if (k.startsWith("membre:")) return `Photo de ${k.slice(7)}`;
+  return k;
+};
+const settingLabel = (key) => {
+  const k = String(key || "");
+  if (k.startsWith("texte:")) {
+    const id = k.slice(6);
+    for (const g of TEXT_GROUPS) { const c = g.champs.find(([x]) => x === id); if (c) return `${g.titre} — ${c[1]}`; }
+    return id;
+  }
+  return SETTING_LABELS[k] || k;
+};
+
+// Droits que l'administrateur peut confier à un membre : [code, nom, ce que cela permet]
+const PERMISSIONS = [
+  ["news", "Actualités", "Publier, modifier et supprimer les actualités."],
+  ["events", "Événements", "Gérer l'agenda et voir les inscrits."],
+  ["jobs", "Opportunités", "Publier les offres de stage, d'emploi, de bourse…"],
+  ["candidatures", "Candidatures", "Suivre les candidatures et consulter les profils et CV des candidats."],
+  ["documents", "Documents & vidéos", "Ajouter des fichiers et des liens à la médiathèque."],
+  ["galerie", "Galerie photos", "Ajouter et supprimer des photos."],
+  ["sondages", "Sondages", "Créer et clore des sondages."],
+  ["temoignages", "Témoignages", "Valider et publier les témoignages des anciens."],
+  ["partenaires", "Partenaires", "Gérer la liste et les logos des partenaires."],
+  ["alumni", "Anciens sans compte", "Ajouter des anciens à l'annuaire."],
+  ["messages", "Messages", "Lire et traiter les messages du formulaire de contact."],
+  ["textes", "Textes, bureau & images", "Modifier les textes du site, le bureau, les coordonnées, les logos et les photos."],
+];
+const PERM_LABELS = Object.fromEntries(PERMISSIONS.map(([k, l]) => [k, l]));
+// Modèles rapides pour les postes du bureau (modifiables ensuite case par case).
+const PERM_PRESETS = [
+  ["Secrétariat", ["news", "events", "messages"]],
+  ["Communication", ["news", "galerie", "documents", "textes"]],
+  ["Affaires externes", ["jobs", "candidatures", "partenaires"]],
+  ["Organisation / projets", ["events", "sondages", "galerie"]],
+];
+// Journal d'activité : noms des rubriques et apparence des actions.
+const RUBRIQUES = {
+  news: "Actualités", events: "Événements", jobs: "Opportunités", documents: "Documents & vidéos", photos: "Galerie photos",
+  sondages: "Sondages", temoignages: "Témoignages", partenaires: "Partenaires", alumni: "Anciens sans compte", messages: "Messages",
+  applications: "Candidatures", membres: "Membres", site_settings: "Textes & réglages", site_images: "Images & logos", site: "Site",
+};
+const ACTIONS = {
+  connexion: ["Connexion", "bg-sky-100 text-sky-700"],
+  ajout: ["Ajout", "bg-emerald-100 text-emerald-700"],
+  modification: ["Modification", "bg-amber-100 text-amber-700"],
+  suppression: ["Suppression", "bg-rose-100 text-rose-700"],
+};
+const fmtDateTime = (iso) => (iso ? new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
+const ago = (iso) => {
+  if (!iso) return "jamais";
+  const m = Math.round((Date.now() - new Date(iso)) / 60000);
+  if (m < 1) return "à l'instant";
+  if (m < 60) return `il y a ${m} min`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `il y a ${h} h`;
+  const d = Math.round(h / 24);
+  return d < 30 ? `il y a ${d} j` : `le ${fmtDate(iso)}`;
+};
 
 // Listes liées au fonctionnement du site : elles restent ici car le code s'appuie sur leurs noms exacts.
 const JOB_TYPES = ["Stage", "Emploi", "Alternance", "Formation", "Bourse", "Concours"];
@@ -396,7 +537,7 @@ const PageHero = ({ kicker, title, sub, icon: Icon = Compass }) => (
     <div className="relative max-w-6xl mx-auto px-4 pt-14 pb-24 fade-up">
       <p className="text-orange-400 text-sm font-semibold uppercase tracking-widest">{kicker}</p>
       <h1 className="text-4xl md:text-5xl font-extrabold mt-2">{title}</h1>
-      {sub && <p className="text-slate-300 mt-3 max-w-2xl">{sub}</p>}
+      {tx("intro:" + title, sub) && <p className="text-slate-300 mt-3 max-w-2xl whitespace-pre-line">{tx("intro:" + title, sub)}</p>}
     </div>
     <Waves />
   </section>
@@ -777,7 +918,14 @@ function App() {
 
   const navMain = [["actualites", "Actualités"], ["evenements", "Événements"], ["opportunites", "Opportunités"], ["alumni", "Anciens"], ["mediatheque", "Médiathèque"], ["contact", "Contact"]];
   const navAsso = [["apropos", "À propos"], ["bureau", "Le bureau"], ["partenaires", "Partenaires"]];
-  const adminNav = isAdmin ? [["admin", `Administration${adminAlerts ? ` (${adminAlerts})` : ""}`]] : [];
+  // Droits délégués : un membre peut gérer certaines rubriques sans être administrateur.
+  const perms = (me && me.permissions) || [];
+  const can = (p) => isAdmin || perms.includes(p);
+  const canManage = isAdmin || perms.length > 0;
+  const manageAlerts = (isAdmin ? members.filter((m) => m.statut === "en_attente").length : 0)
+    + (can("messages") ? messages.filter((m) => !m.lu).length : 0)
+    + (can("temoignages") ? temoignages.filter((t) => !t.publie).length : 0);
+  const adminNav = canManage ? [["admin", `${isAdmin ? "Administration" : "Gestion"}${manageAlerts ? ` (${manageAlerts})` : ""}`]] : [];
   const NavCount = ({ id }) => (newCounts[id] > 0 && page !== id ? <span className="ml-1 min-w-5 h-5 px-1.5 rounded-full bg-orange-600 text-white text-xs font-bold inline-flex items-center justify-center">{newCounts[id]}</span> : null);
 
   // Pour les membres, on utilise la liste complète (toujours à jour) ; pour les visiteurs, l'aperçu public.
