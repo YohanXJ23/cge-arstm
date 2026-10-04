@@ -4824,7 +4824,23 @@ function AdminAdhesions({ can, notify }) {
                         <p className="font-semibold text-slate-900 flex items-center gap-2">{c.annee}<span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${ouverte ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{ouverte ? "ouverte" : daysUntil(c.ouverture) > 0 ? "à venir" : "terminée"}</span></p>
                         <p className="text-xs text-slate-500">Du {fmtDate(c.ouverture)} au {fmtDate(c.cloture)} · frais {fcfa(c.frais)} · cotisation {fcfa(c.cotisation)} · entretien : {entretienTexte(c)}</p>
                       </div>
-                      <button onClick={() => setEditing(c)} className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-orange-600" aria-label="Modifier" title="Modifier"><Pencil size={16} /></button>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button onClick={() => setEditing(c)} className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-orange-600" aria-label="Modifier" title="Modifier"><Pencil size={16} /></button>
+                        <ConfirmButton
+                          onConfirm={async () => {
+                            const n = rows.filter((r) => r.campagne_id === c.id).length;
+                            if (n) {
+                              const { error: e1 } = await sb.from("adhesions").delete().eq("campagne_id", c.id);
+                              if (e1) return notify("Suppression des candidatures impossible : " + e1.message, "error");
+                            }
+                            const { error } = await sb.from("adhesion_campagnes").delete().eq("id", c.id);
+                            if (error) return notify("Suppression impossible : " + error.message, "error");
+                            notify(`Campagne ${c.annee} supprimée${n ? ` avec ses ${n} candidature(s)` : ""}. Les membres déjà admis restent membres.`);
+                            setCampId(null); load();
+                          }}
+                          confirmLabel={rows.some((r) => r.campagne_id === c.id) ? "Supprimer aussi les candidatures ?" : "Supprimer ?"}
+                          ariaLabel="Supprimer la campagne" className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={16} /></ConfirmButton>
+                      </div>
                     </li>
                   );
                 })}
@@ -5147,7 +5163,23 @@ function FinBureau({ F }) {
         {mois.length === 0 || ids.length === 0 ? <p className="text-sm text-slate-500">{mois.length === 0 ? "Aucun mois créé." : "Aucun membre du bureau n'est coché."}</p> : (
           <div className="overflow-x-auto">
             <table className="text-sm border-separate border-spacing-1">
-              <thead><tr><th className="text-left px-2 text-xs text-slate-500 font-semibold sticky left-0 bg-white">Membre</th>{mois.map((c) => <th key={c.id} className="text-xs text-slate-500 font-semibold whitespace-nowrap px-1">{moisLabel(c.mois)}</th>)}</tr></thead>
+              <thead><tr><th className="text-left px-2 text-xs text-slate-500 font-semibold sticky left-0 bg-white">Membre</th>{mois.map((c) => (
+                <th key={c.id} className="text-xs text-slate-500 font-semibold whitespace-nowrap px-1">
+                  <div className="flex flex-col items-center gap-0.5">
+                    {moisLabel(c.mois)}
+                    {F.canW && (
+                      <ConfirmButton
+                        onConfirm={async () => {
+                          if (F.dus.some((d) => d.cotisation_id === c.id && F.paye(d.id) > 0)) return F.notify("Des paiements existent pour ce mois : supprimez-les d'abord (cliquez sur les cases).", "error");
+                          const { error } = await sb.from("fin_cotisations").delete().eq("id", c.id);
+                          if (error) return F.notify("Suppression impossible : " + error.message, "error");
+                          F.notify(`Mois ${moisLabel(c.mois)} supprimé.`); F.reload();
+                        }}
+                        confirmLabel="Suppr. ?" ariaLabel={`Supprimer le mois ${moisLabel(c.mois)}`} className="text-slate-300 hover:text-rose-600"><X size={12} /></ConfirmButton>
+                    )}
+                  </div>
+                </th>
+              ))}</tr></thead>
               <tbody>
                 {ids.map((uid) => (
                   <tr key={uid}><td className="pr-3 font-semibold text-slate-900 whitespace-nowrap sticky left-0 bg-white">{F.nom(uid)}</td>{mois.map((c) => <td key={c.id} className="text-center">{cell(c, uid)}</td>)}</tr>
@@ -5518,7 +5550,7 @@ function FinCaisse({ F }) {
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className={`font-bold whitespace-nowrap ${m.sens === "entree" ? "text-emerald-700" : "text-rose-600"}`}>{m.sens === "entree" ? "+" : "−"} {fcfa(m.montant)}</span>
                   {m.justificatif_path && <button onClick={() => downloadPrivate("justificatifs", m.justificatif_path, null, F.notify)} title="Voir le justificatif" className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100"><FileText size={15} /></button>}
-                  {F.canW && !automatique(m) && <ConfirmButton onConfirm={() => supprimer(m)} confirmLabel="Suppr. ?" ariaLabel="Supprimer l'opération" className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={15} /></ConfirmButton>}
+                  {F.canW && <ConfirmButton onConfirm={() => supprimer(m)} confirmLabel={automatique(m) ? "Saisie auto : supprimer quand même ?" : "Suppr. ?"} ariaLabel="Supprimer l'opération" className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={15} /></ConfirmButton>}
                 </div>
               </li>
             ))}
@@ -6214,6 +6246,14 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                       {APP_STATUSES.map((s) => <option key={s}>{s}</option>)}
                     </select>
                     <button onClick={() => openProfile(a.userId)} className="px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1"><Eye size={14} /> Profil & CV</button>
+                    <ConfirmButton
+                      onConfirm={async () => {
+                        const { error } = await sb.from("applications").delete().eq("id", a.id);
+                        if (error) return notify("Suppression impossible : " + error.message, "error");
+                        setApplications((list) => list.filter((x) => x.id !== a.id));
+                        notify("Candidature supprimée.");
+                      }}
+                      confirmLabel="Supprimer ?" ariaLabel="Supprimer la candidature" className="p-2 rounded-xl text-rose-600 hover:bg-rose-50"><Trash2 size={16} /></ConfirmButton>
                   </div>
                 </li>
               ))}
