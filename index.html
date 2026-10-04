@@ -29,7 +29,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- Réglages du site (bureau, président, coordonnées, listes) : fichier à modifier chaque année -->
 <script src="config.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<!-- Babel n'est plus chargé ici : il n'est téléchargé qu'au premier passage (voir « Démarrage rapide » en bas de page). -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="preconnect" href="https://jusggszkkvpufejnswlo.supabase.co" crossorigin />
 
 <style>
   body { margin: 0; background: #fafaf9; }
@@ -65,10 +68,15 @@
   setTimeout(function () {
     if (window.__CGE_STARTED) return;
     if (!window.CGE_CONFIG) return window.__cgeConfigMissing();
+    // Si la version gardée dans le navigateur pose problème : on l'efface et on recharge une seule fois.
+    if (window.__CGE_CACHE) {
+      try { localStorage.removeItem("cge-arstm:code"); } catch (e) {}
+      if (!sessionStorage.getItem("cge-arstm:recharge")) { sessionStorage.setItem("cge-arstm:recharge", "1"); return location.reload(); }
+    }
     var missing = [];
     if (!window.React) missing.push("React");
     if (!window.ReactDOM) missing.push("ReactDOM");
-    if (!window.Babel) missing.push("Babel");
+    if (!window.Babel && !window.__CGE_CACHE) missing.push("Babel");
     if (!window.LucideReact) missing.push("Icônes");
     if (!window.tailwind) missing.push("Tailwind");
     if (!window.supabase) missing.push("Supabase");
@@ -77,7 +85,8 @@
   }, 12000);
 </script>
 
-<script type="text/babel" data-presets="react">
+<!-- Code du site : il n'est pas exécuté tel quel, il est traduit puis lancé par « Démarrage rapide » (en bas). -->
+<script type="text/plain" id="app-source">
 const { useState, useEffect, useContext, useRef, createContext } = React;
 
 // =====================================================================
@@ -6120,6 +6129,34 @@ class ErrorBoundary extends React.Component {
 }
 window.__CGE_STARTED = true;
 ReactDOM.createRoot(document.getElementById("root")).render(<ErrorBoundary><App /></ErrorBoundary>);
+</script>
+
+<script>
+  // =====================================================================
+  // DÉMARRAGE RAPIDE
+  // Au premier passage, Babel traduit le code du site, puis la traduction est gardée dans le navigateur.
+  // Aux visites suivantes, le site démarre directement, sans télécharger Babel.
+  // Une nouvelle version du site (code différent) est détectée automatiquement et retraduite une fois.
+  // =====================================================================
+  (function () {
+    var src = document.getElementById("app-source").textContent;
+    var h = 0;
+    for (var i = 0; i < src.length; i++) { h = (h * 31 + src.charCodeAt(i)) | 0; }
+    var KEY = "cge-arstm:code", VER = h + ":" + src.length;
+    function lancer(code) { var s = document.createElement("script"); s.text = code; document.body.appendChild(s); }
+    var garde = null;
+    try { var c = JSON.parse(localStorage.getItem(KEY) || "null"); if (c && c.v === VER) garde = c.code; } catch (e) {}
+    if (garde) { window.__CGE_CACHE = true; lancer(garde); return; }
+    var b = document.createElement("script");
+    b.src = "https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js";
+    b.onload = function () {
+      var code = Babel.transform(src, { presets: ["react"] }).code;
+      try { localStorage.setItem(KEY, JSON.stringify({ v: VER, code: code })); } catch (e) { /* stockage plein ou désactivé : on traduira à chaque visite */ }
+      try { sessionStorage.removeItem("cge-arstm:recharge"); } catch (e) {}
+      lancer(code);
+    };
+    document.head.appendChild(b);
+  })();
 </script>
 </body>
 </html>
