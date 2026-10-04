@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>CGE ARSTM — Conférence des Grandes Écoles</title>
-<meta name="description" content="Section ARSTM de la Conférence des Grandes Écoles de Côte d'Ivoire : actualités, bureau exécutif, événements, opportunités de stages et d'emplois, réseau alumni et espace membre." />
+<meta name="description" content="Section ARSTM de la Conférence des Grandes Écoles de Côte d'Ivoire : actualités, bureau exécutif, événements, opportunités, réseau des anciens, mentorat et espace membre." />
 <meta name="theme-color" content="#ff8a00" />
 <link rel="icon" type="image/svg+xml" href="logos/cge-arstm.svg" />
 
@@ -100,7 +100,8 @@ const Anchor = pickIcon("Anchor"), Menu = pickIcon("Menu"), X = pickIcon("X"), C
   RotateCcw = pickIcon("RotateCcw", "RefreshCw"), Hourglass = pickIcon("Hourglass", "Clock"), KeyRound = pickIcon("KeyRound", "Key"),
   BookOpen = pickIcon("BookOpen", "Book"), Trophy = pickIcon("Trophy", "Award"), Repeat = pickIcon("Repeat", "RefreshCw"),
   ExternalLink = pickIcon("ExternalLink"), BarChart3 = pickIcon("BarChart3", "BarChart"), Inbox = pickIcon("Inbox", "Mail"),
-  Flame = pickIcon("Flame", "Sparkles"), MailOpen = pickIcon("MailOpen", "Mail");
+  Flame = pickIcon("Flame", "Sparkles"), MailOpen = pickIcon("MailOpen", "Mail"), UserCheck = pickIcon("UserCheck", "User"),
+  MessageCircle = pickIcon("MessageCircle", "MessageSquare"), Linkedin = pickIcon("Linkedin", "Globe");
 
 // =====================================================================
 // À PERSONNALISER — textes, coordonnées et images par défaut
@@ -160,8 +161,10 @@ const BUREAU = [
 ];
 
 const EMPTY_PROFILE = {
-  photo: null, prenoms: "", nom: "", naissance: "", nationalite: "", telephone: "", email: "", ville: "",
+  type: "eleve", photo: null, prenoms: "", nom: "", naissance: "", nationalite: "", telephone: "", email: "", ville: "",
   filiere: "", promotion: "", matricule: "", linkedin: "", titre: "", bio: "", objectif: "", disponible: false,
+  // Profil d'ancien
+  poste: "", entreprise: "", pays: "", annuaire: true, mentor: false, mentor_domaines: "", mentor_presentation: "",
   formations: [], experiences: [], competences: [], langues: [], cv: null,
 };
 
@@ -172,6 +175,15 @@ const STATUS_STYLES = {
   "En cours d'examen": "bg-amber-100 text-amber-700",
   "Retenue": "bg-emerald-100 text-emerald-700",
   "Non retenue": "bg-slate-200 text-slate-600",
+};
+
+// Statuts d'une demande de mentorat : [libellé, couleur]
+const MENTORAT_STATUS = {
+  en_attente: ["En attente de réponse", "bg-amber-100 text-amber-700"],
+  acceptee: ["Acceptée", "bg-emerald-100 text-emerald-700"],
+  refusee: ["Déclinée", "bg-slate-200 text-slate-600"],
+  terminee: ["Terminée", "bg-sky-100 text-sky-700"],
+  annulee: ["Annulée", "bg-slate-200 text-slate-500"],
 };
 
 // Apparence de chaque type d'opportunité : [dégradé, icône, pastille]
@@ -194,16 +206,18 @@ const accountName = (r) => [r?.prenoms, r?.nom].filter(Boolean).join(" ") || r?.
 const rowToProfile = (r) => ({
   ...EMPTY_PROFILE, email: r.email || "", ...(r.data || {}),
   prenoms: r.prenoms || "", nom: r.nom || "", matricule: r.matricule || "", filiere: r.filiere || "", promotion: r.promotion || "",
+  type: r.type || "eleve",
 });
 const profileToRow = (p) => {
-  const { prenoms, nom, matricule, filiere, promotion, ...data } = p;
-  return { prenoms: prenoms || "", nom: nom || "", matricule: matricule ? matricule.trim() : null, filiere: filiere || "", promotion: promotion || "", data };
+  const { prenoms, nom, matricule, filiere, promotion, type, ...data } = p;
+  return { prenoms: prenoms || "", nom: nom || "", matricule: matricule ? matricule.trim() : null, filiere: filiere || "", promotion: promotion || "", type: type === "ancien" ? "ancien" : "eleve", data };
 };
 const plainFromDb = (r) => r;
 const plainToDb = ({ id, created_at, ...r }) => r;
 const newsFromDb = ({ members_only, ...r }) => ({ ...r, membersOnly: !!members_only });
 const newsToDb = ({ id, created_at, membersOnly, ...r }) => ({ ...r, members_only: !!membersOnly });
 const jobToDb = ({ id, created_at, ...r }) => ({ ...r, cloture: r.cloture || null, lien: r.lien ? r.lien.trim() : null });
+const temoToDb = ({ id, created_at, author_id, ...r }) => ({ ...r, publie: !!r.publie, photo: r.photo || null });
 const appFromDb = (r) => ({ id: r.id, jobId: r.job_id, userId: r.user_id, title: r.title, company: r.company, status: r.status, applicant: r.applicant, email: r.email, cvName: r.cv_name, date: r.date });
 const regFromDb = (r) => ({ eventId: r.event_id, userId: r.user_id, name: r.name });
 
@@ -442,6 +456,27 @@ const Deadline = ({ date }) => {
   );
 };
 
+// Témoignage d'un ancien, avec « Lire la suite » pour les textes longs.
+function TestimonialCard({ t }) {
+  const [open, setOpen] = useState(false);
+  const long = (t.texte || "").length > 280;
+  return (
+    <article className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-xl transition flex flex-col">
+      <Quote size={32} className="text-orange-500 opacity-60" />
+      {t.titre && <h3 className="text-lg font-bold text-slate-900 mt-3">{t.titre}</h3>}
+      <p className="text-slate-600 mt-2 leading-relaxed whitespace-pre-line">{open || !long ? t.texte : t.texte.slice(0, 280).trim() + "…"}</p>
+      {long && <button onClick={() => setOpen(!open)} className="self-start mt-2 text-sm font-semibold text-orange-600">{open ? "Réduire" : "Lire la suite"}</button>}
+      <div className="flex items-center gap-3 mt-auto pt-6">
+        <Avatar photo={t.photo} name={t.nom} size="w-12 h-12" />
+        <div>
+          <p className="font-bold text-slate-900">{t.nom}</p>
+          <p className="text-xs text-slate-500">{[[t.poste, t.entreprise].filter(Boolean).join(" · "), t.promo && `Promo ${t.promo}`].filter(Boolean).join(" — ")}</p>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 // =====================================================================
 // APPLICATION
 // =====================================================================
@@ -463,16 +498,19 @@ function App() {
   const [news, setNews] = useState([]);
   const [events, setEvents] = useState([]);
   const [jobs, setJobs] = useState([]);
-  const [alumni, setAlumni] = useState([]);
+  const [alumni, setAlumni] = useState([]);           // anciens ajoutés à la main par le bureau
+  const [annuaire, setAnnuaire] = useState([]);       // anciens ayant un compte
+  const [mentorats, setMentorats] = useState([]);     // mes demandes de mentorat (envoyées et reçues)
+  const [temoignages, setTemoignages] = useState([]); // publiés + les miens (+ tous pour l'admin)
   const [applications, setApplications] = useState([]);
   const [registrations, setRegistrations] = useState([]);
-  const [members, setMembers] = useState([]);   // visible uniquement par les admins
-  const [messages, setMessages] = useState([]); // visible uniquement par les admins
+  const [members, setMembers] = useState([]);         // admins uniquement
+  const [messages, setMessages] = useState([]);       // admins uniquement
+  const [mentoratAll, setMentoratAll] = useState([]); // admins uniquement
   const [stats, setStats] = useState({});
-  const [apercu, setApercu] = useState([]);     // aperçu public des opportunités
+  const [apercu, setApercu] = useState([]);           // aperçu public des opportunités
   const [imgOverrides, setImgOverrides] = useState({});
   const [newsFilter, setNewsFilter] = useState("Toutes");
-  const [alumniQuery, setAlumniQuery] = useState("");
   const loadId = useRef(0);
   const quietUntil = useRef(0);
   const busy = useRef(new Set());
@@ -524,7 +562,7 @@ function App() {
       }
       const active = !!myRow;
       const admin = active && myRow.role === "admin";
-      const [n, e, j, a, apps, regs, imgs, mem, st, ap, msgs] = await Promise.all([
+      const [n, e, j, a, apps, regs, imgs, mem, st, ap, msgs, temo, ann, ment, mAll] = await Promise.all([
         q(sb.from("news").select("*").order("date", { ascending: false })),
         q(sb.from("events").select("*").order("date")),
         active ? q(sb.from("jobs").select("*").order("created_at", { ascending: false })) : [],
@@ -536,6 +574,10 @@ function App() {
         q(sb.rpc("stats_publiques")),
         q(sb.rpc("opportunites_apercu")),
         admin ? q(sb.from("messages").select("*").order("created_at", { ascending: false })) : [],
+        q(sb.from("temoignages").select("*").order("created_at", { ascending: false })),
+        active ? q(sb.rpc("annuaire_anciens")) : [],
+        active ? q(sb.rpc("mes_mentorats")) : [],
+        admin ? q(sb.from("mentorat").select("id, statut, created_at")) : [],
       ]);
       if (id !== loadId.current) return;
       setMe(myRow);
@@ -546,6 +588,7 @@ function App() {
       setMembers(mem); setMessages(msgs);
       setStats(st && !Array.isArray(st) ? st : {});
       setApercu(Array.isArray(ap) ? ap : []);
+      setTemoignages(temo); setAnnuaire(ann); setMentorats(ment); setMentoratAll(mAll);
       if (errors.length) notify("Connexion à la base incomplète : " + errors[0].message, "error");
     } catch (err) {
       console.error(err);
@@ -564,17 +607,20 @@ function App() {
 
   const go = (p) => { setPage(p); setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const openLogin = () => { setLoginOpen(true); setMenuOpen(false); };
-  const user = me ? { id: me.id, name: accountName(me), role: me.role, email: me.email } : null;
+  const user = me ? { id: me.id, name: accountName(me), role: me.role, email: me.email, type: profile.type } : null;
   const isAdmin = user?.role === "admin";
   const pct = completion(profile);
   const fullName = [profile.prenoms, profile.nom].filter(Boolean).join(" ") || user?.name || "";
-  const adminAlerts = members.filter((m) => m.statut === "en_attente").length + messages.filter((m) => !m.lu).length;
+  const published = temoignages.filter((t) => t.publie);
+  const myTemoignages = user ? temoignages.filter((t) => t.author_id === user.id) : [];
+  const receivedPending = mentorats.filter((m) => m.sens === "mentor" && m.statut === "en_attente").length;
+  const adminAlerts = members.filter((m) => m.statut === "en_attente").length + messages.filter((m) => !m.lu).length + temoignages.filter((t) => !t.publie).length;
   const myApplications = user ? applications.filter((a) => a.userId === user.id) : [];
   const myRegs = user ? registrations.filter((r) => r.userId === user.id).map((r) => r.eventId) : [];
 
   const nav = [
     ["accueil", "Accueil"], ["apropos", "À propos"], ["bureau", "Bureau"], ["actualites", "Actualités"],
-    ["evenements", "Événements"], ["opportunites", "Opportunités"], ["alumni", "Alumni"], ["contact", "Contact"],
+    ["evenements", "Événements"], ["opportunites", "Opportunités"], ["alumni", "Anciens"], ["contact", "Contact"],
     ...(isAdmin ? [["admin", `Administration${adminAlerts ? ` (${adminAlerts})` : ""}`]] : []),
   ];
 
@@ -590,7 +636,7 @@ function App() {
   const homeStats = [
     [user ? openJobs.length : stats.offres, "", "Opportunités ouvertes"],
     [stats.membres, "", "Membres inscrits"],
-    [upcoming.length, "", "Événements à venir"],
+    [stats.anciens, "", "Anciens dans le réseau"],
     [new Date().getFullYear() - ANNEE_CREATION, "", `Ans d'existence (depuis ${ANNEE_CREATION})`],
   ];
 
@@ -617,7 +663,7 @@ function App() {
     if (free === false) return "Ce matricule possède déjà un compte.";
     const { data, error } = await sb.auth.signUp({
       email: r.email, password: r.password,
-      options: { emailRedirectTo: SITE_URL(), data: { prenoms: r.prenoms, nom: r.nom, matricule: r.matricule, filiere: r.filiere, promotion: r.promotion } },
+      options: { emailRedirectTo: SITE_URL(), data: { prenoms: r.prenoms, nom: r.nom, matricule: r.matricule, filiere: r.filiere, promotion: r.promotion, type: r.type } },
     });
     if (error) return authMessage(error);
     if (data.session) await sb.auth.signOut(); // le compte doit d'abord être validé
@@ -645,6 +691,8 @@ function App() {
       notify(error.code === "23505" ? "Ce matricule est déjà utilisé par un autre compte." : "Enregistrement impossible : " + error.message, "error");
       return false;
     }
+    // L'annuaire dépend du profil d'ancien : on le rafraîchit après chaque modification.
+    if (next.type === "ancien" || prev.type === "ancien") sb.rpc("annuaire_anciens").then(({ data }) => data && setAnnuaire(data));
     return true;
   };
 
@@ -695,6 +743,47 @@ function App() {
     });
   };
 
+  // ----- Mentorat -----
+  const refreshMentorats = async () => {
+    const { data, error } = await sb.rpc("mes_mentorats");
+    if (!error) setMentorats(data || []);
+  };
+  const sendMentorRequest = async (mentor, message) => {
+    const { error } = await sb.from("mentorat").insert({ eleve_id: user.id, mentor_id: mentor.id, message });
+    if (error) {
+      notify(error.code === "23505" ? "Vous avez déjà une demande en cours avec cette personne." : "Envoi impossible : " + error.message, "error");
+      return false;
+    }
+    await refreshMentorats();
+    notify(`Demande envoyée à ${mentor.nom}. Suivez-la dans Mon espace → Mentorat.`);
+    return true;
+  };
+  const updateMentorat = async (id, patch, msg) => {
+    const { error } = await sb.from("mentorat").update(patch).eq("id", id);
+    if (error) { notify("Action impossible : " + error.message, "error"); return false; }
+    await refreshMentorats();
+    if (msg) notify(msg);
+    return true;
+  };
+
+  // ----- Témoignages -----
+  const submitTemoignage = async ({ titre, texte }) => {
+    const { data, error } = await sb.from("temoignages").insert({
+      author_id: user.id, nom: fullName, promo: profile.promotion || "", poste: profile.poste || "",
+      entreprise: profile.entreprise || "", photo: profile.photo || null, titre, texte, publie: false,
+    }).select().single();
+    if (error) { notify("Envoi impossible : " + error.message, "error"); return false; }
+    setTemoignages((list) => [data, ...list]);
+    notify("Merci ! Votre témoignage sera publié après validation par le bureau.");
+    return true;
+  };
+  const deleteTemoignage = async (id) => {
+    const { error } = await sb.from("temoignages").delete().eq("id", id);
+    if (error) return notify("Suppression impossible : " + error.message, "error");
+    setTemoignages((list) => list.filter((t) => t.id !== id));
+    notify("Témoignage retiré.");
+  };
+
   if (firstLoad) return <FullLoader />;
 
   return (
@@ -727,9 +816,10 @@ function App() {
           <div className="flex items-center gap-2">
             {user ? (
               <>
-                <button onClick={() => go("profil")} className={`hidden sm:flex items-center gap-2 pl-1 pr-4 py-1 rounded-full border transition ${page === "profil" ? "border-orange-500 bg-orange-50" : "border-slate-200 hover:border-orange-400"}`}>
+                <button onClick={() => go("profil")} className={`relative hidden sm:flex items-center gap-2 pl-1 pr-4 py-1 rounded-full border transition ${page === "profil" ? "border-orange-500 bg-orange-50" : "border-slate-200 hover:border-orange-400"}`}>
                   <Avatar photo={profile.photo} name={fullName} size="w-8 h-8" text="text-xs" />
                   <span className="text-sm font-semibold">Mon espace</span>
+                  {receivedPending > 0 && <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-orange-600 text-white text-xs font-bold flex items-center justify-center" title="Demandes de mentorat en attente">{receivedPending}</span>}
                 </button>
                 <button onClick={logout} className="hidden sm:flex p-2 rounded-full text-slate-500 hover:bg-slate-100" aria-label="Se déconnecter" title="Se déconnecter"><LogOut size={18} /></button>
               </>
@@ -748,7 +838,7 @@ function App() {
             ))}
             {user ? (
               <>
-                <button onClick={() => go("profil")} className="mt-2 px-3 py-3 rounded-lg bg-orange-600 text-white font-semibold text-left">Mon espace</button>
+                <button onClick={() => go("profil")} className="mt-2 px-3 py-3 rounded-lg bg-orange-600 text-white font-semibold text-left">Mon espace{receivedPending > 0 && ` (${receivedPending})`}</button>
                 <button onClick={logout} className="mt-2 px-3 py-3 rounded-lg bg-slate-100 text-left">Se déconnecter</button>
               </>
             ) : (
@@ -759,7 +849,7 @@ function App() {
       </header>
 
       <div key={page} className="fade-up">
-        {page === "accueil" && <Home go={go} user={user} openLogin={openLogin} visibleNews={visibleNews} upcoming={upcoming} nextEvent={nextEvent} pct={pct} homeOpps={homeOpps} homeStats={homeStats} />}
+        {page === "accueil" && <Home go={go} user={user} openLogin={openLogin} visibleNews={visibleNews} upcoming={upcoming} nextEvent={nextEvent} pct={pct} homeOpps={homeOpps} homeStats={homeStats} testimonials={published} />}
 
         {/* ===== À PROPOS ===== */}
         {page === "apropos" && (
@@ -942,33 +1032,10 @@ function App() {
           <OpportunitiesPage user={user} jobs={openJobs} apercu={apercu} myApplications={myApplications} pct={pct} apply={apply} go={go} openLogin={openLogin} />
         )}
 
-        {/* ===== ALUMNI ===== */}
+        {/* ===== RÉSEAU DES ANCIENS ===== */}
         {page === "alumni" && (
-          <>
-            <PageHero kicker="Réseau" title="Nos Alumni" sub="Les anciens de l'ARSTM, un réseau pour vous inspirer et vous orienter." icon={GraduationCap} />
-            <main className="max-w-6xl mx-auto px-4 py-16">
-              {!user ? <Locked onLogin={openLogin} label="au réseau des anciens" /> : (
-                <>
-                  <div className="relative max-w-md mb-8">
-                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input value={alumniQuery} onChange={(e) => setAlumniQuery(e.target.value)} placeholder="Rechercher un nom, une entreprise, une promo..." className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white shadow-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500" />
-                  </div>
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {alumni.filter((a) => [a.name, a.company, a.role, a.promo].join(" ").toLowerCase().includes(alumniQuery.toLowerCase())).map((a) => (
-                      <div key={a.id} className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition duration-300">
-                        <div className="flex items-center gap-4">
-                          <Avatar name={a.name} size="w-14 h-14" />
-                          <div><p className="font-bold text-slate-900">{a.name}</p><span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-semibold">Promo {a.promo}</span></div>
-                        </div>
-                        <p className="text-sm text-slate-600 mt-5 flex items-center gap-2"><Briefcase size={15} className="text-orange-600" /> {a.role}</p>
-                        <p className="text-sm text-slate-600 mt-1.5 flex items-center gap-2"><Building2 size={15} className="text-orange-600" /> {a.company}</p>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </main>
-          </>
+          <AlumniPage user={user} profile={profile} published={published} annuaire={annuaire} alumni={alumni} mentorats={mentorats}
+            onRequest={sendMentorRequest} openLogin={openLogin} go={go} />
         )}
 
         {/* ===== CONTACT ===== */}
@@ -976,7 +1043,8 @@ function App() {
 
         {/* ===== MON ESPACE ===== */}
         {page === "profil" && (user
-          ? <ProfileSpace uid={user.id} profile={profile} update={updateProfile} pct={pct} fullName={fullName} applications={myApplications} registrations={myRegs} events={events} notify={notify} go={go} />
+          ? <ProfileSpace uid={user.id} profile={profile} update={updateProfile} pct={pct} fullName={fullName} applications={myApplications} registrations={myRegs} events={events} notify={notify} go={go}
+              mentorats={mentorats} onUpdateMentorat={updateMentorat} myTemoignages={myTemoignages} onSubmitTemoignage={submitTemoignage} onDeleteTemoignage={deleteTemoignage} receivedPending={receivedPending} />
           : <main className="max-w-6xl mx-auto px-4 py-20"><Locked onLogin={openLogin} label="à votre espace personnel" /></main>)}
 
         {/* ===== ADMINISTRATION ===== */}
@@ -984,6 +1052,7 @@ function App() {
           <>
             <PageHero kicker="Réservé aux administrateurs" title="Administration" icon={Shield} />
             <AdminPanel news={news} setNews={setNews} events={events} setEvents={setEvents} jobs={jobs} setJobs={setJobs} alumni={alumni} setAlumni={setAlumni}
+              temoignages={temoignages} setTemoignages={setTemoignages} mentoratAll={mentoratAll}
               applications={applications} setApplications={setApplications} registrations={registrations}
               members={members} setMembers={setMembers} messages={messages} setMessages={setMessages}
               currentId={user.id} notify={notify} reload={loadAll} />
@@ -1027,7 +1096,7 @@ function App() {
 // =====================================================================
 // PAGE D'ACCUEIL
 // =====================================================================
-function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct, homeOpps, homeStats }) {
+function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct, homeOpps, homeStats, testimonials }) {
   const images = useImages();
   const left = nextEvent ? daysUntil(nextEvent.date) : null;
   return (
@@ -1064,10 +1133,9 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct, home
               </div>
             )}
             <div className="float absolute right-0 bottom-0 w-64 rounded-3xl p-6 shadow-2xl bg-gradient-to-br from-orange-500 to-orange-700" style={{ animationDelay: "1.8s" }}>
-              <p className="text-xs font-bold uppercase tracking-wider flex items-center gap-2"><Sparkles size={14} /> Votre profil pro</p>
-              <p className="font-semibold mt-2">Infos, parcours, compétences et CV au même endroit.</p>
-              <div className="mt-4 h-2 rounded-full bg-white bg-opacity-25 overflow-hidden"><div className="h-full bg-white rounded-full" style={{ width: `${user ? pct : 72}%`, transition: "width .8s" }} /></div>
-              <p className="text-xs mt-2 opacity-90">{user ? `Complété à ${pct} %` : "Créez le vôtre en quelques minutes"}</p>
+              <p className="text-xs font-bold uppercase tracking-wider flex items-center gap-2"><Handshake size={14} /> Mentorat</p>
+              <p className="font-semibold mt-2">Échangez avec un ancien de l'ARSTM qui a suivi le chemin dont vous rêvez.</p>
+              <button onClick={() => go("alumni")} className="mt-4 text-sm font-bold flex items-center gap-1 hover:gap-2 transition-all">Trouver un mentor <ArrowRight size={15} /></button>
             </div>
           </div>
         </div>
@@ -1130,6 +1198,15 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct, home
         </div>
       </section>
 
+      {testimonials.length > 0 && (
+        <section className="max-w-6xl mx-auto px-4 pt-20">
+          <SectionTitle kicker="Leurs parcours" title="La parole aux anciens" action="Le réseau des anciens" onAction={() => go("alumni")} />
+          <div className="grid md:grid-cols-2 gap-6">
+            {testimonials.slice(0, 2).map((t) => <TestimonialCard key={t.id} t={t} />)}
+          </div>
+        </section>
+      )}
+
       <section className="max-w-6xl mx-auto px-4 pt-20">
         <div className="relative rounded-3xl overflow-hidden text-white p-8 md:p-12 shadow-2xl" style={{ background: NAVY }}>
           <Quote size={120} className="absolute right-6 top-4 text-orange-500 opacity-20" />
@@ -1153,7 +1230,7 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct, home
           <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mt-2">Bien plus qu'une association</h2>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
-          {[[Megaphone, "Représentation", "Votre voix portée auprès de la direction et des partenaires."], [Calendar, "Événements", "Conférences, sport, culture et moments de partage toute l'année."], [Briefcase, "Carrière", "Stages, emplois, formations et bourses, candidature en un clic."], [GraduationCap, "Réseau Alumni", "Des anciens pour vous guider et vous recommander."], [Handshake, "Entraide", "Parrainage des nouveaux et soutien entre promotions."], [Globe, "Rayonnement", "Faire briller l'ARSTM dans toute la sous-région."]].map(([Icon, t, d], i) => (
+          {[[Megaphone, "Représentation", "Votre voix portée auprès de la direction et des partenaires."], [Calendar, "Événements", "Conférences, sport, culture et moments de partage toute l'année."], [Briefcase, "Carrière", "Stages, emplois, formations et bourses, candidature en un clic."], [Handshake, "Mentorat", "Un ancien de l'ARSTM pour vous conseiller sur votre parcours."], [Users, "Entraide", "Parrainage des nouveaux et soutien entre promotions."], [Globe, "Rayonnement", "Faire briller l'ARSTM dans toute la sous-région."]].map(([Icon, t, d], i) => (
             <div key={t} className="group bg-white rounded-3xl p-7 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition duration-300">
               <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${CARD_GRADIENTS[i % 4]} flex items-center justify-center shadow-lg group-hover:rotate-6 group-hover:scale-110 transition`}><Icon className="text-white" /></div>
               <h3 className="text-lg font-bold text-slate-900 mt-5">{t}</h3>
@@ -1348,6 +1425,142 @@ function OpportunitiesPage({ user, jobs, apercu, myApplications, pct, apply, go,
 }
 
 // =====================================================================
+// RÉSEAU DES ANCIENS ET MENTORAT
+// =====================================================================
+function AlumniPage({ user, profile, published, annuaire, alumni, mentorats, onRequest, openLogin, go }) {
+  const [view, setView] = useState("tous");
+  const [q, setQ] = useState("");
+  const [requesting, setRequesting] = useState(null);
+
+  // On réunit les anciens inscrits sur le site et ceux ajoutés à la main par le bureau.
+  const people = [
+    ...annuaire.map((a) => ({
+      key: "p" + a.id, id: a.id, nom: [a.prenoms, a.nom].filter(Boolean).join(" "), promo: a.promotion, filiere: a.filiere, photo: a.photo,
+      poste: a.poste, entreprise: a.entreprise, lieu: [a.ville, a.pays].filter(Boolean).join(", "), linkedin: a.linkedin,
+      mentor: a.mentor, domaines: a.mentor_domaines, presentation: a.mentor_presentation,
+    })),
+    ...alumni.map((a) => ({ key: "m" + a.id, nom: a.name, promo: a.promo, poste: a.role, entreprise: a.company })),
+  ];
+  const mentorsCount = people.filter((p) => p.mentor).length;
+  const list = people.filter((p) => (view === "tous" || p.mentor)
+    && (!q || [p.nom, p.promo, p.poste, p.entreprise, p.lieu, p.filiere, p.domaines].join(" ").toLowerCase().includes(q.toLowerCase())));
+  const activeWith = (id) => mentorats.find((m) => m.sens === "eleve" && m.autre_id === id && ["en_attente", "acceptee"].includes(m.statut));
+
+  return (
+    <>
+      <PageHero kicker="Réseau" title="Les anciens de l'ARSTM" sub="Des parcours pour vous inspirer, un annuaire pour garder le lien et des mentors pour vous guider." icon={GraduationCap} />
+      <main className="max-w-6xl mx-auto px-4 py-16 space-y-16">
+        {published.length > 0 && (
+          <div>
+            <SectionTitle kicker="Leurs parcours" title="La parole aux anciens" />
+            <div className="grid md:grid-cols-2 gap-6">{published.map((t) => <TestimonialCard key={t.id} t={t} />)}</div>
+          </div>
+        )}
+
+        <div>
+          <SectionTitle kicker="Annuaire" title={view === "mentors" ? "Mentors disponibles" : "Tous les anciens"} />
+          {!user ? <Locked onLogin={openLogin} label="à l'annuaire des anciens et au mentorat" /> : (
+            <>
+              {profile.type === "ancien" && !profile.mentor && (
+                <div className="mb-6 rounded-3xl p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4" style={{ background: NAVY }}>
+                  <div>
+                    <p className="font-bold text-lg flex items-center gap-2"><Handshake size={20} className="text-orange-400" /> Vous êtes un ancien : devenez mentor !</p>
+                    <p className="text-sm text-slate-300 mt-1">Quelques échanges avec un élève peuvent changer son parcours. Vous choisissez à qui vous répondez.</p>
+                  </div>
+                  <button onClick={() => go("profil")} className="px-5 py-3 rounded-xl bg-orange-600 font-semibold hover:bg-orange-500 whitespace-nowrap">Compléter mon profil d'ancien</button>
+                </div>
+              )}
+              <div className="bg-white rounded-3xl shadow-sm p-5 flex flex-col md:flex-row gap-3 mb-6">
+                <div className="flex gap-2">
+                  {[["tous", `Tous (${people.length})`], ["mentors", `Mentors (${mentorsCount})`]].map(([v, l]) => (
+                    <button key={v} onClick={() => setView(v)} className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition ${view === v ? "bg-orange-600 text-white shadow-md" : "bg-slate-100 text-slate-600 hover:text-orange-600"}`}>{l}</button>
+                  ))}
+                </div>
+                <div className="relative flex-1">
+                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nom, promo, entreprise, pays, domaine..." className={inputCls + " mt-0 pl-10"} />
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {list.map((p) => {
+                  const req = p.id && activeWith(p.id);
+                  const self = p.id && p.id === user.id;
+                  return (
+                    <div key={p.key} className={`bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl transition duration-300 flex flex-col ${p.mentor ? "ring-2 ring-orange-200" : ""}`}>
+                      <div className="flex items-center gap-4">
+                        <Avatar photo={p.photo} name={p.nom} size="w-14 h-14" />
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900">{p.nom}</p>
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {p.promo && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-semibold">Promo {p.promo}</span>}
+                            {p.mentor && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold flex items-center gap-1"><Handshake size={11} /> Mentor</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-4 space-y-1.5 text-sm text-slate-600">
+                        {p.poste && <p className="flex items-center gap-2"><Briefcase size={15} className="text-orange-600 flex-shrink-0" /> {p.poste}</p>}
+                        {p.entreprise && <p className="flex items-center gap-2"><Building2 size={15} className="text-orange-600 flex-shrink-0" /> {p.entreprise}</p>}
+                        {p.lieu && <p className="flex items-center gap-2"><MapPin size={15} className="text-orange-600 flex-shrink-0" /> {p.lieu}</p>}
+                        {p.filiere && <p className="flex items-center gap-2"><GraduationCap size={15} className="text-orange-600 flex-shrink-0" /> {p.filiere}</p>}
+                      </div>
+                      {p.mentor && (p.domaines || p.presentation) && (
+                        <div className="mt-4 p-3 rounded-xl bg-orange-50 text-sm">
+                          {p.domaines && <p className="font-semibold text-orange-800">Peut vous aider sur : {p.domaines}</p>}
+                          {p.presentation && <p className="text-slate-700 mt-1">{p.presentation}</p>}
+                        </div>
+                      )}
+                      <div className="mt-auto pt-5 flex flex-wrap gap-2">
+                        {p.linkedin && /^https?:\/\//i.test(p.linkedin) && <a href={p.linkedin} target="_blank" rel="noopener noreferrer" className="px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1"><Linkedin size={14} /> LinkedIn</a>}
+                        {p.mentor && !self && (req
+                          ? <span className={`px-3 py-2 rounded-xl text-xs font-semibold ${MENTORAT_STATUS[req.statut][1]}`}>Demande {req.statut === "acceptee" ? "acceptée" : "envoyée"}</span>
+                          : <button onClick={() => setRequesting(p)} className="flex-1 px-3 py-2 rounded-xl bg-orange-600 text-white text-xs font-semibold hover:bg-orange-700 flex items-center justify-center gap-1"><MessageCircle size={14} /> Demander un mentorat</button>)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {list.length === 0 && (
+                <div className="bg-white rounded-3xl p-8 text-center text-slate-500 shadow-sm">
+                  {view === "mentors" ? "Aucun mentor disponible pour le moment. Les anciens peuvent se déclarer mentors depuis leur espace." : "Aucun ancien ne correspond à cette recherche."}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </main>
+      {requesting && <MentorRequestModal mentor={requesting} profile={profile} onClose={() => setRequesting(null)} onSend={onRequest} />}
+    </>
+  );
+}
+
+function MentorRequestModal({ mentor, profile, onClose, onSend }) {
+  const first = mentor.nom.split(" ")[0];
+  const suggestion = `Bonjour ${first},\n\nJe suis élève${profile.filiere ? ` en ${profile.filiere}` : ""} à l'ARSTM${profile.promotion ? ` (promotion ${profile.promotion})` : ""}.${profile.objectif ? ` Mon objectif : ${profile.objectif}.` : ""}\n\nVotre parcours m'intéresse beaucoup. Seriez-vous d'accord pour un premier échange afin que je puisse bénéficier de vos conseils ?\n\nMerci d'avance !`;
+  const [msg, setMsg] = useState(suggestion);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const send = async () => {
+    if (msg.trim().length < 10) return setErr("Votre message est trop court.");
+    setBusy(true);
+    const ok = await onSend(mentor, msg.trim().slice(0, 1500));
+    setBusy(false);
+    if (ok) onClose();
+  };
+  return (
+    <ModalShell onClose={onClose} title="Demande de mentorat" sub={`À ${mentor.nom}${mentor.poste ? ` — ${mentor.poste}` : ""}`}>
+      <div className="p-8 space-y-4">
+        <p className="text-sm text-slate-600">Présentez-vous et expliquez ce que vous attendez. Si {first} accepte, vos coordonnées respectives seront partagées pour poursuivre l'échange.</p>
+        <label className="block"><span className="text-xs font-semibold text-slate-600">Votre message ({msg.length}/1500)</span>
+          <textarea rows={9} maxLength={1500} value={msg} onChange={(e) => { setMsg(e.target.value); setErr(""); }} className={inputCls} />
+        </label>
+        {err && <p className="text-sm text-rose-600">{err}</p>}
+        <button onClick={send} disabled={busy} className="w-full py-3.5 rounded-xl bg-orange-600 text-white font-bold hover:bg-orange-700 disabled:opacity-60 flex items-center justify-center gap-2"><Send size={17} /> {busy ? "Envoi..." : "Envoyer la demande"}</button>
+      </div>
+    </ModalShell>
+  );
+}
+
+// =====================================================================
 // CONTACT
 // =====================================================================
 function ContactPage({ user, profile, notify }) {
@@ -1439,11 +1652,13 @@ function ContactPage({ user, profile, notify }) {
 // =====================================================================
 // ESPACE PERSONNEL
 // =====================================================================
-function ProfileSpace({ uid, profile, update, pct, fullName, applications, registrations, events, notify, go }) {
-  const [tab, setTab] = useState("dashboard");
+function ProfileSpace({ uid, profile, update, pct, fullName, applications, registrations, events, notify, go, mentorats, onUpdateMentorat, myTemoignages, onSubmitTemoignage, onDeleteTemoignage, receivedPending }) {
+  const [tab, setTab] = useState(receivedPending > 0 ? "mentorat" : "dashboard");
   const [showCV, setShowCV] = useState(false);
+  const isAncien = profile.type === "ancien";
   const tabs = [
     ["dashboard", "Tableau de bord", LayoutDashboard], ["infos", "Informations personnelles", User],
+    ["mentorat", `${isAncien ? "Ancien & mentorat" : "Mentorat"}${receivedPending ? ` (${receivedPending})` : ""}`, Handshake],
     ["parcours", "Parcours", GraduationCap], ["competences", "Compétences & langues", Award],
     ["cv", "Mon CV", FileText], ["candidatures", "Mes candidatures", Send],
   ];
@@ -1457,8 +1672,12 @@ function ProfileSpace({ uid, profile, update, pct, fullName, applications, regis
           <div className="text-center sm:text-left">
             <p className="text-orange-400 text-sm font-semibold uppercase tracking-widest">Mon espace</p>
             <h1 className="text-3xl md:text-4xl font-extrabold mt-1">{fullName}</h1>
-            <p className="text-slate-300 mt-1">{profile.titre || [profile.filiere, profile.promotion && `Promotion ${profile.promotion}`].filter(Boolean).join(" · ") || "Complétez votre profil pour vous démarquer"}</p>
-            {profile.disponible && <span className="inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full bg-emerald-500 text-white text-xs font-bold"><span className="w-2 h-2 rounded-full bg-white pulse-dot" /> Disponible pour un stage</span>}
+            <p className="text-slate-300 mt-1">{isAncien ? [profile.poste, profile.entreprise].filter(Boolean).join(" · ") || "Ancien de l'ARSTM" : profile.titre || [profile.filiere, profile.promotion && `Promotion ${profile.promotion}`].filter(Boolean).join(" · ") || "Complétez votre profil pour vous démarquer"}</p>
+            <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
+              {isAncien && <span className="px-3 py-1 rounded-full bg-white bg-opacity-15 text-xs font-bold">Ancien{profile.promotion && ` · Promo ${profile.promotion}`}</span>}
+              {isAncien && profile.mentor && <span className="px-3 py-1 rounded-full bg-emerald-500 text-xs font-bold flex items-center gap-1"><Handshake size={12} /> Mentor</span>}
+              {!isAncien && profile.disponible && <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500 text-white text-xs font-bold"><span className="w-2 h-2 rounded-full bg-white pulse-dot" /> Disponible pour un stage</span>}
+            </div>
           </div>
         </div>
         <Waves />
@@ -1484,6 +1703,7 @@ function ProfileSpace({ uid, profile, update, pct, fullName, applications, regis
         <div key={tab} className="lg:col-span-3 fade-up">
           {tab === "dashboard" && <Dashboard profile={profile} pct={pct} fullName={fullName} applications={applications} registrations={registrations} events={events} setTab={setTab} go={go} />}
           {tab === "infos" && <InfosTab uid={uid} profile={profile} update={update} notify={notify} />}
+          {tab === "mentorat" && <MentoratTab profile={profile} update={update} notify={notify} mentorats={mentorats} onUpdate={onUpdateMentorat} myTemoignages={myTemoignages} onSubmitTemoignage={onSubmitTemoignage} onDeleteTemoignage={onDeleteTemoignage} go={go} setTab={setTab} />}
           {tab === "parcours" && (
             <div className="space-y-6">
               <ListEditor title="Formations" Icon={GraduationCap} notify={notify} items={profile.formations} onChange={(formations) => update({ formations })}
@@ -1523,12 +1743,190 @@ function ProfileSpace({ uid, profile, update, pct, fullName, applications, regis
   );
 }
 
+// Onglet « Mentorat » de l'espace personnel (élèves et anciens).
+function MentoratTab({ profile, update, notify, mentorats, onUpdate, myTemoignages, onSubmitTemoignage, onDeleteTemoignage, go, setTab }) {
+  const isAncien = profile.type === "ancien";
+  const sent = mentorats.filter((m) => m.sens === "eleve");
+  const received = mentorats.filter((m) => m.sens === "mentor");
+  return (
+    <div className="space-y-6">
+      {isAncien && <AncienPanel profile={profile} update={update} notify={notify} />}
+
+      {isAncien && (
+        <Panel title={`Demandes reçues (${received.length})`} Icon={UserCheck}>
+          {received.length === 0
+            ? <p className="text-sm text-slate-500">{profile.mentor ? "Aucune demande pour l'instant. Les élèves vous trouvent dans l'annuaire des anciens." : "Activez « Je souhaite être mentor » ci-dessus pour recevoir des demandes d'élèves."}</p>
+            : <ul className="space-y-4">{received.map((m) => <MentoratItem key={m.id} m={m} onUpdate={onUpdate} />)}</ul>}
+        </Panel>
+      )}
+
+      <Panel title="Mes demandes de mentorat" Icon={Handshake}>
+        {sent.length === 0 ? (
+          <div className="text-center py-6">
+            <p className="text-slate-500">Vous n'avez encore contacté aucun mentor.</p>
+            <button onClick={() => go("alumni")} className="mt-4 px-5 py-2.5 rounded-xl bg-orange-600 text-white font-semibold text-sm">Trouver un mentor</button>
+          </div>
+        ) : <ul className="space-y-4">{sent.map((m) => <MentoratItem key={m.id} m={m} onUpdate={onUpdate} />)}</ul>}
+      </Panel>
+
+      {isAncien
+        ? <TemoignagePanel mine={myTemoignages} onSubmit={onSubmitTemoignage} onDelete={onDeleteTemoignage} notify={notify} />
+        : (
+          <div className="rounded-2xl bg-sky-50 border border-sky-200 p-5 flex gap-3 text-sm text-sky-900">
+            <Info size={20} className="flex-shrink-0 text-sky-600 mt-0.5" />
+            <p>Vous êtes diplômé(e) ? Passez votre statut en « Ancien élève » dans <button onClick={() => setTab("infos")} className="font-semibold underline">Informations personnelles</button> pour apparaître dans l'annuaire, devenir mentor et partager votre parcours.</p>
+          </div>
+        )}
+    </div>
+  );
+}
+
+function MentoratItem({ m, onUpdate }) {
+  const [reply, setReply] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [label, cls] = MENTORAT_STATUS[m.statut] || MENTORAT_STATUS.en_attente;
+  const isMentor = m.sens === "mentor";
+  const act = async (patch, msg) => { setBusy(true); await onUpdate(m.id, patch, msg); setBusy(false); };
+  return (
+    <li className={`p-5 rounded-2xl border ${isMentor && m.statut === "en_attente" ? "border-orange-300 bg-orange-50" : "border-slate-200"}`}>
+      <div className="flex items-start gap-3">
+        <Avatar photo={m.autre_photo} name={m.autre_nom} size="w-11 h-11" text="text-sm" />
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2"><p className="font-bold text-slate-900">{m.autre_nom}</p><span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${cls}`}>{label}</span></div>
+          {m.autre_infos && <p className="text-xs text-slate-500 mt-0.5">{m.autre_infos}</p>}
+          <p className="text-xs text-slate-400 mt-0.5">{isMentor ? "Demande reçue" : "Demande envoyée"} le {fmtDate(m.created_at)}</p>
+        </div>
+      </div>
+      <p className="text-sm text-slate-700 mt-3 p-3 rounded-xl bg-white border border-slate-100 whitespace-pre-line">{m.message}</p>
+      {m.reponse && <p className="text-sm text-slate-700 mt-2 p-3 rounded-xl bg-orange-50 whitespace-pre-line"><strong>{isMentor ? "Votre réponse" : "Réponse du mentor"} :</strong> {m.reponse}</p>}
+      {m.statut === "acceptee" && (m.autre_email || m.autre_telephone) && (
+        <div className="mt-3 p-3 rounded-xl bg-emerald-50 text-sm text-emerald-800 flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span className="font-semibold">Pour poursuivre l'échange :</span>
+          {m.autre_email && <a href={`mailto:${m.autre_email}`} className="flex items-center gap-1 underline"><Mail size={14} /> {m.autre_email}</a>}
+          {m.autre_telephone && <a href={`tel:${m.autre_telephone.replace(/\s/g, "")}`} className="flex items-center gap-1 underline"><Phone size={14} /> {m.autre_telephone}</a>}
+        </div>
+      )}
+      {isMentor && m.statut === "en_attente" && (
+        <div className="mt-4 space-y-2">
+          <textarea rows={2} maxLength={1500} value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Un petit mot pour l'élève (facultatif) : vos disponibilités, comment vous joindre..." className={inputCls} />
+          <p className="text-xs text-slate-500">En acceptant, votre email et votre téléphone de contact sont communiqués à l'élève (et les siens à vous).</p>
+          <div className="flex gap-2 justify-end">
+            <button disabled={busy} onClick={() => act({ statut: "refusee", reponse: reply.trim() || null }, "Demande déclinée.")} className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-sm font-semibold text-slate-600 disabled:opacity-60">Décliner</button>
+            <button disabled={busy} onClick={() => act({ statut: "acceptee", reponse: reply.trim() || null }, "Demande acceptée ! Vos coordonnées sont maintenant partagées.")} className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60 flex items-center gap-1"><CheckCircle2 size={15} /> Accepter</button>
+          </div>
+        </div>
+      )}
+      <div className="mt-3 flex justify-end gap-2">
+        {!isMentor && m.statut === "en_attente" && <ConfirmButton onConfirm={() => act({ statut: "annulee" }, "Demande annulée.")} confirmLabel="Annuler ?" className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-rose-600">Annuler la demande</ConfirmButton>}
+        {m.statut === "acceptee" && <ConfirmButton onConfirm={() => act({ statut: "terminee" }, "Mentorat marqué comme terminé. Merci !")} confirmLabel="Terminer ?" className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-orange-600">Marquer comme terminé</ConfirmButton>}
+      </div>
+    </li>
+  );
+}
+
+// Profil professionnel d'un ancien + choix d'être mentor.
+function AncienPanel({ profile, update, notify }) {
+  const keys = ["poste", "entreprise", "pays", "annuaire", "mentor", "mentor_domaines", "mentor_presentation"];
+  const [d, setD] = useState(Object.fromEntries(keys.map((k) => [k, profile[k]])));
+  const [saving, setSaving] = useState(false);
+  const set = (k) => (e) => setD({ ...d, [k]: e.target.value });
+  const save = async () => {
+    const patch = { ...d, annuaire: d.annuaire !== false, mentor: d.annuaire !== false && !!d.mentor };
+    setSaving(true);
+    const ok = await update(patch);
+    setSaving(false);
+    if (ok) notify("Profil d'ancien enregistré.");
+  };
+  return (
+    <Panel title="Mon profil d'ancien" Icon={GraduationCap}>
+      <div className="grid sm:grid-cols-3 gap-4">
+        <label className="block"><span className="text-xs font-semibold text-slate-600">Poste actuel</span><input value={d.poste || ""} onChange={set("poste")} placeholder="ex. Officier mécanicien" className={inputCls} /></label>
+        <label className="block"><span className="text-xs font-semibold text-slate-600">Entreprise</span><input value={d.entreprise || ""} onChange={set("entreprise")} placeholder="ex. Compagnie maritime" className={inputCls} /></label>
+        <label className="block"><span className="text-xs font-semibold text-slate-600">Pays</span><input value={d.pays || ""} onChange={set("pays")} placeholder="ex. Côte d'Ivoire" className={inputCls} /></label>
+      </div>
+      <p className="text-xs text-slate-500 mt-2">La ville et le lien LinkedIn se règlent dans « Informations personnelles ».</p>
+
+      <div className="mt-6 space-y-3">
+        <label className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition ${d.annuaire !== false ? "border-orange-300 bg-orange-50" : "border-slate-200"}`}>
+          <input type="checkbox" checked={d.annuaire !== false} onChange={(e) => setD({ ...d, annuaire: e.target.checked, mentor: e.target.checked ? d.mentor : false })} className="w-5 h-5 mt-0.5 accent-orange-600" />
+          <span><span className="font-semibold text-slate-900 block">Apparaître dans l'annuaire des anciens</span><span className="text-xs text-slate-500">Visible uniquement par les membres connectés : nom, promo, poste, entreprise, ville, pays et LinkedIn. Jamais votre email ni votre téléphone.</span></span>
+        </label>
+        <label className={`flex items-start gap-3 p-4 rounded-2xl border transition ${d.annuaire === false ? "opacity-50 cursor-not-allowed" : "cursor-pointer"} ${d.mentor && d.annuaire !== false ? "border-emerald-400 bg-emerald-50" : "border-slate-200"}`}>
+          <input type="checkbox" disabled={d.annuaire === false} checked={!!d.mentor && d.annuaire !== false} onChange={(e) => setD({ ...d, mentor: e.target.checked })} className="w-5 h-5 mt-0.5 accent-emerald-600" />
+          <span><span className="font-semibold text-slate-900 block">Je souhaite être mentor</span><span className="text-xs text-slate-500">Les élèves pourront vous envoyer une demande. Vous choisissez librement d'accepter ou non, et vous pouvez arrêter à tout moment.</span></span>
+        </label>
+      </div>
+
+      {d.mentor && d.annuaire !== false && (
+        <div className="mt-4 space-y-4">
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Sujets sur lesquels vous pouvez aider</span><input value={d.mentor_domaines || ""} onChange={set("mentor_domaines")} placeholder="ex. Mécanique navale, offshore, recherche de stage, travail à l'étranger" className={inputCls} /></label>
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Quelques mots pour les élèves ({(d.mentor_presentation || "").length}/400)</span>
+            <textarea rows={3} maxLength={400} value={d.mentor_presentation || ""} onChange={set("mentor_presentation")} placeholder="ex. 8 ans de navigation, aujourd'hui chef mécanicien. Je peux vous parler du métier et des premières années à bord." className={inputCls} />
+          </label>
+        </div>
+      )}
+      <div className="flex justify-end mt-6"><button onClick={save} disabled={saving} className="px-6 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700 disabled:opacity-60">{saving ? "Enregistrement..." : "Enregistrer"}</button></div>
+    </Panel>
+  );
+}
+
+// Un ancien partage son parcours ; le bureau valide avant publication.
+function TemoignagePanel({ mine, onSubmit, onDelete, notify }) {
+  const [open, setOpen] = useState(mine.length === 0);
+  const [titre, setTitre] = useState("");
+  const [texte, setTexte] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    if (texte.trim().length < 20) return notify("Votre témoignage doit faire au moins 20 caractères.", "error");
+    setBusy(true);
+    const ok = await onSubmit({ titre: titre.trim(), texte: texte.trim().slice(0, 4000) });
+    setBusy(false);
+    if (ok) { setTitre(""); setTexte(""); setOpen(false); }
+  };
+  return (
+    <Panel title="Partager mon parcours" Icon={Quote} action={!open && <button onClick={() => setOpen(true)} className="px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-semibold flex items-center gap-1"><Plus size={16} /> Nouveau</button>}>
+      <p className="text-sm text-slate-500 -mt-3 mb-5">Votre témoignage inspire les élèves. Il sera publié dans « La parole aux anciens » après relecture par le bureau, avec votre nom, votre photo, votre poste et votre promotion.</p>
+      {mine.length > 0 && (
+        <ul className="space-y-3 mb-5">
+          {mine.map((t) => (
+            <li key={t.id} className="p-4 rounded-2xl border border-slate-200 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold text-slate-900">{t.titre || "Mon parcours"}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${t.publie ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{t.publie ? "Publié" : "En attente de validation"}</span>
+                </div>
+                <p className="text-sm text-slate-600 mt-1 line-clamp-2">{t.texte}</p>
+              </div>
+              {!t.publie && <ConfirmButton onConfirm={() => onDelete(t.id)} confirmLabel="Retirer ?" ariaLabel="Retirer ce témoignage" className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={16} /></ConfirmButton>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {open && (
+        <div className="space-y-4">
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Titre (facultatif)</span><input value={titre} onChange={(e) => setTitre(e.target.value)} maxLength={120} placeholder="ex. De l'ARSTM à l'offshore" className={inputCls} /></label>
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Votre parcours ({texte.length}/4000)</span>
+            <textarea rows={7} maxLength={4000} value={texte} onChange={(e) => setTexte(e.target.value)} placeholder="Votre filière, vos premiers stages, votre métier aujourd'hui, et le conseil que vous auriez aimé recevoir à l'époque..." className={inputCls} />
+          </label>
+          <div className="flex justify-end gap-2">
+            {mine.length > 0 && <button onClick={() => setOpen(false)} className="px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-sm">Annuler</button>}
+            <button onClick={submit} disabled={busy} className="px-5 py-2.5 rounded-xl bg-orange-600 text-white font-semibold text-sm disabled:opacity-60 flex items-center gap-2"><Send size={15} /> {busy ? "Envoi..." : "Envoyer pour publication"}</button>
+          </div>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 function Dashboard({ profile, pct, fullName, applications, registrations, events, setTab, go }) {
+  const isAncien = profile.type === "ancien";
   const checklist = [
     ["Ajouter une photo de profil", "infos", profile.photo],
     ["Renseigner téléphone et email", "infos", profile.telephone && profile.email],
     ["Indiquer filière et promotion", "infos", profile.filiere && profile.promotion],
-    ["Préciser votre objectif professionnel", "infos", profile.objectif],
+    ...(isAncien
+      ? [["Compléter votre profil d'ancien (poste, entreprise)", "mentorat", profile.poste && profile.entreprise]]
+      : [["Préciser votre objectif professionnel", "infos", profile.objectif]]),
     ["Écrire une courte présentation", "infos", profile.bio],
     ["Ajouter une formation", "parcours", profile.formations.length],
     ["Ajouter une expérience ou un stage", "parcours", profile.experiences.length],
@@ -1542,8 +1940,10 @@ function Dashboard({ profile, pct, fullName, applications, registrations, events
         <Ring pct={pct} />
         <div className="flex-1 text-center md:text-left">
           <h2 className="text-2xl font-extrabold text-slate-900">Bonjour {fullName.split(" ")[0]} 👋</h2>
-          <p className="text-slate-600 mt-2">{pct === 100 ? "Votre profil est complet. Bravo ! Vous êtes prêt(e) à postuler." : pct >= 50 ? "Bon début ! Complétez encore votre profil pour maximiser vos chances." : "Complétez votre profil : il servira à vos candidatures et au réseau CGE."}</p>
-          {!profile.disponible && <button onClick={() => setTab("infos")} className="mt-3 text-sm text-orange-600 font-semibold">Vous cherchez un stage ? Indiquez-le dans votre profil →</button>}
+          <p className="text-slate-600 mt-2">{pct === 100 ? "Votre profil est complet. Bravo !" : pct >= 50 ? "Bon début ! Complétez encore votre profil pour maximiser vos chances." : "Complétez votre profil : il servira à vos candidatures et au réseau CGE."}</p>
+          {isAncien
+            ? !profile.mentor && <button onClick={() => setTab("mentorat")} className="mt-3 text-sm text-orange-600 font-semibold">Partagez votre expérience : devenez mentor →</button>
+            : !profile.disponible && <button onClick={() => setTab("infos")} className="mt-3 text-sm text-orange-600 font-semibold">Vous cherchez un stage ? Indiquez-le dans votre profil →</button>}
         </div>
       </div>
       <div className="grid sm:grid-cols-3 gap-4">
@@ -1585,6 +1985,7 @@ function InfosTab({ uid, profile, update, notify }) {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const set = (k) => (e) => setD({ ...d, [k]: e.target.value });
+  const isAncien = d.type === "ancien";
   const onPhoto = async (e) => {
     const f = e.target.files && e.target.files[0]; e.target.value = "";
     if (!f) return;
@@ -1599,11 +2000,13 @@ function InfosTab({ uid, profile, update, notify }) {
   const removePhoto = async () => { setD((x) => ({ ...x, photo: null })); if (await update({ photo: null })) notify("Photo retirée."); };
   const save = async () => {
     if (d.email && !EMAIL_RE.test(d.email)) return notify("Adresse email invalide.", "error");
-    const { formations, experiences, competences, langues, cv, ...infos } = d;
+    if (d.linkedin && !/^https?:\/\//i.test(d.linkedin)) return notify("Le lien LinkedIn doit commencer par https://", "error");
+    // On n'envoie que les champs de cet onglet (les autres sont gérés ailleurs).
+    const { formations, experiences, competences, langues, cv, poste, entreprise, pays, annuaire, mentor, mentor_domaines, mentor_presentation, ...infos } = d;
     setSaving(true);
     const ok = await update(infos);
     setSaving(false);
-    if (ok) notify("Informations enregistrées.");
+    if (ok) notify(isAncien && profile.type !== "ancien" ? "Vous êtes maintenant « Ancien » : complétez votre profil dans l'onglet Ancien & mentorat." : "Informations enregistrées.");
   };
   const F = ({ label, k, type = "text", placeholder }) => (
     <label className="block"><span className="text-xs font-semibold text-slate-600">{label}</span><input type={type} value={d[k] || ""} onChange={set(k)} placeholder={placeholder} className={inputCls} /></label>
@@ -1624,17 +2027,30 @@ function InfosTab({ uid, profile, update, notify }) {
         </div>
       </div>
 
-      <h3 className="font-bold text-slate-900 mb-3">Projet professionnel</h3>
-      <div className="space-y-4">
-        {F({ label: "Objectif professionnel", k: "objectif", placeholder: "ex. Devenir officier mécanicien dans la marine marchande" })}
-        <label className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition ${d.disponible ? "border-emerald-400 bg-emerald-50" : "border-slate-200 hover:border-orange-300"}`}>
-          <input type="checkbox" checked={!!d.disponible} onChange={(e) => setD({ ...d, disponible: e.target.checked })} className="w-5 h-5 mt-0.5 accent-emerald-600" />
-          <span>
-            <span className="font-semibold text-slate-900 block">Je suis disponible pour un stage</span>
-            <span className="text-xs text-slate-500">Le bureau pourra transmettre votre profil aux entreprises qui recherchent des stagiaires.</span>
-          </span>
-        </label>
+      <h3 className="font-bold text-slate-900 mb-3">Statut</h3>
+      <div className="grid sm:grid-cols-2 gap-3">
+        {[["eleve", "Élève actuel", "Je suis en formation à l'ARSTM"], ["ancien", "Ancien élève", "Je suis diplômé(e) de l'ARSTM"]].map(([v, l, s]) => (
+          <button key={v} type="button" onClick={() => setD({ ...d, type: v })} className={`p-4 rounded-2xl border text-left transition ${d.type === v ? "border-orange-500 bg-orange-50 ring-2 ring-orange-200" : "border-slate-200 hover:border-orange-300"}`}>
+            <p className="font-semibold text-slate-900">{l}</p><p className="text-xs text-slate-500">{s}</p>
+          </button>
+        ))}
       </div>
+
+      {!isAncien && (
+        <>
+          <h3 className="font-bold text-slate-900 mt-8 mb-3">Projet professionnel</h3>
+          <div className="space-y-4">
+            {F({ label: "Objectif professionnel", k: "objectif", placeholder: "ex. Devenir officier mécanicien dans la marine marchande" })}
+            <label className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition ${d.disponible ? "border-emerald-400 bg-emerald-50" : "border-slate-200 hover:border-orange-300"}`}>
+              <input type="checkbox" checked={!!d.disponible} onChange={(e) => setD({ ...d, disponible: e.target.checked })} className="w-5 h-5 mt-0.5 accent-emerald-600" />
+              <span>
+                <span className="font-semibold text-slate-900 block">Je suis disponible pour un stage</span>
+                <span className="text-xs text-slate-500">Le bureau pourra transmettre votre profil aux entreprises qui recherchent des stagiaires.</span>
+              </span>
+            </label>
+          </div>
+        </>
+      )}
 
       <h3 className="font-bold text-slate-900 mt-8 mb-3">Identité</h3>
       <div className="grid sm:grid-cols-2 gap-4">
@@ -1651,10 +2067,10 @@ function InfosTab({ uid, profile, update, notify }) {
         <label className="block"><span className="text-xs font-semibold text-slate-600">Filière</span>
           <select value={d.filiere} onChange={set("filiere")} className={inputCls}><option value="">Choisir...</option>{FILIERES.map((f) => <option key={f}>{f}</option>)}</select>
         </label>
-        {F({ label: "Promotion", k: "promotion", placeholder: "ex. 2026" })}{F({ label: "Matricule", k: "matricule" })}
+        {F({ label: isAncien ? "Promotion (année de sortie)" : "Promotion", k: "promotion", placeholder: "ex. 2026" })}{F({ label: "Matricule", k: "matricule" })}
       </div>
       <h3 className="font-bold text-slate-900 mt-8 mb-3">Présentation</h3>
-      {F({ label: "Titre professionnel", k: "titre", placeholder: "ex. Élève ingénieur en mécanique navale" })}
+      {F({ label: "Titre professionnel", k: "titre", placeholder: isAncien ? "ex. Chef mécanicien" : "ex. Élève ingénieur en mécanique navale" })}
       <label className="block mt-4"><span className="text-xs font-semibold text-slate-600">À propos de moi ({(d.bio || "").length}/500)</span>
         <textarea rows={4} maxLength={500} value={d.bio || ""} onChange={set("bio")} placeholder="Présentez-vous en quelques lignes : vos objectifs, ce qui vous motive..." className={inputCls} />
       </label>
@@ -1812,6 +2228,7 @@ function CVPreview({ profile: p, fullName, onClose, notify }) {
   const Section = ({ title, children }) => (
     <div className="mt-6"><h3 className="text-sm font-extrabold uppercase tracking-widest text-orange-600 border-b-2 border-orange-500 pb-1">{title}</h3><div className="mt-3">{children}</div></div>
   );
+  const isAncien = p.type === "ancien";
   return (
     <div className="fixed inset-0 z-50 bg-black bg-opacity-60 overflow-y-auto p-4" onClick={onClose}>
       <div className="max-w-3xl mx-auto" onClick={(e) => e.stopPropagation()}>
@@ -1825,18 +2242,18 @@ function CVPreview({ profile: p, fullName, onClose, notify }) {
             <Avatar photo={p.photo} name={fullName} size="w-28 h-28" text="text-4xl" />
             <div>
               <h1 className="text-3xl font-extrabold">{fullName}</h1>
-              {p.titre && <p className="text-orange-400 font-semibold mt-1">{p.titre}</p>}
-              {p.disponible && <p className="text-emerald-300 text-sm font-semibold mt-1">Disponible pour un stage</p>}
+              {(p.titre || (isAncien && p.poste)) && <p className="text-orange-400 font-semibold mt-1">{p.titre || [p.poste, p.entreprise].filter(Boolean).join(" · ")}</p>}
+              {!isAncien && p.disponible && <p className="text-emerald-300 text-sm font-semibold mt-1">Disponible pour un stage</p>}
               <div className="text-sm text-slate-300 mt-3 space-y-1">
                 {p.telephone && <p className="flex items-center gap-2"><Phone size={13} /> {p.telephone}</p>}
                 {p.email && <p className="flex items-center gap-2"><Mail size={13} /> {p.email}</p>}
-                {p.ville && <p className="flex items-center gap-2"><MapPin size={13} /> {p.ville}</p>}
+                {(p.ville || p.pays) && <p className="flex items-center gap-2"><MapPin size={13} /> {[p.ville, p.pays].filter(Boolean).join(", ")}</p>}
                 {p.linkedin && <p className="flex items-center gap-2"><Globe size={13} /> {p.linkedin}</p>}
               </div>
             </div>
           </div>
           <div className="p-8 text-slate-800">
-            {p.objectif && <Section title="Objectif professionnel"><p className="text-sm leading-relaxed">{p.objectif}</p></Section>}
+            {!isAncien && p.objectif && <Section title="Objectif professionnel"><p className="text-sm leading-relaxed">{p.objectif}</p></Section>}
             {p.bio && <Section title="Profil"><p className="text-sm leading-relaxed">{p.bio}</p></Section>}
             {p.experiences.length > 0 && <Section title="Expériences">{p.experiences.map((x) => (
               <div key={x.id} className="mb-3"><p className="font-bold">{x.poste} — <span className="font-normal">{x.entreprise}</span></p>{x.periode && <p className="text-xs text-slate-500">{x.periode}</p>}{x.description && <p className="text-sm mt-1">{x.description}</p>}</div>
@@ -1862,7 +2279,7 @@ function CVPreview({ profile: p, fullName, onClose, notify }) {
 // =====================================================================
 // CONNEXION, INSCRIPTION ET MOT DE PASSE
 // =====================================================================
-const EMPTY_REG = { prenoms: "", nom: "", matricule: "", email: "", filiere: "", promotion: "", password: "", confirm: "" };
+const EMPTY_REG = { type: "eleve", prenoms: "", nom: "", matricule: "", email: "", filiere: "", promotion: "", password: "", confirm: "" };
 
 function ModalShell({ onClose, title, sub, children }) {
   return (
@@ -1930,7 +2347,7 @@ function LoginModal({ onClose, onLogin, onRegister, onForgot }) {
 
   const titles = {
     login: ["Espace membre", "Connectez-vous avec votre email."],
-    register: ["Créer un compte", "Réservé aux élèves de l'ARSTM. Votre demande sera validée par le bureau."],
+    register: ["Créer un compte", "Pour les élèves et les anciens de l'ARSTM. Votre demande sera validée par le bureau."],
     forgot: ["Mot de passe oublié", "Recevez un lien pour choisir un nouveau mot de passe."],
     done: ["Demande envoyée", "Plus qu'une étape : la validation."],
     sent: ["Email envoyé", "Consultez votre boîte de réception."],
@@ -1959,8 +2376,13 @@ function LoginModal({ onClose, onLogin, onRegister, onForgot }) {
 
       {mode === "register" && (
         <div className="p-8 space-y-4">
+          <div className="grid grid-cols-2 gap-2">
+            {[["eleve", "Élève actuel"], ["ancien", "Ancien élève"]].map(([v, l]) => (
+              <button key={v} type="button" onClick={() => setReg({ ...reg, type: v })} className={`py-2.5 rounded-xl text-sm font-semibold border transition ${reg.type === v ? "border-orange-500 bg-orange-50 text-orange-700" : "border-slate-300 text-slate-600"}`}>{l}</button>
+            ))}
+          </div>
           <div className="grid grid-cols-2 gap-3">{regField("Prénoms", "prenoms")}{regField("Nom", "nom")}</div>
-          {regField("Matricule", "matricule", "text", "ex. ARSTM-2026-045")}
+          {regField(reg.type === "ancien" ? "Matricule (lors de votre scolarité)" : "Matricule", "matricule", "text", "ex. ARSTM-2026-045")}
           {regField("Email (servira à vous connecter)", "email", "email", "prenom.nom@exemple.com")}
           <div className="grid grid-cols-2 gap-3">
             <label className="block"><span className="text-xs font-semibold text-slate-600">Filière</span>
@@ -1968,7 +2390,7 @@ function LoginModal({ onClose, onLogin, onRegister, onForgot }) {
                 <option value="">Choisir...</option>{FILIERES.map((f) => <option key={f}>{f}</option>)}
               </select>
             </label>
-            {regField("Promotion", "promotion", "text", "ex. 2026")}
+            {regField(reg.type === "ancien" ? "Année de sortie" : "Promotion", "promotion", "text", "ex. 2026")}
           </div>
           {regField("Mot de passe (8 caractères min.)", "password", "password")}
           {regField("Confirmer le mot de passe", "confirm", "password")}
@@ -2037,7 +2459,7 @@ function NewPasswordModal({ onClose, notify }) {
 // =====================================================================
 // ADMINISTRATION
 // =====================================================================
-// Champs des formulaires : k = nom, type = text/date/url/select/textarea/checkbox, optional = facultatif
+// Champs des formulaires : k = nom, type = text/date/url/select/textarea/checkbox/image, optional = facultatif
 const ADMIN_SECTIONS = {
   news: {
     table: "news", fromDb: newsFromDb, toDb: newsToDb, label: "Actualités", icon: Newspaper,
@@ -2078,8 +2500,22 @@ const ADMIN_SECTIONS = {
     ],
     show: (i) => `${i.title}${i.company ? ` — ${i.company}` : ""}`,
   },
+  temoignages: {
+    table: "temoignages", fromDb: plainFromDb, toDb: temoToDb, label: "Témoignages", icon: Quote,
+    fields: [
+      { k: "nom", label: "Nom de l'ancien" },
+      { k: "promo", label: "Promotion", optional: true },
+      { k: "poste", label: "Poste", optional: true },
+      { k: "entreprise", label: "Entreprise", optional: true },
+      { k: "photo", label: "Photo", type: "image", folder: "site/temoignages", optional: true },
+      { k: "titre", label: "Titre", optional: true, placeholder: "ex. De l'ARSTM à l'offshore" },
+      { k: "texte", label: "Témoignage (20 caractères minimum)", type: "textarea" },
+      { k: "publie", label: "Publié sur le site", type: "checkbox" },
+    ],
+    show: (i) => `${i.nom}${i.titre ? ` — ${i.titre}` : ""}`,
+  },
   alumni: {
-    table: "alumni", fromDb: plainFromDb, toDb: plainToDb, label: "Alumni", icon: GraduationCap,
+    table: "alumni", fromDb: plainFromDb, toDb: plainToDb, label: "Anciens (sans compte)", icon: GraduationCap,
     fields: [
       { k: "name", label: "Nom" },
       { k: "promo", label: "Promotion" },
@@ -2089,6 +2525,32 @@ const ADMIN_SECTIONS = {
     show: (i) => `${i.name} — Promo ${i.promo}`,
   },
 };
+
+// Champ « image » des formulaires d'administration : envoi immédiat, puis l'adresse est gardée dans le formulaire.
+function ImageField({ label, value, onChange, folder, notify }) {
+  const [busy, setBusy] = useState(false);
+  const onFile = async (e) => {
+    const f = e.target.files && e.target.files[0]; e.target.value = "";
+    if (!f) return;
+    setBusy(true);
+    try { onChange(await uploadPublicImage(folder, await compressImage(f, 500))); }
+    catch (err) { notify(err.message, "error"); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="block">
+      {label}
+      <div className="mt-1 flex items-center gap-3">
+        <Avatar photo={value} name="?" size="w-14 h-14" />
+        <label className={`cursor-pointer px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1 ${busy ? "bg-slate-200 text-slate-500" : "bg-orange-600 text-white hover:bg-orange-700"}`}>
+          <Camera size={14} /> {busy ? "Envoi..." : value ? "Changer" : "Ajouter une photo"}
+          <input type="file" accept="image/*" onChange={onFile} disabled={busy} className="hidden" />
+        </label>
+        {value && !busy && <button type="button" onClick={() => onChange(null)} className="px-3 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-300 text-slate-600">Retirer</button>}
+      </div>
+    </div>
+  );
+}
 
 // Une case d'image modifiable : aperçu + bouton « Changer » + bouton « Retirer ».
 function ImageSlot({ imgKey, label, sub, round, notify }) {
@@ -2155,33 +2617,42 @@ function ImagesManager({ notify }) {
 }
 
 // Tableau de bord du bureau : les chiffres clés en un coup d'œil.
-function AdminDashboard({ members, jobs, applications, registrations, events, messages, onOpen }) {
+function AdminDashboard({ members, jobs, applications, registrations, events, messages, temoignages, mentoratAll, onOpen }) {
+  const actifs = members.filter((m) => m.statut === "actif");
   const pending = members.filter((m) => m.statut === "en_attente").length;
-  const actifs = members.filter((m) => m.statut === "actif").length;
-  const dispo = members.filter((m) => m.statut === "actif" && m.data?.disponible).length;
+  const anciens = actifs.filter((m) => m.type === "ancien").length;
+  const mentors = actifs.filter((m) => m.type === "ancien" && m.data?.mentor).length;
+  const dispo = actifs.filter((m) => m.type !== "ancien" && m.data?.disponible).length;
   const open = jobs.filter((j) => !isExpired(j));
   const retenues = applications.filter((a) => a.status === "Retenue").length;
   const upcomingIds = new Set(events.filter((e) => daysUntil(e.date) >= 0).map((e) => e.id));
   const insc = registrations.filter((r) => upcomingIds.has(r.eventId)).length;
   const unread = messages.filter((m) => !m.lu).length;
+  const temoPending = temoignages.filter((t) => !t.publie).length;
+  const mentoratPending = mentoratAll.filter((m) => m.statut === "en_attente").length;
+  const mentoratActifs = mentoratAll.filter((m) => m.statut === "acceptee" || m.statut === "terminee").length;
   const closingSoon = open.filter((j) => j.cloture && daysUntil(j.cloture) <= 7).sort(byDeadline);
 
   const cards = [
     [UserPlus, pending, "Demandes d'inscription", () => onOpen("members"), pending > 0],
     [Mail, unread, "Messages non lus", () => onOpen("messages"), unread > 0],
-    [Users, actifs, "Membres actifs", () => onOpen("members")],
-    [GraduationCap, dispo, "Élèves disponibles pour un stage", () => onOpen("members", true)],
+    [Quote, temoPending, "Témoignages à valider", () => onOpen("temoignages"), temoPending > 0],
+    [Users, actifs.length, "Membres actifs", () => onOpen("members")],
+    [GraduationCap, anciens, "Anciens inscrits", () => onOpen("members", { type: "ancien" })],
+    [Handshake, mentors, "Mentors disponibles", () => onOpen("members", { type: "ancien" })],
+    [MessageCircle, mentoratPending, "Demandes de mentorat sans réponse"],
+    [UserCheck, mentoratActifs, "Mentorats acceptés"],
     [Briefcase, open.length, "Opportunités ouvertes", () => onOpen("jobs")],
     [Send, applications.length, "Candidatures reçues", () => onOpen("applications")],
     [Trophy, retenues, "Candidatures retenues", () => onOpen("applications")],
-    [Calendar, insc, "Inscriptions aux événements à venir", () => onOpen("events")],
+    [Target, dispo, "Élèves disponibles pour un stage", () => onOpen("members", { dispo: true })],
   ];
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map(([Icon, v, l, fn, alert]) => (
-          <button key={l} onClick={fn} className={`rounded-3xl shadow-sm p-5 text-left hover:shadow-lg transition ${alert ? "bg-amber-50 ring-2 ring-amber-300" : "bg-white"}`}>
+          <button key={l} onClick={fn} disabled={!fn} className={`rounded-3xl shadow-sm p-5 text-left transition ${fn ? "hover:shadow-lg" : "cursor-default"} ${alert ? "bg-amber-50 ring-2 ring-amber-300" : "bg-white"}`}>
             <Icon size={20} className={alert ? "text-amber-600" : "text-orange-600"} />
             <p className="text-3xl font-extrabold text-slate-900 mt-3">{v}</p>
             <p className="text-sm text-slate-500 leading-snug">{l}</p>
@@ -2221,7 +2692,7 @@ function AdminDashboard({ members, jobs, applications, registrations, events, me
   );
 }
 
-function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, setAlumni, applications, setApplications, registrations, members, setMembers, messages, setMessages, currentId, notify, reload }) {
+function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, setAlumni, temoignages, setTemoignages, mentoratAll, applications, setApplications, registrations, members, setMembers, messages, setMessages, currentId, notify, reload }) {
   const [tab, setTab] = useState("dashboard");
   const [form, setForm] = useState({});
   const [editingId, setEditingId] = useState(null);
@@ -2229,27 +2700,36 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
   const [viewing, setViewing] = useState(null); // { profile, name } pour afficher le CV d'un membre
   const [mq, setMq] = useState("");
   const [mf, setMf] = useState("");
+  const [mt, setMt] = useState("");
   const [dispoOnly, setDispoOnly] = useState(false);
+  const [bulkPromo, setBulkPromo] = useState("");
   const formRef = useRef(null);
 
-  const store = { news: [news, setNews], events: [events, setEvents], jobs: [jobs, setJobs], alumni: [alumni, setAlumni] };
+  const store = { news: [news, setNews], events: [events, setEvents], jobs: [jobs, setJobs], temoignages: [temoignages, setTemoignages], alumni: [alumni, setAlumni] };
   const cfg = ADMIN_SECTIONS[tab];
   const [items, setItems] = store[tab] || [[], () => {}];
   const pending = members.filter((m) => m.statut === "en_attente");
   const active = members.filter((m) => m.statut === "actif");
   const unread = messages.filter((m) => !m.lu).length;
+  const temoPending = temoignages.filter((t) => !t.publie).length;
   const shownMembers = active.filter((m) =>
-    (!mf || m.filiere === mf) && (!dispoOnly || m.data?.disponible)
-    && (!mq || [accountName(m), m.email, m.matricule, m.promotion, m.data?.objectif].join(" ").toLowerCase().includes(mq.toLowerCase())));
+    (!mf || m.filiere === mf) && (!mt || (m.type || "eleve") === mt) && (!dispoOnly || m.data?.disponible)
+    && (!mq || [accountName(m), m.email, m.matricule, m.promotion, m.data?.objectif, m.data?.poste, m.data?.entreprise].join(" ").toLowerCase().includes(mq.toLowerCase())));
+  // Promotions qui comptent encore des élèves (pour le passage en anciens en fin d'année)
+  const elevePromos = [...new Set(active.filter((m) => m.type !== "ancien" && m.promotion).map((m) => m.promotion))].sort();
 
   const resetForm = () => { setForm({}); setEditingId(null); };
   const switchTab = (k) => { setTab(k); resetForm(); };
-  const openFromDashboard = (k, dispo) => { if (dispo) setDispoOnly(true); switchTab(k); };
+  const openFromDashboard = (k, opts = {}) => {
+    if (opts.dispo) setDispoOnly(true);
+    if (opts.type) setMt(opts.type);
+    switchTab(k);
+  };
 
-  // ----- Contenus (actualités, événements, opportunités, alumni) -----
+  // ----- Contenus (actualités, événements, opportunités, témoignages, anciens) -----
   const save = async () => {
     if (saving) return;
-    const missing = cfg.fields.find((f) => !f.optional && f.type !== "checkbox" && f.type !== "select" && !String(form[f.k] ?? "").trim());
+    const missing = cfg.fields.find((f) => !f.optional && !["checkbox", "select", "image"].includes(f.type) && !String(form[f.k] ?? "").trim());
     if (missing) return notify(`Le champ « ${missing.label} » est obligatoire.`, "error");
     const badUrl = cfg.fields.find((f) => f.type === "url" && form[f.k] && !/^https?:\/\//i.test(String(form[f.k]).trim()));
     if (badUrl) return notify(`Le champ « ${badUrl.label} » doit commencer par https://`, "error");
@@ -2277,6 +2757,12 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
     if (editingId === item.id) resetForm();
     notify("Supprimé.");
   };
+  const togglePublish = async (t) => {
+    const { error } = await sb.from("temoignages").update({ publie: !t.publie }).eq("id", t.id);
+    if (error) return notify("Mise à jour impossible : " + error.message, "error");
+    setTemoignages((list) => list.map((x) => (x.id === t.id ? { ...x, publie: !t.publie } : x)));
+    notify(t.publie ? "Témoignage retiré du site." : "Témoignage publié !");
+  };
 
   // ----- Membres -----
   const updateMember = async (m, patch, msg) => {
@@ -2292,6 +2778,13 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
     setMembers((list) => list.filter((x) => x.id !== m.id));
     setApplications((list) => list.filter((a) => a.userId !== m.id));
     notify(msg);
+  };
+  const promoteClass = async () => {
+    const { data, error } = await sb.from("profiles").update({ type: "ancien" }).eq("statut", "actif").eq("type", "eleve").eq("promotion", bulkPromo).select();
+    if (error) return notify("Action impossible : " + error.message, "error");
+    setMembers((list) => list.map((x) => data.find((d) => d.id === x.id) || x));
+    notify(`${data.length} membre${data.length > 1 ? "s" : ""} de la promotion ${bulkPromo} passé${data.length > 1 ? "s" : ""} en anciens.`);
+    setBulkPromo("");
   };
   const openProfile = (userId) => {
     const m = members.find((x) => x.id === userId);
@@ -2322,7 +2815,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
 
   const tabs = [
     ["dashboard", { label: "Tableau de bord", icon: BarChart3 }],
-    ...Object.entries(ADMIN_SECTIONS),
+    ...Object.entries(ADMIN_SECTIONS).map(([k, s]) => [k, k === "temoignages" && temoPending ? { ...s, label: `${s.label} (${temoPending})` } : s]),
     ["members", { label: `Membres${pending.length ? ` (${pending.length} en attente)` : ""}`, icon: Users }],
     ["applications", { label: `Candidatures (${applications.length})`, icon: Send }],
     ["messages", { label: `Messages${unread ? ` (${unread})` : ""}`, icon: Inbox }],
@@ -2331,11 +2824,12 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
 
   const renderField = (f) => {
     const val = form[f.k];
+    const lab = <span className="text-xs font-semibold text-slate-600">{f.label}{f.optional && <span className="font-normal text-slate-400"> (facultatif)</span>}</span>;
+    if (f.type === "image") return <ImageField key={f.k} label={lab} value={val} folder={f.folder} notify={notify} onChange={(url) => setForm((prev) => ({ ...prev, [f.k]: url }))} />;
     const onChange = (e) => setForm({ ...form, [f.k]: f.type === "checkbox" ? e.target.checked : e.target.value });
     if (f.type === "checkbox") return <label key={f.k} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!val} onChange={onChange} className="w-4 h-4 accent-orange-600" /> {f.label}</label>;
-    const lab = <span className="text-xs font-semibold text-slate-600">{f.label}{f.optional && <span className="font-normal text-slate-400"> (facultatif)</span>}</span>;
     if (f.type === "select") return <label key={f.k} className="block">{lab}<select value={val ?? f.opts[0]} onChange={onChange} className={inputCls}>{f.opts.map((o) => <option key={o} value={o}>{o || "— Non précisé —"}</option>)}</select></label>;
-    if (f.type === "textarea") return <label key={f.k} className="block">{lab}<textarea rows={3} value={val ?? ""} onChange={onChange} placeholder={f.placeholder} className={inputCls} /></label>;
+    if (f.type === "textarea") return <label key={f.k} className="block">{lab}<textarea rows={f.k === "texte" ? 6 : 3} value={val ?? ""} onChange={onChange} placeholder={f.placeholder} className={inputCls} /></label>;
     return <label key={f.k} className="block">{lab}<input type={f.type === "url" ? "url" : f.type || "text"} value={val ?? ""} onChange={onChange} placeholder={f.placeholder} className={inputCls} /></label>;
   };
 
@@ -2352,7 +2846,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
         ); })}
       </div>
 
-      {tab === "dashboard" && <AdminDashboard members={members} jobs={jobs} applications={applications} registrations={registrations} events={events} messages={messages} onOpen={openFromDashboard} />}
+      {tab === "dashboard" && <AdminDashboard members={members} jobs={jobs} applications={applications} registrations={registrations} events={events} messages={messages} temoignages={temoignages} mentoratAll={mentoratAll} onOpen={openFromDashboard} />}
 
       {tab === "images" && <ImagesManager notify={notify} />}
 
@@ -2366,8 +2860,8 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                     <div className="flex items-center gap-3">
                       <Avatar name={accountName(m)} size="w-11 h-11" text="text-sm" />
                       <div>
-                        <p className="font-bold text-slate-900">{accountName(m)}</p>
-                        <p className="text-sm text-slate-500">Matricule <strong>{m.matricule || "—"}</strong> · {m.filiere || "filière ?"} · Promo {m.promotion || "?"}</p>
+                        <p className="font-bold text-slate-900 flex flex-wrap items-center gap-2">{accountName(m)} {m.type === "ancien" && <span className="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">Ancien</span>}</p>
+                        <p className="text-sm text-slate-500">Matricule <strong>{m.matricule || "—"}</strong> · {m.filiere || "filière ?"} · {m.type === "ancien" ? "Sortie" : "Promo"} {m.promotion || "?"}</p>
                         <p className="text-xs text-slate-500">{m.email} · demande du {fmtDate(m.created_at)}</p>
                       </div>
                     </div>
@@ -2380,23 +2874,41 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
               </ul>
             )}
           </Panel>
+
+          {elevePromos.length > 0 && (
+            <Panel title="Fin d'année : passer une promotion en anciens" Icon={GraduationCap}>
+              <p className="text-sm text-slate-500 -mt-3 mb-4">Les élèves de la promotion choisie deviennent « anciens » : ils apparaissent dans l'annuaire et peuvent devenir mentors. Leur compte, leur profil et leur CV sont conservés.</p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select value={bulkPromo} onChange={(e) => setBulkPromo(e.target.value)} className={inputCls + " mt-0 sm:w-72"}>
+                  <option value="">Choisir une promotion...</option>
+                  {elevePromos.map((p) => <option key={p} value={p}>Promotion {p} ({active.filter((m) => m.type !== "ancien" && m.promotion === p).length} élèves)</option>)}
+                </select>
+                {bulkPromo && <ConfirmButton onConfirm={promoteClass} confirmLabel={`Confirmer pour la promo ${bulkPromo} ?`} className="px-5 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-semibold hover:bg-orange-700">Passer en anciens</ConfirmButton>}
+              </div>
+            </Panel>
+          )}
+
           <Panel title={`Membres actifs (${active.length})`} Icon={Users}>
-            <div className="flex flex-col md:flex-row gap-2 mb-5">
+            <div className="flex flex-col lg:flex-row gap-2 mb-5">
               <div className="relative flex-1">
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input value={mq} onChange={(e) => setMq(e.target.value)} placeholder="Nom, email, matricule, objectif..." className={inputCls + " mt-0 pl-10"} />
+                <input value={mq} onChange={(e) => setMq(e.target.value)} placeholder="Nom, email, matricule, entreprise..." className={inputCls + " mt-0 pl-10"} />
               </div>
-              <select value={mf} onChange={(e) => setMf(e.target.value)} className={inputCls + " mt-0 md:w-56"}>
+              <select value={mt} onChange={(e) => setMt(e.target.value)} className={inputCls + " mt-0 lg:w-40"}>
+                <option value="">Tous</option><option value="eleve">Élèves</option><option value="ancien">Anciens</option>
+              </select>
+              <select value={mf} onChange={(e) => setMf(e.target.value)} className={inputCls + " mt-0 lg:w-52"}>
                 <option value="">Toutes les filières</option>{FILIERES.map((f) => <option key={f}>{f}</option>)}
               </select>
               <label className={`flex items-center gap-2 text-sm font-semibold whitespace-nowrap px-4 py-2.5 rounded-xl border cursor-pointer ${dispoOnly ? "border-emerald-400 bg-emerald-50 text-emerald-700" : "border-slate-300 text-slate-600"}`}>
-                <input type="checkbox" checked={dispoOnly} onChange={(e) => setDispoOnly(e.target.checked)} className="accent-emerald-600" /> Disponibles pour un stage
+                <input type="checkbox" checked={dispoOnly} onChange={(e) => setDispoOnly(e.target.checked)} className="accent-emerald-600" /> Dispo stage
               </label>
             </div>
-            {(mq || mf || dispoOnly) && <p className="text-sm text-slate-500 mb-3">{shownMembers.length} membre{shownMembers.length > 1 ? "s" : ""} correspond{shownMembers.length > 1 ? "ent" : ""} à la recherche.</p>}
+            {(mq || mf || mt || dispoOnly) && <p className="text-sm text-slate-500 mb-3">{shownMembers.length} membre{shownMembers.length > 1 ? "s" : ""} correspond{shownMembers.length > 1 ? "ent" : ""} à la recherche.</p>}
             <ul className="divide-y divide-slate-100">
               {shownMembers.map((m) => {
                 const self = m.id === currentId;
+                const ancien = m.type === "ancien";
                 return (
                   <li key={m.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
@@ -2405,15 +2917,22 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                         <p className="font-semibold text-slate-900 flex flex-wrap items-center gap-2">
                           {accountName(m)}
                           {m.role === "admin" && <span className="text-xs px-2 py-0.5 rounded-full bg-slate-900 text-white">Admin</span>}
-                          {m.data?.disponible && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Dispo stage</span>}
+                          {ancien && <span className="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">Ancien</span>}
+                          {ancien && m.data?.mentor && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Mentor</span>}
+                          {!ancien && m.data?.disponible && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Dispo stage</span>}
                           {self && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Vous</span>}
                         </p>
                         <p className="text-xs text-slate-500">{[m.email, m.matricule, m.filiere, m.promotion && `Promo ${m.promotion}`].filter(Boolean).join(" · ")}</p>
-                        {m.data?.objectif && <p className="text-xs text-slate-600 mt-0.5 italic">Objectif : {m.data.objectif}</p>}
+                        {ancien && (m.data?.poste || m.data?.entreprise) && <p className="text-xs text-slate-600 mt-0.5">{[m.data.poste, m.data.entreprise].filter(Boolean).join(" · ")}</p>}
+                        {!ancien && m.data?.objectif && <p className="text-xs text-slate-600 mt-0.5 italic">Objectif : {m.data.objectif}</p>}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <button onClick={() => openProfile(m.id)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1"><Eye size={14} /> Profil</button>
+                      <ConfirmButton onConfirm={() => updateMember(m, { type: ancien ? "eleve" : "ancien" }, ancien ? `${accountName(m)} est de nouveau « élève ».` : `${accountName(m)} est maintenant « ancien ».`)}
+                        confirmLabel="Confirmer ?" className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1">
+                        <GraduationCap size={14} /> {ancien ? "Repasser élève" : "Passer ancien"}
+                      </ConfirmButton>
                       {!self && (
                         <ConfirmButton onConfirm={() => updateMember(m, { role: m.role === "admin" ? "membre" : "admin" }, m.role === "admin" ? `${accountName(m)} n'est plus administrateur.` : `${accountName(m)} est maintenant administrateur.`)}
                           confirmLabel={m.role === "admin" ? "Retirer ?" : "Nommer ?"} className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1">
@@ -2486,6 +3005,8 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
         <div className="grid lg:grid-cols-2 gap-6">
           <div ref={formRef} className="scroll-mt-24">
             <Panel title={editingId ? "Modifier" : "Ajouter"} Icon={editingId ? Pencil : Plus}>
+              {tab === "temoignages" && !editingId && <p className="text-sm text-slate-500 -mt-3 mb-4">Les anciens inscrits peuvent aussi proposer leur témoignage depuis leur espace : il apparaît alors ici, à valider.</p>}
+              {tab === "alumni" && <p className="text-sm text-slate-500 -mt-3 mb-4">Pour les anciens qui n'ont pas (encore) de compte. Ceux qui s'inscrivent sur le site apparaissent automatiquement dans l'annuaire.</p>}
               <div className="space-y-3">
                 {cfg.fields.map(renderField)}
                 <div className="flex gap-2 pt-1">
@@ -2502,13 +3023,15 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                 const past = (tab === "events" && daysUntil(i.date) < 0) || (tab === "jobs" && isExpired(i));
                 return (
                   <li key={i.id} className={`py-3 flex items-center justify-between gap-3 ${editingId === i.id ? "bg-orange-50 -mx-3 px-3 rounded-xl" : ""}`}>
-                    <div className="text-sm text-slate-700">
+                    <div className="text-sm text-slate-700 min-w-0">
                       {tab === "jobs" && <span className="mr-2"><TypeBadge type={i.type} /></span>}
                       <span className={past ? "text-slate-400" : ""}>{cfg.show(i)}</span>
                       {count !== null && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-semibold whitespace-nowrap">{count} inscrit{count > 1 ? "s" : ""}</span>}
                       {past && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">{tab === "jobs" ? "clôturée" : "passé"}</span>}
+                      {tab === "temoignages" && <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-semibold ${i.publie ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>{i.publie ? "publié" : "à valider"}</span>}
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
+                      {tab === "temoignages" && <button onClick={() => togglePublish(i)} className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold ${i.publie ? "bg-white border border-slate-300 text-slate-600" : "bg-emerald-600 text-white hover:bg-emerald-700"}`}>{i.publie ? "Dépublier" : "Publier"}</button>}
                       <button onClick={() => startEdit(i)} className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-orange-600" aria-label="Modifier" title="Modifier"><Pencil size={16} /></button>
                       <ConfirmButton onConfirm={() => remove(i)} confirmLabel="Supprimer ?" ariaLabel="Supprimer" className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={16} /></ConfirmButton>
                     </div>
