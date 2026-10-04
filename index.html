@@ -4718,7 +4718,36 @@ function CampagneForm({ initial, onDone, notify }) {
 const POSTES_SUGGERES = ["Chef(fe) de département", "Adjoint(e)", "Secrétaire", "Membre"];
 const rangPoste = (p) => (/chef/i.test(p || "") ? 0 : /adjoint/i.test(p || "") ? 1 : 2);
 
-function DepartementsView({ comptes, canEdit, notify, reload }) {
+// Passation : enregistre le poste de chacun dans son historique, puis libère départements, postes et cases « Bureau ».
+function ClotureMandat({ comptes, notify, reload }) {
+  const [mandat, setMandat] = useState(MANDAT || "");
+  const [busy, setBusy] = useState(false);
+  const avecPoste = comptes.filter((p) => String(p.poste_cge || "").trim()).length;
+  const occupes = comptes.filter((p) => p.departement || p.poste_cge || p.bureau).length;
+  const cloturer = async () => {
+    const m = mandat.trim();
+    if (!/^\d{4}(-\d{4})?$/.test(m)) return notify("Écrivez le mandat sous la forme 2026-2027.", "error");
+    setBusy(true);
+    const { data, error } = await sb.rpc("cloturer_mandat", { mandat: m });
+    setBusy(false);
+    if (error) return notify(error.message, "error");
+    notify(`Mandat ${m} clôturé : ${data || 0} poste(s) ajouté(s) aux historiques. Les départements sont libres pour le nouveau bureau.`);
+    reload();
+  };
+  return (
+    <Panel title="Passation : clôturer le mandat" Icon={HistoryIcon}>
+      <p className="text-sm text-slate-600 -mt-3">À faire une fois par an, à la passation, <strong>avant</strong> de changer le mandat dans Textes & réglages.</p>
+      <p className="text-sm text-slate-600 mt-2">Le poste de chaque personne ({avecPoste}) rejoint son historique « postes à la CGE » avec le mandat ci-dessous. Ensuite, les départements, postes et cases « Bureau » sont vidés ({occupes} personne{occupes > 1 ? "s" : ""}) : le nouveau bureau repart d'une page propre.</p>
+      <div className="flex flex-col sm:flex-row gap-2 mt-4">
+        <input value={mandat} onChange={(e) => setMandat(e.target.value)} placeholder="ex. 2026-2027" className={inputCls + " mt-0 sm:w-48"} />
+        <ConfirmButton onConfirm={cloturer} confirmLabel={`Clôturer ${mandat.trim() || "le mandat"} ?`} className="px-5 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-semibold hover:bg-orange-700">{busy ? "Clôture..." : "Clôturer le mandat"}</ConfirmButton>
+      </div>
+      <p className="text-xs text-slate-500 mt-2">Les mois de cotisation du bureau déjà créés restent dus. Les élèves qui deviennent anciens sont traités automatiquement, sans ce bouton.</p>
+    </Panel>
+  );
+}
+
+function DepartementsView({ comptes, canEdit, canClose, notify, reload }) {
   const [ajout, setAjout] = useState({});
   const membres = comptes.filter((p) => p.membre_cge || p.departement);
   const depts = [...new Set([...DEPARTEMENTS, ...membres.map((p) => p.departement).filter(Boolean)])];
@@ -4734,6 +4763,7 @@ function DepartementsView({ comptes, canEdit, notify, reload }) {
         <Info size={20} className="flex-shrink-0 text-sky-600 mt-0.5" />
         <p>Rattachez les membres CGE à un département et indiquez leur poste : il s'affiche dans leur espace. C'est indépendant de la case « Bureau » (qui sert à la cotisation mensuelle du bureau). La liste des départements se modifie dans Textes & réglages → Listes.</p>
       </div>
+      {canClose && <ClotureMandat comptes={comptes} notify={notify} reload={reload} />}
       <datalist id="postes-dept">{POSTES_SUGGERES.map((x) => <option key={x} value={x} />)}</datalist>
       <div className="grid lg:grid-cols-2 gap-6">
         {depts.map((dep) => {
@@ -4998,7 +5028,7 @@ function AdminAdhesions({ can, notify }) {
         </Panel>
       )}
 
-      {view === "departements" && <DepartementsView comptes={comptes} canEdit={canA || canT} notify={notify} reload={load} />}
+      {view === "departements" && <DepartementsView comptes={comptes} canEdit={canA || canT} canClose={canA} notify={notify} reload={load} />}
 
       {view === "campagnes" && canA && (
         editing ? (
@@ -6351,7 +6381,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
 
           {elevePromos.length > 0 && (
             <Panel title="Fin d'année : passer une promotion en anciens" Icon={GraduationCap}>
-              <p className="text-sm text-slate-500 -mt-3 mb-4">Les élèves de la promotion choisie deviennent « anciens » : ils apparaissent dans l'annuaire et peuvent devenir mentors. Leur compte, leur profil et leur CV sont conservés.</p>
+              <p className="text-sm text-slate-500 -mt-3 mb-4">Les élèves de la promotion choisie deviennent « anciens » : ils apparaissent dans l'annuaire et peuvent devenir mentors. Leur compte, leur profil et leur CV sont conservés. Leur poste au bureau, s'ils en ont un, rejoint leur historique « postes à la CGE », et ils sont retirés de leur département.</p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <select value={bulkPromo} onChange={(e) => setBulkPromo(e.target.value)} className={inputCls + " mt-0 sm:w-72"}>
                   <option value="">Choisir une promotion...</option>
