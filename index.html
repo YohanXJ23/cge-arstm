@@ -17,6 +17,7 @@
 <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"] } } } };</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+<script>window.react = window.React; /* la bibliothèque d'icônes cherche React sous ce nom */</script>
 <script src="https://cdn.jsdelivr.net/npm/lucide-react@0.383.0/dist/umd/lucide-react.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
 
@@ -45,9 +46,35 @@
 </div>
 <noscript><p style="padding:2rem;font-family:sans-serif">Ce site a besoin de JavaScript pour fonctionner.</p></noscript>
 
+<script>
+  // Diagnostic : si le site n'a pas démarré après 10 secondes, on affiche la cause probable.
+  setTimeout(function () {
+    if (window.__CGE_STARTED) return;
+    var missing = [];
+    if (!window.React) missing.push("React");
+    if (!window.ReactDOM) missing.push("ReactDOM");
+    if (!window.Babel) missing.push("Babel");
+    if (!window.LucideReact) missing.push("Icônes");
+    if (!window.tailwind) missing.push("Tailwind");
+    document.getElementById("root").innerHTML = '<div style="padding:32px;font-family:sans-serif;max-width:700px;margin:40px auto"><h1 style="color:#ea580c;font-size:22px;font-weight:800">Le site ne parvient pas à démarrer</h1><p style="margin-top:12px;line-height:1.6">' +
+      (missing.length ? "Outils non chargés : <b>" + missing.join(", ") + "</b>. Vérifiez la connexion internet ou désactivez un éventuel bloqueur de publicités." : "Les outils sont bien chargés : l'erreur vient du code. Appuyez sur F12, ouvrez l'onglet « Console » et envoyez une capture des messages en rouge.") + "</p></div>";
+  }, 10000);
+</script>
 <script type="text/babel" data-presets="react">
 const { useState, useEffect } = React;
-const { Anchor, Menu, X, Calendar, Briefcase, GraduationCap, Users, Newspaper, Lock, LogOut, Plus, Trash2, MapPin, Mail, Phone, ChevronRight, Target, Heart, Lightbulb, User, Building2, Clock, Shield, Upload, FileText, Camera, Award, CheckCircle2, Sparkles, Compass, Send, Download, Printer, ArrowRight, LayoutDashboard, Quote, Globe, Search, Ship, Megaphone, Handshake } = LucideReact;
+// Icônes : si une icône manque, on affiche un espace vide au lieu de faire planter tout le site.
+const LR = window.LucideReact || {};
+const IconFallback = ({ size = 24, className = "" }) => <span className={className} style={{ display: "inline-block", width: size, height: size }} />;
+const pickIcon = (...names) => { for (const n of names) if (LR[n]) return LR[n]; console.warn("Icône introuvable :", names[0]); return IconFallback; };
+const Anchor = pickIcon("Anchor"), Menu = pickIcon("Menu"), X = pickIcon("X"), Calendar = pickIcon("Calendar"), Briefcase = pickIcon("Briefcase"),
+  GraduationCap = pickIcon("GraduationCap"), Users = pickIcon("Users"), Newspaper = pickIcon("Newspaper"), Lock = pickIcon("Lock"), LogOut = pickIcon("LogOut"),
+  Plus = pickIcon("Plus"), Trash2 = pickIcon("Trash2", "Trash"), MapPin = pickIcon("MapPin"), Mail = pickIcon("Mail"), Phone = pickIcon("Phone"),
+  ChevronRight = pickIcon("ChevronRight"), Target = pickIcon("Target"), Heart = pickIcon("Heart"), Lightbulb = pickIcon("Lightbulb"), User = pickIcon("User"),
+  Building2 = pickIcon("Building2", "Building"), Clock = pickIcon("Clock"), Shield = pickIcon("Shield"), Upload = pickIcon("Upload"), FileText = pickIcon("FileText"),
+  Camera = pickIcon("Camera"), Award = pickIcon("Award"), CheckCircle2 = pickIcon("CheckCircle2", "CircleCheck", "CheckCircle"), Sparkles = pickIcon("Sparkles"),
+  Compass = pickIcon("Compass"), Send = pickIcon("Send"), Download = pickIcon("Download"), Printer = pickIcon("Printer"), ArrowRight = pickIcon("ArrowRight"),
+  LayoutDashboard = pickIcon("LayoutDashboard", "LayoutGrid"), Quote = pickIcon("Quote"), Globe = pickIcon("Globe"), Search = pickIcon("Search"),
+  Ship = pickIcon("Ship"), Megaphone = pickIcon("Megaphone"), Handshake = pickIcon("Handshake", "HeartHandshake");
 
 // =====================================================================
 // À PERSONNALISER
@@ -1259,7 +1286,24 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
 // =====================================================================
 // DÉMARRAGE
 // =====================================================================
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+// Si une erreur survient, on l'affiche à l'écran au lieu d'une page blanche.
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (!this.state.error) return this.props.children;
+    const e = this.state.error;
+    return (
+      <div style={{ padding: 32, fontFamily: "Inter, sans-serif", maxWidth: 760, margin: "40px auto" }}>
+        <h1 style={{ color: "#ea580c", fontSize: 22, fontWeight: 800 }}>Le site a rencontré une erreur</h1>
+        <p style={{ marginTop: 12 }}>Faites une capture d'écran de ce message et envoyez-la :</p>
+        <pre style={{ marginTop: 12, padding: 16, background: "#fee2e2", borderRadius: 12, whiteSpace: "pre-wrap", fontSize: 13 }}>{String(e && e.message) + "\n\n" + String((e && e.stack) || "").split("\n").slice(0, 6).join("\n")}</pre>
+      </div>
+    );
+  }
+}
+window.__CGE_STARTED = true;
+ReactDOM.createRoot(document.getElementById("root")).render(<ErrorBoundary><App /></ErrorBoundary>);
 </script>
 </body>
 </html>
