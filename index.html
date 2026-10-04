@@ -27,6 +27,8 @@
 <script>window.react = window.React; /* la bibliothèque d'icônes cherche React sous ce nom */</script>
 <script src="https://cdn.jsdelivr.net/npm/lucide-react@0.383.0/dist/umd/lucide-react.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Réglages du site (bureau, président, coordonnées, listes) : fichier à modifier chaque année -->
+<script src="config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
 
 <style>
@@ -55,9 +57,14 @@
 <noscript><p style="padding:2rem;font-family:sans-serif">Ce site a besoin de JavaScript pour fonctionner.</p></noscript>
 
 <script>
+  // Message affiché si le fichier config.js est absent ou contient une faute de frappe.
+  window.__cgeConfigMissing = function () {
+    document.getElementById("root").innerHTML = '<div style="padding:32px;font-family:sans-serif;max-width:700px;margin:40px auto"><h1 style="color:#e67700;font-size:22px;font-weight:800">Le fichier config.js est introuvable ou contient une erreur</h1><p style="margin-top:12px;line-height:1.6">Vérifiez que <b>config.js</b> est bien placé à côté de <b>index.html</b> chez l\'hébergeur.</p><p style="margin-top:12px;line-height:1.6">Si vous venez de le modifier, vérifiez les guillemets " " et les virgules. Appuyez sur F12 puis ouvrez l\'onglet « Console » : la ligne en erreur y est indiquée.</p></div>';
+  };
   // Diagnostic : si le site n'a pas démarré après 12 secondes, on affiche la cause probable.
   setTimeout(function () {
     if (window.__CGE_STARTED) return;
+    if (!window.CGE_CONFIG) return window.__cgeConfigMissing();
     var missing = [];
     if (!window.React) missing.push("React");
     if (!window.ReactDOM) missing.push("ReactDOM");
@@ -72,6 +79,12 @@
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useContext, useRef, createContext } = React;
+
+// =====================================================================
+// RÉGLAGES — lus depuis le fichier config.js (à modifier chaque année)
+// =====================================================================
+const CFG = window.CGE_CONFIG;
+if (!CFG) { window.__CGE_STARTED = true; window.__cgeConfigMissing(); throw new Error("config.js manquant ou invalide"); }
 
 // =====================================================================
 // CONNEXION À SUPABASE (base de données en ligne)
@@ -107,55 +120,26 @@ const Anchor = pickIcon("Anchor"), Menu = pickIcon("Menu"), X = pickIcon("X"), C
   Link2 = pickIcon("Link2", "Link"), FolderOpen = pickIcon("FolderOpen", "Folder");
 
 // =====================================================================
-// À PERSONNALISER — textes, coordonnées et images par défaut
+// Valeurs venant de config.js (avec une valeur de secours si une ligne manque)
 // =====================================================================
-// Logo vectoriel (SVG) : reste net à toutes les tailles. Fichier à placer dans le dossier "logos" de l'hébergeur.
-const LOGO_SRC = "logos/cge-arstm.svg";
-// Logos des écoles membres : lien ou chemin de l'image (ex. "logos/ensea.png"). null = sigle affiché.
-const LOGOS_ECOLES = { ARSTM: null, ENSEA: null, ESATIC: null, "INP-HB": null, ESA: null, ESCAE: null, ESI: null, ESMG: null, ESTP: null };
-// Photos du bureau : nom exact du membre => chemin de la photo (ex. "NANGUI AKRE": "photos/nangui-akre.jpg").
-const PHOTOS_BUREAU = {};
+const LOGO_SRC = CFG.LOGO_SRC || "logos/cge-arstm.svg";
+const LOGOS_ECOLES = CFG.LOGOS_ECOLES || {};
+const PHOTOS_BUREAU = CFG.PHOTOS_BUREAU || {};
+const CONTACT = { adresse: "", email: "", telephone: "", facebook: "", ...(CFG.CONTACT || {}) };
+const PRESIDENT = { name: "", message: "", ...(CFG.PRESIDENT || {}) };
+const MANDAT = CFG.MANDAT || "";
+const ANNEE_CREATION = Number(CFG.ANNEE_CREATION) || 1992;
+const FILIERES = CFG.FILIERES || [];
+const DOMAINES = CFG.DOMAINES || ["Autre"];
+const ZONES = CFG.ZONES || ["Côte d'Ivoire"];
+const NEWS_CATEGORIES = CFG.NEWS_CATEGORIES || ["Annonce"];
+const DOC_CATEGORIES = CFG.DOC_CATEGORIES || ["Autre"];
+const BUREAU = CFG.BUREAU || [];
 
-// Coordonnées affichées sur la page Contact et dans le pied de page. Laisser "" pour masquer une ligne.
-const CONTACT = {
-  adresse: "ARSTM, Abidjan — Côte d'Ivoire",
-  email: "",      // ex. "cge.arstm@gmail.com"
-  telephone: "",  // ex. "+225 07 00 00 00 00"
-  facebook: "https://www.facebook.com/ci.cge/",
-};
-
-// Les partenaires se gèrent désormais depuis Administration → Partenaires.
-
-const PRESIDENT = {
-  name: "NANGUI AKRE",
-  message: "Bienvenue sur le site de la CGE ARSTM. Notre ambition est simple : faire de chaque élève un acteur engagé de sa formation et lui ouvrir les portes du monde professionnel. Ensemble, cultivons l'entraide, l'excellence et le rayonnement de notre Académie. (Texte provisoire)",
-};
-
-const ANNEE_CREATION = 1992;
-
-// Filières (bandeau défilant + profils des membres) : à adapter
-const FILIERES = ["Navigation maritime", "Mécanique navale", "Génie thermique", "Électromécanique", "Logistique & transport", "Administration maritime", "Sécurité maritime", "Hydrographie"];
-
-// Listes utilisées dans le site : à adapter
+// Listes liées au fonctionnement du site : elles restent ici car le code s'appuie sur leurs noms exacts.
 const JOB_TYPES = ["Stage", "Emploi", "Alternance", "Formation", "Bourse", "Concours"];
-const DOMAINES = ["Sciences nautiques", "Mécanique navale", "Génie thermique", "Électromécanique", "Offshore", "Logistique & transport", "Industrie", "Administration maritime", "Autre"];
-const ZONES = ["Côte d'Ivoire", "Afrique", "Europe", "International"];
-const NEWS_CATEGORIES = ["Vie de la CGE", "Annonce", "ARSTM", "Carrière", "Événement", "Interne"];
 const CONTACT_SUBJECTS = ["Renseignement", "Partenariat / entreprise", "Proposer une offre", "Adhésion", "Autre"];
-const DOC_CATEGORIES = ["Documents CGE", "Comptes rendus", "Guides pratiques", "Réglementation", "Formations", "Autre"];
 const PARTNER_ROLES = ["Partenaire officiel", "Partenaire", "Entreprise partenaire", "Institution", "Média"];
-
-const BUREAU = [
-  { dept: "Présidence", members: [["NANGUI AKRE", "Président"], ["SYLLA YACOUBA", "Vice-Président"]] },
-  { dept: "Secrétariat Général", members: [["COULIBALY DAVID", "Secrétaire Général"], ["GUIRA CHEICK", "Secrétaire Général Adjoint"]] },
-  { dept: "Finances", members: [["OUATTARA INES", "Trésorière Générale"], ["ZADI MARIA AUDE", "Trésorière Adjointe"], ["HOBA EKRA", "Commissaire aux Comptes"]] },
-  { dept: "Informatique", members: [["KOUAKOU MARC-ARTHUR", "Chef de département"], ["KOLOGA MOUHAMMED", "Adjoint"]] },
-  { dept: "Projets", members: [["ALLOH N'CHOH", "Chef de département"], ["ATTA KOUAO", "Adjoint"]] },
-  { dept: "Communication", members: [["APOMOLIA APO", "Chef de département"], ["MAMBO INCHOT", "Adjoint"]] },
-  { dept: "Organisation", members: [["TOTO DEBORAH", "Cheffe de département"], ["KOUASSI SETH", "Adjoint"], ["SEDJI NANGUI", "Adjoint"]] },
-  { dept: "Affaires Externes", members: [["OHOUEU JEAN", "Chef de département"], ["KOUAKOU GBOKO", "Adjoint"]] },
-  { dept: "Porte-parole", members: [["ADEGOKE SARAH", "Porte-parole"], ["MAHUDO LUCIE", "Porte-parole Adjointe"]] },
-];
 
 const EMPTY_PROFILE = {
   type: "eleve", photo: null, prenoms: "", nom: "", naissance: "", nationalite: "", telephone: "", email: "", ville: "",
@@ -1137,7 +1121,7 @@ function App() {
         {/* ===== BUREAU ===== */}
         {page === "bureau" && (
           <>
-            <PageHero kicker="Mandat 2026-2027" title="Le Bureau Exécutif" sub="Des élèves élus et engagés au service de leurs camarades." icon={Users} />
+            <PageHero kicker={MANDAT ? `Mandat ${MANDAT}` : "Le bureau"} title="Le Bureau Exécutif" sub="Des élèves élus et engagés au service de leurs camarades." icon={Users} />
             <main className="max-w-6xl mx-auto px-4 py-16 space-y-14">
               <div className="relative rounded-3xl overflow-hidden text-white p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 shadow-2xl" style={{ background: NAVY }}>
                 <div className="absolute -right-10 -bottom-10 w-64 h-64 rounded-full bg-orange-500 opacity-20 blur-3xl" />
@@ -1338,7 +1322,7 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, homeOpps,
         <div className="relative max-w-6xl mx-auto px-4 pt-16 pb-32 grid lg:grid-cols-2 gap-12 items-center">
           <div className="fade-up">
             <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white bg-opacity-10 border border-white border-opacity-20 text-xs font-semibold">
-              <span className="w-2 h-2 rounded-full bg-orange-500 pulse-dot" /> Bureau exécutif 2026-2027
+              <span className="w-2 h-2 rounded-full bg-orange-500 pulse-dot" /> Bureau exécutif {MANDAT}
             </span>
             <h1 className="text-4xl md:text-6xl font-extrabold mt-6 leading-tight">
               Unis pour naviguer vers <span className="bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">l'excellence</span>
@@ -2360,6 +2344,7 @@ function Dashboard({ profile, pct, fullName, applications, registrations, events
     ["Déposer votre CV", "cv", profile.cv],
   ];
   const myEvents = events.filter((e) => registrations.includes(e.id)).sort((a, b) => a.date.localeCompare(b.date));
+  const myUpcoming = myEvents.filter((e) => daysUntil(e.date) >= 0);
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-3xl shadow-sm p-6 md:p-8 flex flex-col md:flex-row items-center gap-8">
@@ -2373,7 +2358,7 @@ function Dashboard({ profile, pct, fullName, applications, registrations, events
         </div>
       </div>
       <div className="grid sm:grid-cols-3 gap-4">
-        {[[Send, applications.length, "Candidatures", "candidatures"], [Calendar, myEvents.length, "Événements inscrits", null], [FileText, profile.cv ? "Oui" : "Non", "CV déposé", "cv"]].map(([Icon, v, l, t]) => (
+        {[[Send, applications.length, "Candidatures", "candidatures"], [Calendar, myUpcoming.length, "Événements à venir", null], [FileText, profile.cv ? "Oui" : "Non", "CV déposé", "cv"]].map(([Icon, v, l, t]) => (
           <button key={l} onClick={() => (t ? setTab(t) : go("evenements"))} className="bg-white rounded-3xl shadow-sm p-5 text-left hover:shadow-lg transition">
             <Icon size={20} className="text-orange-600" />
             <p className="text-3xl font-extrabold text-slate-900 mt-3">{v}</p>
@@ -2534,7 +2519,7 @@ function ListEditor({ title, Icon, fields, items, onChange, render, notify }) {
         {items.map((it) => (
           <li key={it.id} className="flex items-start justify-between gap-4 p-4 rounded-2xl border border-slate-200 hover:border-orange-300 transition">
             <div className="border-l-4 border-orange-500 pl-4">{render(it)}</div>
-            <button onClick={() => onChange(items.filter((x) => x.id !== it.id))} className="p-2 rounded-lg text-rose-600 hover:bg-rose-50" aria-label="Supprimer"><Trash2 size={16} /></button>
+            <ConfirmButton onConfirm={() => onChange(items.filter((x) => x.id !== it.id))} confirmLabel="Supprimer ?" ariaLabel="Supprimer" className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={16} /></ConfirmButton>
           </li>
         ))}
       </ul>
@@ -2583,7 +2568,7 @@ function SkillsTab({ profile, update, notify }) {
               <span className="w-28 font-semibold text-slate-900 text-sm">{l.langue}</span>
               <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full bg-orange-500 rounded-full" style={{ width: `${(levels.indexOf(l.niveau) + 1) * 25}%` }} /></div>
               <span className="w-32 text-xs text-slate-500">{l.niveau}</span>
-              <button onClick={() => update({ langues: profile.langues.filter((x) => x.id !== l.id) })} className="text-rose-600 p-1" aria-label="Supprimer"><Trash2 size={15} /></button>
+              <ConfirmButton onConfirm={() => update({ langues: profile.langues.filter((x) => x.id !== l.id) })} confirmLabel="Supprimer ?" ariaLabel="Supprimer" className="text-rose-600 p-1"><Trash2 size={15} /></ConfirmButton>
             </li>
           ))}
         </ul>
