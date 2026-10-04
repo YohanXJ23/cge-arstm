@@ -207,10 +207,31 @@ const TEXT_GROUPS = [
   { titre: "Pied de page", champs: [
     ["footer.description", "Présentation dans le pied de page", "Section ARSTM de la Conférence des Grandes Écoles de Côte d'Ivoire, association des ingénieurs de conception des grandes écoles publiques, créée en mai 1992.", true],
   ] },
+  { titre: "Accueil : carte Mentorat et cartes « Bien plus qu'une association »", champs: [
+    ["accueil.mentorat", "Carte orange « Mentorat » (en haut de l'accueil, sur ordinateur)", "Échangez avec un ancien de l'ARSTM qui a suivi le chemin dont vous rêvez.", true],
+    ["accueil.atouts_kicker", "Petit titre au-dessus des cartes", "Ce que la CGE vous apporte"],
+    ["accueil.atouts_titre", "Titre des cartes", "Bien plus qu'une association"],
+    ["accueil.atouts", "Les cartes (une par ligne, sous la forme Titre | Description ; 6 cartes conseillées)", "Représentation | Votre voix portée auprès de la direction et des partenaires.\nÉvénements | Conférences, sport, culture et moments de partage toute l'année.\nCarrière | Stages, emplois, formations et bourses, candidature en un clic.\nMentorat | Un ancien de l'ARSTM pour vous conseiller sur votre parcours.\nEntraide | Parrainage des nouveaux et soutien entre promotions.\nRayonnement | Faire briller l'ARSTM dans toute la sous-région.", true],
+  ] },
+  { titre: "À propos : les grandes écoles membres", champs: [
+    ["apropos.ecoles_titre", "Titre", "Les grandes écoles membres"],
+    ["apropos.ecoles_texte", "Phrase d'introduction", "Les élèves ingénieurs de plusieurs grandes écoles publiques ivoiriennes forment ensemble la CGE.", true],
+    ["apropos.ecoles", "Les écoles : une par ligne, sous la forme SIGLE | Nom complet | écoles rattachées séparées par des virgules (facultatif). La première est mise en avant en orange.", "ARSTM | Académie Régionale des Sciences et Techniques de la Mer\nENSEA | École Nationale Supérieure de Statistique et d'Économie Appliquée\nESATIC | École Supérieure Africaine des Technologies de l'Information et de la Communication\nINP-HB | Institut National Polytechnique Félix Houphouët-Boigny, Yamoussoukro | ESA, ESCAE, ESI, ESMG, ESTP", true],
+  ] },
+  { titre: "Pages Contact et Partenaires", champs: [
+    ["contact.entreprises_titre", "Contact : titre de l'encadré bleu", "Entreprises et partenaires"],
+    ["contact.entreprises_texte", "Contact : texte de l'encadré bleu", "Vous recrutez des stagiaires ou des jeunes diplômés du maritime ? Choisissez le sujet « Proposer une offre » : nous la diffuserons auprès de nos membres.", true],
+    ["partenaires.cta_titre", "Partenaires : titre de l'encadré orange", "Devenez partenaire de la CGE ARSTM"],
+    ["partenaires.cta_texte", "Partenaires : texte de l'encadré orange", "Recrutez nos futurs officiers et ingénieurs, faites connaître votre entreprise et soutenez la formation maritime en Afrique de l'Ouest.", true],
+  ] },
 ];
 const TEXT_DEFAULTS = Object.fromEntries(TEXT_GROUPS.flatMap((g) => g.champs.map(([k, , d]) => [k, d])));
 // Texte en vigueur : celui de l'administrateur s'il existe, sinon le texte d'origine.
 const tx = (k, fallback = "") => { const v = TEXTES[k]; return typeof v === "string" && v.trim() ? v : TEXT_DEFAULTS[k] ?? fallback; };
+// Texte écrit en lignes « A | B | C » : renvoie la liste des lignes découpées.
+const txLines = (k) => tx(k).split("\n").map((l) => l.split("|").map((s) => s.trim())).filter(([a]) => a);
+// Écoles membres : [sigle, nom complet, [écoles rattachées]].
+const ecolesList = () => txLines("apropos.ecoles").map(([code, nom = "", sub = ""]) => [code, nom, sub.split(",").map((s) => s.trim()).filter(Boolean)]);
 // Met en gras les passages écrits **comme ceci**.
 const rich = (s) => String(s || "").split("**").map((p, i) => (i % 2 ? <strong key={i}>{p}</strong> : p));
 const imageLabel = (key) => {
@@ -1270,27 +1291,28 @@ function App() {
               <div>
                 <div className="text-center max-w-2xl mx-auto">
                   <p className="text-orange-600 font-bold text-sm uppercase tracking-widest">Le réseau national</p>
-                  <h2 className="text-3xl font-extrabold text-slate-900 mt-2">Les grandes écoles membres</h2>
-                  <p className="text-slate-500 mt-3">Les élèves ingénieurs de plusieurs grandes écoles publiques ivoiriennes forment ensemble la CGE.</p>
+                  <h2 className="text-3xl font-extrabold text-slate-900 mt-2">{tx("apropos.ecoles_titre")}</h2>
+                  <p className="text-slate-500 mt-3 whitespace-pre-line">{tx("apropos.ecoles_texte")}</p>
                 </div>
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 mt-10">
-                  {[["ARSTM", "Académie Régionale des Sciences et Techniques de la Mer"], ["ENSEA", "École Nationale Supérieure de Statistique et d'Économie Appliquée"], ["ESATIC", "École Supérieure Africaine des Technologies de l'Information et de la Communication"]].map(([s, d]) => (
-                    <div key={s} className={`rounded-3xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition ${s === "ARSTM" ? "bg-gradient-to-br from-orange-500 to-orange-700 text-white" : "bg-white text-slate-800"}`}>
-                      <SchoolLogo code={s} dark={s === "ARSTM"} />
-                      <p className="text-2xl font-extrabold mt-4">{s}</p>
-                      <p className={`text-sm mt-2 leading-snug ${s === "ARSTM" ? "text-orange-100" : "text-slate-500"}`}>{d}</p>
-                    </div>
-                  ))}
-                  <div className="rounded-3xl p-6 text-white shadow-sm hover:shadow-xl hover:-translate-y-1 transition" style={{ background: NAVY }}>
-                    <SchoolLogo code="INP-HB" dark />
-                    <p className="text-2xl font-extrabold mt-4">INP-HB</p>
-                    <p className="text-sm mt-2 leading-snug text-slate-300">Institut National Polytechnique Félix Houphouët-Boigny, Yamoussoukro</p>
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {["ESA", "ESCAE", "ESI", "ESMG", "ESTP"].map((e) => (
-                        <span key={e} className="pl-1.5 pr-3 py-1 rounded-full bg-white bg-opacity-10 border border-white border-opacity-20 text-xs font-bold flex items-center gap-1.5"><SchoolLogo code={e} small />{e}</span>
-                      ))}
-                    </div>
-                  </div>
+                  {ecolesList().map(([s, d, sub], i) => {
+                    // La première école est mise en avant en orange ; celles qui ont des écoles rattachées sont sur fond bleu marine.
+                    const first = i === 0, navy = !first && sub.length > 0, dark = first || navy;
+                    return (
+                      <div key={s} className={`rounded-3xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition ${first ? "bg-gradient-to-br from-orange-500 to-orange-700 text-white" : navy ? "text-white" : "bg-white text-slate-800"}`} style={navy ? { background: NAVY } : undefined}>
+                        <SchoolLogo code={s} dark={dark} />
+                        <p className="text-2xl font-extrabold mt-4">{s}</p>
+                        <p className={`text-sm mt-2 leading-snug ${first ? "text-orange-100" : navy ? "text-slate-300" : "text-slate-500"}`}>{d}</p>
+                        {sub.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-4">
+                            {sub.map((e) => (
+                              <span key={e} className={`pl-1.5 pr-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${dark ? "bg-white bg-opacity-10 border border-white border-opacity-20" : "bg-slate-100 text-slate-700"}`}><SchoolLogo code={e} small />{e}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1552,7 +1574,7 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, homeOpps,
             )}
             <div className="float absolute right-0 bottom-0 w-64 rounded-3xl p-6 shadow-2xl bg-gradient-to-br from-orange-500 to-orange-700" style={{ animationDelay: "1.8s" }}>
               <p className="text-xs font-bold uppercase tracking-wider flex items-center gap-2"><Handshake size={14} /> Mentorat</p>
-              <p className="font-semibold mt-2">Échangez avec un ancien de l'ARSTM qui a suivi le chemin dont vous rêvez.</p>
+              <p className="font-semibold mt-2 whitespace-pre-line">{tx("accueil.mentorat")}</p>
               <button onClick={() => go("alumni")} className="mt-4 text-sm font-bold flex items-center gap-1 hover:gap-2 transition-all">Trouver un mentor <ArrowRight size={15} /></button>
             </div>
           </div>
@@ -1653,11 +1675,11 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, homeOpps,
 
       <section className="max-w-6xl mx-auto px-4 py-20">
         <div className="text-center max-w-2xl mx-auto">
-          <p className="text-orange-600 font-bold text-sm uppercase tracking-widest">Ce que la CGE vous apporte</p>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mt-2">Bien plus qu'une association</h2>
+          <p className="text-orange-600 font-bold text-sm uppercase tracking-widest">{tx("accueil.atouts_kicker")}</p>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mt-2">{tx("accueil.atouts_titre")}</h2>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
-          {[[Megaphone, "Représentation", "Votre voix portée auprès de la direction et des partenaires."], [Calendar, "Événements", "Conférences, sport, culture et moments de partage toute l'année."], [Briefcase, "Carrière", "Stages, emplois, formations et bourses, candidature en un clic."], [Handshake, "Mentorat", "Un ancien de l'ARSTM pour vous conseiller sur votre parcours."], [Users, "Entraide", "Parrainage des nouveaux et soutien entre promotions."], [Globe, "Rayonnement", "Faire briller l'ARSTM dans toute la sous-région."]].map(([Icon, t, d], i) => (
+          {txLines("accueil.atouts").map(([t, d = ""], i) => [[Megaphone, Calendar, Briefcase, Handshake, Users, Globe][i % 6], t, d]).map(([Icon, t, d], i) => (
             <div key={t} className="group bg-white rounded-3xl p-7 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition duration-300">
               <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${CARD_GRADIENTS[i % 4]} flex items-center justify-center shadow-lg group-hover:rotate-6 group-hover:scale-110 transition`}><Icon className="text-white" /></div>
               <h3 className="text-lg font-bold text-slate-900 mt-5">{t}</h3>
@@ -2168,8 +2190,8 @@ function PartnersPage({ partenaires, onBecomePartner }) {
         <div className="relative rounded-3xl overflow-hidden p-10 md:p-12 text-white shadow-2xl bg-gradient-to-br from-orange-500 via-orange-600 to-orange-800">
           <Handshake size={200} strokeWidth={0.8} className="absolute -right-6 -bottom-8 opacity-20" />
           <div className="relative max-w-xl">
-            <h2 className="text-3xl font-extrabold">Devenez partenaire de la CGE ARSTM</h2>
-            <p className="mt-3 text-orange-50">Recrutez nos futurs officiers et ingénieurs, faites connaître votre entreprise et soutenez la formation maritime en Afrique de l'Ouest.</p>
+            <h2 className="text-3xl font-extrabold">{tx("partenaires.cta_titre")}</h2>
+            <p className="mt-3 text-orange-50 whitespace-pre-line">{tx("partenaires.cta_texte")}</p>
             <button onClick={onBecomePartner} className="mt-6 px-6 py-3 rounded-xl bg-white text-orange-700 font-bold hover:shadow-xl transition flex items-center gap-2">Nous contacter <ArrowRight size={18} /></button>
           </div>
         </div>
@@ -2227,8 +2249,8 @@ function ContactPage({ user, profile, notify, presetSubject }) {
           ))}
           <div className="rounded-3xl p-6 text-white shadow-xl" style={{ background: NAVY }}>
             <Handshake className="text-orange-400" />
-            <p className="font-bold text-lg mt-3">Entreprises et partenaires</p>
-            <p className="text-sm text-slate-300 mt-2">Vous recrutez des stagiaires ou des jeunes diplômés du maritime ? Choisissez le sujet « Proposer une offre » : nous la diffuserons auprès de nos membres.</p>
+            <p className="font-bold text-lg mt-3">{tx("contact.entreprises_titre")}</p>
+            <p className="text-sm text-slate-300 mt-2 whitespace-pre-line">{tx("contact.entreprises_texte")}</p>
           </div>
         </div>
 
@@ -3270,7 +3292,7 @@ function ImageSlot({ imgKey, label, sub, round, notify }) {
 function ImagesManager({ notify }) {
   const groups = [
     { title: "Logo de la CGE-ARSTM", hint: "Par défaut, le site utilise le fichier logos/cge-arstm.svg. Ne le remplacez ici que si nécessaire (l'image envoyée est convertie en PNG).", items: [["logo", "Logo CGE-ARSTM"]] },
-    { title: "Logos des écoles membres", hint: "Affichés dans la page « À propos ».", items: Object.keys(LOGOS_ECOLES).map((k) => [`ecole:${k}`, k, ["ESA", "ESCAE", "ESI", "ESMG", "ESTP"].includes(k) ? "École de l'INP-HB" : null]) },
+    { title: "Logos des écoles membres", hint: "Affichés dans la page « À propos ». La liste des écoles se modifie dans « Textes & réglages ».", items: ecolesList().flatMap(([code, , sub]) => [[`ecole:${code}`, code, null], ...sub.map((e) => [`ecole:${e}`, e, `Rattachée à ${code}`])]) },
     { title: "Photos du bureau exécutif", hint: "Photo portrait, visage centré. Recadrée automatiquement en rond.", round: true, items: BUREAU.flatMap((g) => g.members.map(([n, r]) => [`membre:${n}`, n, `${r} · ${g.dept}`])) },
   ];
   return (
@@ -3604,7 +3626,7 @@ function TextGroup({ g, settings, change, commit, resetKeys }) {
           <label key={k} className="block">
             <span className="text-xs font-semibold text-slate-600 flex flex-wrap items-center gap-2">{label}{(("texte:" + k) in settings) && <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">modifié</span>}</span>
             {long
-              ? <textarea rows={k === "apropos.histoire" ? 8 : 3} value={vals[k]} onChange={(e) => setVals({ ...vals, [k]: e.target.value })} className={inputCls} />
+              ? <textarea rows={["apropos.histoire", "accueil.atouts", "apropos.ecoles", "apropos.calendrier"].includes(k) ? 7 : 3} value={vals[k]} onChange={(e) => setVals({ ...vals, [k]: e.target.value })} className={inputCls} />
               : <input value={vals[k]} onChange={(e) => setVals({ ...vals, [k]: e.target.value })} className={inputCls} />}
           </label>
         ))}
@@ -4157,6 +4179,9 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
       {tab === "reglages" && <SettingsManager settings={settings} saveSettings={saveSettings} notify={notify} />}
       {tab === "droits" && <RightsManager members={members} updateMember={updateMember} />}
       {tab === "journal" && <ActivityLog members={members} />}
+      {tab === "reglages" && <SettingsManager settings={settings} saveSettings={saveSettings} notify={notify} />}
+      {tab === "droits" && <RightsManager members={members} updateMember={updateMember} />}
+      {tab === "journal" && <ActivityLog members={members} />}
 
       {tab === "members" && (
         <div className="space-y-6">
@@ -4228,6 +4253,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                           {ancien && <span className="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">Ancien</span>}
                           {ancien && m.data?.mentor && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Mentor</span>}
                           {!ancien && m.data?.disponible && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Dispo stage</span>}
+                          {m.role !== "admin" && (m.permissions || []).length > 0 && <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Droits délégués</span>}
                           {m.role !== "admin" && (m.permissions || []).length > 0 && <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Droits délégués</span>}
                           {self && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Vous</span>}
                         </p>
