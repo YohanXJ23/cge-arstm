@@ -3417,7 +3417,7 @@ function InfosTab({ uid, profile, update, notify }) {
         <label className="block"><span className="text-xs font-semibold text-slate-600">Filière</span>
           <select value={d.filiere} onChange={set("filiere")} className={inputCls}><option value="">Choisir...</option>{FILIERES.map((f) => <option key={f}>{f}</option>)}</select>
         </label>
-        {F({ label: isAncien ? "Promotion (année de sortie)" : "Promotion", k: "promotion", placeholder: "ex. 2026" })}{F({ label: "Matricule", k: "matricule" })}
+        {F({ label: "Promotion (numéro)", k: "promotion", placeholder: "ex. 38" })}{F({ label: "Matricule", k: "matricule", placeholder: "ex. 2024-1234" })}
       </div>
       <h3 className="font-bold text-slate-900 mt-8 mb-3">Présentation</h3>
       {F({ label: "Titre professionnel", k: "titre", placeholder: isAncien ? "ex. Chef mécanicien" : "ex. Élève ingénieur en mécanique navale" })}
@@ -3732,16 +3732,17 @@ function LoginModal({ onClose, onLogin, onRegister, onForgot }) {
               <button key={v} type="button" onClick={() => setReg({ ...reg, type: v })} className={`py-2.5 rounded-xl text-sm font-semibold border transition ${reg.type === v ? "border-orange-500 bg-orange-50 text-orange-700" : "border-slate-300 text-slate-600"}`}>{l}</button>
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-3">{regField("Prénoms", "prenoms")}{regField("Nom", "nom")}</div>
-          {regField(reg.type === "ancien" ? "Matricule (lors de votre scolarité)" : "Matricule", "matricule", "text", "ex. ARSTM-2026-045")}
-          {regField("Email (servira à vous connecter)", "email", "email", "prenom.nom@exemple.com")}
+          <div className="grid grid-cols-2 gap-3">{regField("Prénoms", "prenoms", "text", "ex. Kouamé Jean-Marc")}{regField("Nom", "nom", "text", "ex. KOFFI")}</div>
+          {regField(reg.type === "ancien" ? "Matricule (lors de votre scolarité)" : "Matricule", "matricule", "text", "ex. 2024-1234")}
+          {regField("Email (servira à vous connecter)", "email", "email", "ex. kouamejean@gmail.com")}
           <div className="grid grid-cols-2 gap-3">
             <label className="block"><span className="text-xs font-semibold text-slate-600">Filière</span>
               <select value={reg.filiere} onChange={(e) => { setReg({ ...reg, filiere: e.target.value }); setErr(""); }} className={inputCls}>
                 <option value="">Choisir...</option>{FILIERES.map((f) => <option key={f}>{f}</option>)}
               </select>
             </label>
-            {regField(reg.type === "ancien" ? "Année de sortie" : "Promotion", "promotion", "text", "ex. 2026")}
+            {regField("Promotion (numéro)", "promotion", "text", "ex. 38")}
+            <p className="col-span-2 -mt-1 text-xs text-slate-500">Indiquez le numéro de votre promotion à l'ARSTM (par exemple 38), pas une année.</p>
           </div>
           {reg.type === "ancien" && (
             <div className="p-4 rounded-2xl bg-orange-50 border border-orange-100 space-y-3">
@@ -6333,7 +6334,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                       <Avatar name={accountName(m)} size="w-11 h-11" text="text-sm" />
                       <div>
                         <p className="font-bold text-slate-900 flex flex-wrap items-center gap-2">{accountName(m)} {m.type === "ancien" && <span className="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">Ancien</span>}</p>
-                        <p className="text-sm text-slate-500">Matricule <strong>{m.matricule || "—"}</strong> · {m.filiere || "filière ?"} · {m.type === "ancien" ? "Sortie" : "Promo"} {m.promotion || "?"}</p>
+                        <p className="text-sm text-slate-500">Matricule <strong>{m.matricule || "—"}</strong> · {m.filiere || "filière ?"} · Promo {m.promotion || "?"}</p>
                         <p className="text-xs text-slate-500">{m.email} · demande du {fmtDate(m.created_at)}</p>
                         {postesValides(m.data?.postes_cge).length > 0 && <p className="text-xs text-orange-700 font-semibold mt-0.5">Postes CGE déclarés : {postesValides(m.data.postes_cge).map((x) => `${x.intitule} ${periodePoste(x)}`).join(" ; ")}</p>}
                       </div>
