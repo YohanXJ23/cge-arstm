@@ -188,7 +188,7 @@ const applySettings = (settings) => {
 const SETTING_LABELS = {
   MANDAT: "Mandat du bureau", PRESIDENT: "Président et son mot", BUREAU: "Bureau exécutif", CONTACT: "Coordonnées",
   ANNEE_CREATION: "Année de création", FILIERES: "Filières", DOMAINES: "Domaines des opportunités", ZONES: "Zones des opportunités",
-  NEWS_CATEGORIES: "Catégories d'actualités", DOC_CATEGORIES: "Catégories de documents",
+  NEWS_CATEGORIES: "Catégories d'actualités", DOC_CATEGORIES: "Catégories de documents", DEPARTEMENTS: "Départements de la CGE",
 };
 
 // Textes modifiables depuis le site : [clé, libellé dans l'administration, texte d'origine, texte long ?]
@@ -354,6 +354,8 @@ const EMPTY_PROFILE = {
   // Profil d'ancien
   poste: "", entreprise: "", pays: "", annuaire: true, mentor: false, mentor_domaines: "", mentor_presentation: "",
   formations: [], experiences: [], competences: [], langues: [], cv: null,
+  // Postes occupés à la CGE (anciens) : cge_ancien = "oui", "non" ou "" (pas encore répondu)
+  cge_ancien: "", postes_cge: [],
 };
 
 // Statuts possibles d'une candidature (modifiables par l'administrateur).
@@ -1036,7 +1038,8 @@ function App() {
     if (free === false) return "Ce matricule possède déjà un compte.";
     const { data, error } = await sb.auth.signUp({
       email: r.email, password: r.password,
-      options: { emailRedirectTo: SITE_URL(), data: { prenoms: r.prenoms, nom: r.nom, matricule: r.matricule, filiere: r.filiere, promotion: r.promotion, type: r.type } },
+      options: { emailRedirectTo: SITE_URL(), data: { prenoms: r.prenoms, nom: r.nom, matricule: r.matricule, filiere: r.filiere, promotion: r.promotion, type: r.type,
+        ...(r.type === "ancien" ? { cge_ancien: r.cge_ancien, postes_cge: r.cge_ancien === "oui" ? nettoyerPostes(r.postes_cge) : [] } : {}) } },
     });
     if (error) return authMessage(error);
     if (data.session) await sb.auth.signOut(); // le compte doit d'abord être validé
@@ -1245,6 +1248,10 @@ function App() {
   const prochaine = [...campagnes].filter((c) => daysUntil(c.ouverture) > 0).sort((a, b) => a.ouverture.localeCompare(b.ouverture))[0] || null;
   const maCandidature = mesAdhesions[0] || null;
   const goAdhesion = () => go("adhesion");
+
+  // Postes occupés à la CGE par les anciens (annuaire et page « Le bureau »).
+  const [postesAnciens, setPostesAnciens] = useState([]);
+  useEffect(() => { sb.rpc("postes_anciens").then(({ data }) => setPostesAnciens(data || []), () => {}); }, [uid]);
 
   if (firstLoad || !settingsReady) return <FullLoader />;
 
@@ -1470,6 +1477,8 @@ function App() {
           </>
         )}
 
+        {page === "bureau" && <AnciensBureaux postes={postesAnciens} />}
+
         {/* ===== ACTUALITÉS (+ sondages pour les membres) ===== */}
         {page === "actualites" && (
           <>
@@ -1560,7 +1569,7 @@ function App() {
 
         {/* ===== RÉSEAU DES ANCIENS ===== */}
         {page === "alumni" && (
-          <AlumniPage user={isCge ? user : null} profile={profile} published={published} annuaire={annuaire} alumni={alumni} mentorats={mentorats}
+          <AlumniPage user={isCge ? user : null} profile={profile} published={published} annuaire={annuaire} alumni={alumni} mentorats={mentorats} postesCge={postesAnciens}
             onRequest={sendMentorRequest} openLogin={openLogin} go={go} />
         )}
 
@@ -1635,6 +1644,175 @@ function App() {
 // =====================================================================
 // PAGE D'ACCUEIL
 // =====================================================================
+// =====================================================================
+// POSTES OCCUPÉS À LA CGE (anciens) : saisie, annuaire, anciens bureaux
+// =====================================================================
+const POSTES_LISTE = ["Président(e)", "Vice-président(e)", "Secrétaire général(e)", "Secrétaire général(e) adjoint(e)", "Trésorier(e) général(e)", "Trésorier(e) adjoint(e)",
+  "Commissaire aux comptes", "Chef(fe) de département", "Adjoint(e) au chef de département", "Chargé(e) de mission", "Membre du bureau", "Membre"];
+const anneesCge = () => { const out = []; for (let a = new Date().getFullYear(); a >= (Number(ANNEE_CREATION) || 1992); a--) out.push(String(a)); return out; };
+const posteVide = () => ({ id: Date.now() + Math.floor(Math.random() * 1000), intitule: "", departement: "", debut: "", fin: "" });
+const postesValides = (list) => (Array.isArray(list) ? list : []).filter((p) => p && String(p.intitule || "").trim());
+// Période d'un poste : « 2019-2020 », ou « 2019 » s'il n'a duré qu'une année.
+const periodePoste = (p) => (p.debut && p.fin && p.fin !== p.debut ? `${p.debut}-${p.fin}` : p.debut || "");
+const libellePoste = (p) => [p.intitule, p.departement].filter(Boolean).join(" · ");
+const nettoyerPostes = (list) => postesValides(list)
+  .map((p) => ({ id: p.id || Date.now(), intitule: String(p.intitule).trim(), departement: String(p.departement || "").trim(), debut: p.debut || "", fin: p.fin && p.fin >= (p.debut || "") ? p.fin : p.debut || "" }))
+  .sort((a, b) => b.debut.localeCompare(a.debut));
+const erreurPostes = (list) => {
+  const tous = Array.isArray(list) ? list : [];
+  if (tous.some((p) => p && !String(p.intitule || "").trim() && (p.debut || p.autre))) return "Choisissez ou écrivez l'intitulé de chaque poste (ou retirez la ligne vide).";
+  const v = postesValides(tous);
+  if (!v.length) return "Ajoutez au moins un poste, ou répondez « Non ».";
+  if (v.some((p) => !p.debut)) return "Indiquez l'année de début de chaque poste.";
+  if (v.some((p) => p.fin && p.fin < p.debut)) return "L'année de fin ne peut pas être avant l'année de début.";
+  return null;
+};
+
+function OuiNon({ value, onChange }) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {[["oui", "Oui"], ["non", "Non"]].map(([v, l]) => (
+        <button key={v} type="button" onClick={() => onChange(v)} className={`py-2.5 rounded-xl text-sm font-semibold border transition ${value === v ? "border-orange-500 bg-orange-50 text-orange-700 ring-2 ring-orange-200" : "border-slate-300 bg-white text-slate-600"}`}>{l}</button>
+      ))}
+    </div>
+  );
+}
+
+// Saisie des postes : une fiche par poste (intitulé, département, de l'année… à l'année…).
+function PostesEditor({ value, onChange }) {
+  const list = Array.isArray(value) && value.length ? value : [posteVide()];
+  const set = (i, patch) => onChange(list.map((p, j) => (j === i ? { ...p, ...patch } : p)));
+  const annees = anneesCge();
+  const sel = "mt-1 w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500";
+  return (
+    <div className="space-y-3">
+      <datalist id="depts-cge">{[...new Set([...DEPARTEMENTS, ...BUREAU.map((d) => d.dept)])].filter(Boolean).map((d) => <option key={d} value={d} />)}</datalist>
+      {list.map((p, i) => {
+        const autre = !!p.autre || (!!p.intitule && !POSTES_LISTE.includes(p.intitule));
+        return (
+          <div key={p.id || i} className="p-4 rounded-2xl bg-white border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Poste {i + 1}</p>
+              {list.length > 1 && <button type="button" onClick={() => onChange(list.filter((_, j) => j !== i))} className="text-xs font-semibold text-rose-600 flex items-center gap-1"><Trash2 size={13} /> Retirer</button>}
+            </div>
+            <label className="block"><span className="text-xs font-semibold text-slate-600">Poste occupé</span>
+              <select value={autre ? "__autre" : p.intitule || ""} onChange={(e) => set(i, e.target.value === "__autre" ? { autre: true, intitule: "" } : { autre: false, intitule: e.target.value })} className={sel}>
+                <option value="">Choisir...</option>{POSTES_LISTE.map((x) => <option key={x}>{x}</option>)}<option value="__autre">Autre (préciser)</option>
+              </select>
+            </label>
+            {autre && <input value={p.intitule || ""} onChange={(e) => set(i, { intitule: e.target.value, autre: true })} placeholder="Intitulé du poste" maxLength={80} className={sel} />}
+            <label className="block"><span className="text-xs font-semibold text-slate-600">Département <span className="font-normal text-slate-400">(facultatif)</span></span>
+              <input list="depts-cge" value={p.departement || ""} onChange={(e) => set(i, { departement: e.target.value })} maxLength={80} placeholder="ex. Communication" className={sel} />
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block"><span className="text-xs font-semibold text-slate-600">De l'année</span>
+                <select value={p.debut || ""} onChange={(e) => set(i, { debut: e.target.value, fin: p.fin && p.fin < e.target.value ? e.target.value : p.fin })} className={sel}>
+                  <option value="">Choisir...</option>{annees.map((a) => <option key={a}>{a}</option>)}
+                </select>
+              </label>
+              <label className="block"><span className="text-xs font-semibold text-slate-600">À l'année</span>
+                <select value={p.fin || ""} onChange={(e) => set(i, { fin: e.target.value })} className={sel}>
+                  <option value="">Même année</option>{annees.filter((a) => !p.debut || a >= p.debut).map((a) => <option key={a}>{a}</option>)}
+                </select>
+              </label>
+            </div>
+          </div>
+        );
+      })}
+      <button type="button" onClick={() => onChange([...list, posteVide()])} className="w-full py-2.5 rounded-xl border-2 border-dashed border-orange-300 text-orange-700 text-sm font-semibold flex items-center justify-center gap-1 hover:bg-orange-50"><Plus size={16} /> Ajouter un autre poste</button>
+    </div>
+  );
+}
+
+// Mon espace → Ancien & mentorat : « Mes postes à la CGE ».
+function MesPostesCge({ profile, update, notify }) {
+  const deja = postesValides(profile.postes_cge);
+  const [rep, setRep] = useState(profile.cge_ancien || (deja.length ? "oui" : ""));
+  const [list, setList] = useState(deja.length ? deja : [posteVide()]);
+  const [saving, setSaving] = useState(false);
+  const save = async () => {
+    if (!rep) return notify("Indiquez si vous avez occupé un poste à la CGE.", "error");
+    if (rep === "oui") { const e = erreurPostes(list); if (e) return notify(e, "error"); }
+    setSaving(true);
+    const ok = await update({ cge_ancien: rep, postes_cge: rep === "oui" ? nettoyerPostes(list) : [] });
+    setSaving(false);
+    if (ok) notify("Vos postes à la CGE sont enregistrés.");
+  };
+  return (
+    <Panel title="Mes postes à la CGE" Icon={Award}>
+      <p className="text-sm text-slate-500 -mt-3 mb-4">Pendant votre scolarité, avez-vous occupé un poste au sein de la CGE section ARSTM ? Vos postes apparaissent sur votre fiche de l'annuaire et dans « Les anciens bureaux » (page Le bureau), sauf si vous avez choisi de ne pas apparaître dans l'annuaire.</p>
+      <OuiNon value={rep} onChange={setRep} />
+      {rep === "oui" && <div className="mt-4"><PostesEditor value={list} onChange={setList} /></div>}
+      <div className="flex justify-end mt-6"><button onClick={save} disabled={saving} className="px-6 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700 disabled:opacity-60">{saving ? "Enregistrement..." : "Enregistrer"}</button></div>
+    </Panel>
+  );
+}
+
+// Administration → Membres : corriger ou retirer les postes déclarés par un ancien.
+function PostesAdminDialog({ m, onClose, onSave }) {
+  const deja = postesValides(m.data && m.data.postes_cge);
+  const [list, setList] = useState(deja.length ? deja : [posteVide()]);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    const aucun = postesValides(list).length === 0;
+    if (!aucun) { const e = erreurPostes(list); if (e) return setErr(e); }
+    setBusy(true);
+    await onSave(aucun ? [] : nettoyerPostes(list));
+    setBusy(false);
+    onClose();
+  };
+  return (
+    <ModalShell onClose={onClose} title="Postes à la CGE" sub={accountName(m)}>
+      <div className="p-6 space-y-4 bg-slate-50">
+        <PostesEditor value={list} onChange={(v) => { setList(v); setErr(""); }} />
+        <p className="text-xs text-slate-500">Pour tout retirer : retirez les postes (ou laissez « Choisir... »), puis enregistrez.</p>
+        {err && <p className="text-sm text-rose-600">{err}</p>}
+        <button onClick={save} disabled={busy} className="w-full py-3 rounded-xl bg-orange-600 text-white font-bold hover:bg-orange-700 disabled:opacity-60">{busy ? "Enregistrement..." : "Enregistrer"}</button>
+      </div>
+    </ModalShell>
+  );
+}
+
+// Page « Le bureau » : les anciens bureaux, regroupés par mandat (du plus récent au plus ancien).
+function AnciensBureaux({ postes }) {
+  const groupes = {};
+  (postes || []).forEach((a) => postesValides(a.postes).forEach((p) => {
+    const k = periodePoste(p);
+    if (!k) return;
+    if (!groupes[k]) groupes[k] = { k, debut: p.debut || "", fin: p.fin || p.debut || "", gens: [] };
+    groupes[k].gens.push({ nom: a.nom, photo: a.photo, promo: a.promotion, intitule: p.intitule, departement: p.departement });
+  }));
+  const liste = Object.values(groupes).sort((a, b) => b.debut.localeCompare(a.debut) || b.fin.localeCompare(a.fin));
+  if (!liste.length) return null;
+  const rang = (t) => { const i = POSTES_LISTE.indexOf(t); return i < 0 ? 99 : i; };
+  return (
+    <section className="max-w-6xl mx-auto px-4 pb-16">
+      <SectionTitle kicker="Notre histoire" title="Les anciens bureaux" />
+      <div className="space-y-6">
+        {liste.map((g) => (
+          <div key={g.k} className="bg-white rounded-3xl shadow-sm p-6">
+            <p className="font-extrabold text-slate-900 text-lg flex items-center gap-2"><span className="w-1.5 h-6 rounded-full bg-orange-600" /> Mandat {g.k}</p>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+              {[...g.gens].sort((a, b) => rang(a.intitule) - rang(b.intitule) || String(a.nom).localeCompare(String(b.nom))).map((x, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50">
+                  <Avatar photo={x.photo} name={x.nom} size="w-11 h-11" text="text-sm" />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900 text-sm truncate">{x.nom}</p>
+                    <p className="text-xs text-orange-700 font-semibold">{libellePoste(x)}</p>
+                    {x.promo && <p className="text-xs text-slate-500">Promo {x.promo}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-slate-400 mt-4">Liste établie à partir des postes déclarés par les anciens dans leur espace.</p>
+    </section>
+  );
+}
+
 function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, homeOpps, homeStats, testimonials, partenaires, pollsToVote, countsFor, onVote, isNewsNew }) {
   const left = nextEvent ? daysUntil(nextEvent.date) : null;
   const official = partenaires.filter((p) => p.role === "Partenaire officiel");
@@ -1969,7 +2147,7 @@ function OpportunitiesPage({ user, jobs, apercu, myApplications, pct, apply, go,
 // =====================================================================
 // RÉSEAU DES ANCIENS ET MENTORAT
 // =====================================================================
-function AlumniPage({ user, profile, published, annuaire, alumni, mentorats, onRequest, openLogin, go }) {
+function AlumniPage({ user, profile, published, annuaire, alumni, mentorats, onRequest, openLogin, go, postesCge = [] }) {
   const [view, setView] = useState("tous");
   const [q, setQ] = useState("");
   const [requesting, setRequesting] = useState(null);
@@ -1980,12 +2158,13 @@ function AlumniPage({ user, profile, published, annuaire, alumni, mentorats, onR
       key: "p" + a.id, id: a.id, nom: [a.prenoms, a.nom].filter(Boolean).join(" "), promo: a.promotion, filiere: a.filiere, photo: a.photo,
       poste: a.poste, entreprise: a.entreprise, lieu: [a.ville, a.pays].filter(Boolean).join(", "), linkedin: a.linkedin,
       mentor: a.mentor, domaines: a.mentor_domaines, presentation: a.mentor_presentation,
+      postes: postesValides((postesCge.find((x) => x.user_id === a.id) || {}).postes),
     })),
     ...alumni.map((a) => ({ key: "m" + a.id, nom: a.name, promo: a.promo, poste: a.role, entreprise: a.company })),
   ];
   const mentorsCount = people.filter((p) => p.mentor).length;
   const list = people.filter((p) => (view === "tous" || p.mentor)
-    && (!q || [p.nom, p.promo, p.poste, p.entreprise, p.lieu, p.filiere, p.domaines].join(" ").toLowerCase().includes(q.toLowerCase())));
+    && (!q || [p.nom, p.promo, p.poste, p.entreprise, p.lieu, p.filiere, p.domaines, ...(p.postes || []).map((x) => x.intitule)].join(" ").toLowerCase().includes(q.toLowerCase())));
   const activeWith = (id) => mentorats.find((m) => m.sens === "eleve" && m.autre_id === id && ["en_attente", "acceptee"].includes(m.statut));
 
   return (
@@ -2045,6 +2224,9 @@ function AlumniPage({ user, profile, published, annuaire, alumni, mentorats, onR
                         {p.lieu && <p className="flex items-center gap-2"><MapPin size={15} className="text-orange-600 flex-shrink-0" /> {p.lieu}</p>}
                         {p.filiere && <p className="flex items-center gap-2"><GraduationCap size={15} className="text-orange-600 flex-shrink-0" /> {p.filiere}</p>}
                       </div>
+                      {p.postes && p.postes.length > 0 && (
+                        <div className="mt-4 flex flex-wrap gap-1.5">{p.postes.map((x, k) => <span key={k} className="text-xs px-2 py-1 rounded-lg bg-slate-900 text-white font-semibold flex items-center gap-1"><Award size={11} className="text-orange-400 flex-shrink-0" /> {x.intitule} CGE{periodePoste(x) ? ` · ${periodePoste(x)}` : ""}</span>)}</div>
+                      )}
                       {p.mentor && (p.domaines || p.presentation) && (
                         <div className="mt-4 p-3 rounded-xl bg-orange-50 text-sm">
                           {p.domaines && <p className="font-semibold text-orange-800">Peut vous aider sur : {p.domaines}</p>}
@@ -2922,6 +3104,7 @@ function MentoratTab({ profile, update, notify, mentorats, onUpdate, myTemoignag
   return (
     <div className="space-y-6">
       {isAncien && <AncienPanel profile={profile} update={update} notify={notify} />}
+      {isAncien && <MesPostesCge profile={profile} update={update} notify={notify} />}
       {isAncien && (
         <Panel title={`Demandes reçues (${received.length})`} Icon={UserCheck}>
           {received.length === 0
@@ -3091,7 +3274,7 @@ function Dashboard({ profile, pct, fullName, applications, registrations, events
     ["Renseigner téléphone et email", "infos", profile.telephone && profile.email],
     ["Indiquer filière et promotion", "infos", profile.filiere && profile.promotion],
     ...(isAncien
-      ? [["Compléter votre profil d'ancien (poste, entreprise)", "mentorat", profile.poste && profile.entreprise]]
+      ? [["Compléter votre profil d'ancien (poste, entreprise)", "mentorat", profile.poste && profile.entreprise], ["Indiquer vos postes à la CGE", "mentorat", profile.cge_ancien]]
       : [["Préciser votre objectif professionnel", "infos", profile.objectif]]),
     ["Écrire une courte présentation", "infos", profile.bio],
     ["Ajouter une formation", "parcours", profile.formations.length],
@@ -3169,7 +3352,7 @@ function InfosTab({ uid, profile, update, notify }) {
     if (d.email && !EMAIL_RE.test(d.email)) return notify("Adresse email invalide.", "error");
     if (d.linkedin && !/^https?:\/\//i.test(d.linkedin)) return notify("Le lien LinkedIn doit commencer par https://", "error");
     // On n'envoie que les champs de cet onglet (les autres sont gérés ailleurs).
-    const { formations, experiences, competences, langues, cv, poste, entreprise, pays, annuaire, mentor, mentor_domaines, mentor_presentation, ...infos } = d;
+    const { formations, experiences, competences, langues, cv, poste, entreprise, pays, annuaire, mentor, mentor_domaines, mentor_presentation, cge_ancien, postes_cge, ...infos } = d;
     setSaving(true);
     const ok = await update(infos);
     setSaving(false);
@@ -3445,7 +3628,7 @@ function CVPreview({ profile: p, fullName, onClose, notify }) {
 // =====================================================================
 // CONNEXION, INSCRIPTION ET MOT DE PASSE
 // =====================================================================
-const EMPTY_REG = { type: "eleve", prenoms: "", nom: "", matricule: "", email: "", filiere: "", promotion: "", password: "", confirm: "" };
+const EMPTY_REG = { type: "eleve", prenoms: "", nom: "", matricule: "", email: "", filiere: "", promotion: "", password: "", confirm: "", cge_ancien: "", postes_cge: [] };
 
 function ModalShell({ onClose, title, sub, children }) {
   return (
@@ -3490,6 +3673,8 @@ function LoginModal({ onClose, onLogin, onRegister, onForgot }) {
     const r = { ...reg, prenoms: reg.prenoms.trim(), nom: reg.nom.trim(), matricule: reg.matricule.trim(), email: reg.email.trim(), promotion: reg.promotion.trim() };
     if (!r.prenoms || !r.nom || !r.matricule || !r.email || !r.filiere || !r.promotion) return setErr("Tous les champs sont obligatoires.");
     if (!EMAIL_RE.test(r.email)) return setErr("Adresse email invalide.");
+    if (r.type === "ancien" && !r.cge_ancien) return setErr("Indiquez si vous avez occupé un poste à la CGE.");
+    if (r.type === "ancien" && r.cge_ancien === "oui") { const ep = erreurPostes(r.postes_cge); if (ep) return setErr(ep); }
     if (r.password.length < 8) return setErr("Le mot de passe doit contenir au moins 8 caractères.");
     if (r.password !== r.confirm) return setErr("Les deux mots de passe ne correspondent pas.");
     const e = await onRegister(r);
@@ -3558,6 +3743,13 @@ function LoginModal({ onClose, onLogin, onRegister, onForgot }) {
             </label>
             {regField(reg.type === "ancien" ? "Année de sortie" : "Promotion", "promotion", "text", "ex. 2026")}
           </div>
+          {reg.type === "ancien" && (
+            <div className="p-4 rounded-2xl bg-orange-50 border border-orange-100 space-y-3">
+              <p className="text-sm font-semibold text-slate-900">Avez-vous occupé un poste à la CGE pendant votre scolarité ?</p>
+              <OuiNon value={reg.cge_ancien} onChange={(v) => { setReg({ ...reg, cge_ancien: v }); setErr(""); }} />
+              {reg.cge_ancien === "oui" && <PostesEditor value={reg.postes_cge} onChange={(postes_cge) => { setReg({ ...reg, postes_cge }); setErr(""); }} />}
+            </div>
+          )}
           {regField("Mot de passe (8 caractères min.)", "password", "password")}
           {regField("Confirmer le mot de passe", "confirm", "password")}
           {err && <p className="text-sm text-rose-600">{err}</p>}
@@ -5939,12 +6131,15 @@ function AdminDashboard({ members, jobs, applications, registrations, events, me
 // Rubriques de l'administration et droit nécessaire pour y accéder (null = administrateurs uniquement).
 const TAB_PERMS = {
   dashboard: null, news: "news", events: "events", jobs: "jobs", documents: "documents", galerie: "galerie", sondages: "sondages",
-  temoignages: "temoignages", partenaires: "partenaires", alumni: "alumni", members: null, applications: "candidatures", messages: "messages",
+  temoignages: "temoignages", partenaires: "partenaires", alumni: "alumni", members: null,
+  // Une valeur peut être une liste : l'onglet s'affiche si le membre a au moins un de ces droits.
+  finances: ["tresorerie", "finances_lecture"], adhesions: ["adhesions", "tresorerie"], communication: "communication",
+  applications: "candidatures", messages: "messages",
   reglages: "textes", images: "textes", droits: null, journal: null,
 };
 
 function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, setAlumni, temoignages, setTemoignages, mentoratAll, documents, setDocuments, photos, setPhotos, partenaires, setPartenaires, sondages, setSondages, countsFor, applications, setApplications, registrations, members, setMembers, messages, setMessages, currentId, notify, reload, isAdmin, can, settings, saveSettings }) {
-  const allowed = (k) => isAdmin || (!!TAB_PERMS[k] && can(TAB_PERMS[k]));
+  const allowed = (k) => isAdmin || [].concat(TAB_PERMS[k] || []).some((p) => can(p));
   const [tab, setTab] = useState(() => Object.keys(TAB_PERMS).find(allowed) || "news");
   const [form, setForm] = useState({});
   const [editingId, setEditingId] = useState(null);
@@ -5955,6 +6150,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
   const [mt, setMt] = useState("");
   const [dispoOnly, setDispoOnly] = useState(false);
   const [bulkPromo, setBulkPromo] = useState("");
+  const [postesEdit, setPostesEdit] = useState(null);
   const formRef = useRef(null);
 
   const store = { news: [news, setNews], events: [events, setEvents], jobs: [jobs, setJobs], documents: [documents, setDocuments], temoignages: [temoignages, setTemoignages], partenaires: [partenaires, setPartenaires], alumni: [alumni, setAlumni] };
@@ -6139,6 +6335,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                         <p className="font-bold text-slate-900 flex flex-wrap items-center gap-2">{accountName(m)} {m.type === "ancien" && <span className="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700">Ancien</span>}</p>
                         <p className="text-sm text-slate-500">Matricule <strong>{m.matricule || "—"}</strong> · {m.filiere || "filière ?"} · {m.type === "ancien" ? "Sortie" : "Promo"} {m.promotion || "?"}</p>
                         <p className="text-xs text-slate-500">{m.email} · demande du {fmtDate(m.created_at)}</p>
+                        {postesValides(m.data?.postes_cge).length > 0 && <p className="text-xs text-orange-700 font-semibold mt-0.5">Postes CGE déclarés : {postesValides(m.data.postes_cge).map((x) => `${x.intitule} ${periodePoste(x)}`).join(" ; ")}</p>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -6204,11 +6401,13 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                         </p>
                         <p className="text-xs text-slate-500">{[m.email, m.matricule, m.filiere, m.promotion && `Promo ${m.promotion}`].filter(Boolean).join(" · ")}</p>
                         {ancien && (m.data?.poste || m.data?.entreprise) && <p className="text-xs text-slate-600 mt-0.5">{[m.data.poste, m.data.entreprise].filter(Boolean).join(" · ")}</p>}
+                        {ancien && postesValides(m.data?.postes_cge).length > 0 && <p className="text-xs text-orange-700 mt-0.5">CGE : {postesValides(m.data.postes_cge).map((x) => `${x.intitule} ${periodePoste(x)}`).join(" ; ")}</p>}
                         {!ancien && m.data?.objectif && <p className="text-xs text-slate-600 mt-0.5 italic">Objectif : {m.data.objectif}</p>}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <button onClick={() => openProfile(m.id)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1"><Eye size={14} /> Profil</button>
+                      {ancien && <button onClick={() => setPostesEdit(m)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1"><Award size={14} /> Postes CGE</button>}
                       <ConfirmButton onConfirm={() => updateMember(m, { type: ancien ? "eleve" : "ancien" }, ancien ? `${accountName(m)} est de nouveau « élève ».` : `${accountName(m)} est maintenant « ancien ».`)}
                         confirmLabel="Confirmer ?" className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1">
                         <GraduationCap size={14} /> {ancien ? "Repasser élève" : "Passer ancien"}
@@ -6332,6 +6531,8 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
       )}
 
       {viewing && <CVPreview profile={viewing.profile} fullName={viewing.name} notify={notify} onClose={() => setViewing(null)} />}
+      {postesEdit && <PostesAdminDialog m={postesEdit} onClose={() => setPostesEdit(null)}
+        onSave={(postes) => updateMember(postesEdit, { data: { ...(postesEdit.data || {}), cge_ancien: postes.length ? "oui" : "non", postes_cge: postes } }, `Postes CGE de ${accountName(postesEdit)} enregistrés.`)} />}
     </main>
   );
 }
