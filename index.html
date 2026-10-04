@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>CGE ARSTM — Conférence des Grandes Écoles</title>
-<meta name="description" content="Section ARSTM de la Conférence des Grandes Écoles de Côte d'Ivoire : actualités, bureau exécutif, événements, offres de stages et d'emplois, réseau alumni et espace membre." />
+<meta name="description" content="Section ARSTM de la Conférence des Grandes Écoles de Côte d'Ivoire : actualités, bureau exécutif, événements, opportunités de stages et d'emplois, réseau alumni et espace membre." />
 <meta name="theme-color" content="#ff8a00" />
 <link rel="icon" type="image/svg+xml" href="logos/cge-arstm.svg" />
 
@@ -97,10 +97,13 @@ const Anchor = pickIcon("Anchor"), Menu = pickIcon("Menu"), X = pickIcon("X"), C
   LayoutDashboard = pickIcon("LayoutDashboard", "LayoutGrid"), Quote = pickIcon("Quote"), Globe = pickIcon("Globe"), Search = pickIcon("Search"),
   Ship = pickIcon("Ship"), Megaphone = pickIcon("Megaphone"), Handshake = pickIcon("Handshake", "HeartHandshake"), ImageIcon = pickIcon("Image", "ImageIcon"),
   Info = pickIcon("Info"), UserPlus = pickIcon("UserPlus"), Pencil = pickIcon("Pencil", "PenLine", "Edit"), Eye = pickIcon("Eye"),
-  RotateCcw = pickIcon("RotateCcw", "RefreshCw"), Hourglass = pickIcon("Hourglass", "Clock"), KeyRound = pickIcon("KeyRound", "Key");
+  RotateCcw = pickIcon("RotateCcw", "RefreshCw"), Hourglass = pickIcon("Hourglass", "Clock"), KeyRound = pickIcon("KeyRound", "Key"),
+  BookOpen = pickIcon("BookOpen", "Book"), Trophy = pickIcon("Trophy", "Award"), Repeat = pickIcon("Repeat", "RefreshCw"),
+  ExternalLink = pickIcon("ExternalLink"), BarChart3 = pickIcon("BarChart3", "BarChart"), Inbox = pickIcon("Inbox", "Mail"),
+  Flame = pickIcon("Flame", "Sparkles"), MailOpen = pickIcon("MailOpen", "Mail");
 
 // =====================================================================
-// À PERSONNALISER — images par défaut (l'administrateur peut aussi les changer depuis le site)
+// À PERSONNALISER — textes, coordonnées et images par défaut
 // =====================================================================
 // Logo vectoriel (SVG) : reste net à toutes les tailles. Fichier à placer dans le dossier "logos" de l'hébergeur.
 const LOGO_SRC = "logos/cge-arstm.svg";
@@ -108,6 +111,14 @@ const LOGO_SRC = "logos/cge-arstm.svg";
 const LOGOS_ECOLES = { ARSTM: null, ENSEA: null, ESATIC: null, "INP-HB": null, ESA: null, ESCAE: null, ESI: null, ESMG: null, ESTP: null };
 // Photos du bureau : nom exact du membre => chemin de la photo (ex. "NANGUI AKRE": "photos/nangui-akre.jpg").
 const PHOTOS_BUREAU = {};
+
+// Coordonnées affichées sur la page Contact et dans le pied de page. Laisser "" pour masquer une ligne.
+const CONTACT = {
+  adresse: "ARSTM, Abidjan — Côte d'Ivoire",
+  email: "",      // ex. "cge.arstm@gmail.com"
+  telephone: "",  // ex. "+225 07 00 00 00 00"
+  facebook: "https://www.facebook.com/ci.cge/",
+};
 
 // Partenaires : ajouter d'autres partenaires sur le même modèle.
 const PARTENAIRES = [
@@ -124,11 +135,17 @@ const PRESIDENT = {
   message: "Bienvenue sur le site de la CGE ARSTM. Notre ambition est simple : faire de chaque élève un acteur engagé de sa formation et lui ouvrir les portes du monde professionnel. Ensemble, cultivons l'entraide, l'excellence et le rayonnement de notre Académie. (Texte provisoire)",
 };
 
-// Chiffres clés : à vérifier / remplacer par les vrais chiffres
-const STATS = [[34, "", "Ans d'existence (depuis 1992)"], [500, "+", "Membres"], [30, "+", "Événements par an"], [20, "", "Membres du bureau"]];
+const ANNEE_CREATION = 1992;
 
-// Filières affichées dans le bandeau défilant : à adapter
+// Filières (bandeau défilant + profils des membres) : à adapter
 const FILIERES = ["Navigation maritime", "Mécanique navale", "Génie thermique", "Électromécanique", "Logistique & transport", "Administration maritime", "Sécurité maritime", "Hydrographie"];
+
+// Listes utilisées pour les opportunités et les actualités : à adapter
+const JOB_TYPES = ["Stage", "Emploi", "Alternance", "Formation", "Bourse", "Concours"];
+const DOMAINES = ["Sciences nautiques", "Mécanique navale", "Génie thermique", "Électromécanique", "Offshore", "Logistique & transport", "Industrie", "Administration maritime", "Autre"];
+const ZONES = ["Côte d'Ivoire", "Afrique", "Europe", "International"];
+const NEWS_CATEGORIES = ["Vie de la CGE", "Annonce", "ARSTM", "Carrière", "Événement", "Interne"];
+const CONTACT_SUBJECTS = ["Renseignement", "Partenariat / entreprise", "Proposer une offre", "Adhésion", "Autre"];
 
 const BUREAU = [
   { dept: "Présidence", members: [["NANGUI AKRE", "Président"], ["SYLLA YACOUBA", "Vice-Président"]] },
@@ -144,7 +161,7 @@ const BUREAU = [
 
 const EMPTY_PROFILE = {
   photo: null, prenoms: "", nom: "", naissance: "", nationalite: "", telephone: "", email: "", ville: "",
-  filiere: "", promotion: "", matricule: "", linkedin: "", titre: "", bio: "",
+  filiere: "", promotion: "", matricule: "", linkedin: "", titre: "", bio: "", objectif: "", disponible: false,
   formations: [], experiences: [], competences: [], langues: [], cv: null,
 };
 
@@ -155,6 +172,16 @@ const STATUS_STYLES = {
   "En cours d'examen": "bg-amber-100 text-amber-700",
   "Retenue": "bg-emerald-100 text-emerald-700",
   "Non retenue": "bg-slate-200 text-slate-600",
+};
+
+// Apparence de chaque type d'opportunité : [dégradé, icône, pastille]
+const TYPE_STYLES = {
+  Stage: ["from-sky-700 to-cyan-500", GraduationCap, "bg-sky-100 text-sky-700"],
+  Emploi: ["from-orange-500 to-amber-400", Briefcase, "bg-orange-100 text-orange-700"],
+  Alternance: ["from-violet-600 to-fuchsia-500", Repeat, "bg-violet-100 text-violet-700"],
+  Formation: ["from-emerald-600 to-teal-500", BookOpen, "bg-emerald-100 text-emerald-700"],
+  Bourse: ["from-amber-500 to-yellow-400", Award, "bg-amber-100 text-amber-800"],
+  Concours: ["from-rose-500 to-orange-400", Trophy, "bg-rose-100 text-rose-700"],
 };
 
 const CV_MAX = 5 * 1048576;
@@ -176,6 +203,7 @@ const plainFromDb = (r) => r;
 const plainToDb = ({ id, created_at, ...r }) => r;
 const newsFromDb = ({ members_only, ...r }) => ({ ...r, membersOnly: !!members_only });
 const newsToDb = ({ id, created_at, membersOnly, ...r }) => ({ ...r, members_only: !!membersOnly });
+const jobToDb = ({ id, created_at, ...r }) => ({ ...r, cloture: r.cloture || null, lien: r.lien ? r.lien.trim() : null });
 const appFromDb = (r) => ({ id: r.id, jobId: r.job_id, userId: r.user_id, title: r.title, company: r.company, status: r.status, applicant: r.applicant, email: r.email, cvName: r.cv_name, date: r.date });
 const regFromDb = (r) => ({ eventId: r.event_id, userId: r.user_id, name: r.name });
 
@@ -219,7 +247,6 @@ const compressImage = (file, max = 700) => new Promise((resolve, reject) => {
     c.height = Math.max(1, Math.round(img.naturalHeight * scale));
     c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
     URL.revokeObjectURL(url);
-    // PNG garde la transparence (idéal pour les logos), les photos passent en JPEG.
     const type = /png|webp|svg|gif/.test(file.type) ? "image/png" : "image/jpeg";
     c.toBlob((b) => (b ? resolve(b) : reject(new Error("Conversion de l'image impossible."))), type, 0.85);
   };
@@ -258,12 +285,15 @@ const initials = (n) => String(n || "?").split(/\s+/).filter(Boolean).slice(0, 2
 const fmtDate = (iso) => (iso ? new Date(String(iso).slice(0, 10) + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "");
 const dayMonth = (iso) => { const d = new Date(iso + "T12:00:00"); return [d.getDate(), d.toLocaleDateString("fr-FR", { month: "short" }).replace(".", "")]; };
 // Nombre de jours entre aujourd'hui et la date (0 = aujourd'hui, négatif = passé).
-const daysUntil = (iso) => { const t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((new Date(iso + "T00:00:00") - t) / 86400000); };
+const daysUntil = (iso) => { const t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((new Date(String(iso).slice(0, 10) + "T00:00:00") - t) / 86400000); };
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const fileSize = (b) => (b > 1048576 ? (b / 1048576).toFixed(1) + " Mo" : Math.round(b / 1024) + " Ko");
+const isExpired = (j) => !!j.cloture && daysUntil(j.cloture) < 0;
+// Tri des offres : celles qui ferment bientôt d'abord, puis celles sans date limite.
+const byDeadline = (a, b) => (a.cloture && b.cloture ? a.cloture.localeCompare(b.cloture) : a.cloture ? -1 : b.cloture ? 1 : 0);
 
 function completion(p) {
-  const checks = [p.photo, p.prenoms && p.nom, p.telephone, p.email, p.filiere, p.promotion, p.ville, p.bio, p.titre,
+  const checks = [p.photo, p.prenoms && p.nom, p.telephone, p.email, p.filiere, p.promotion, p.ville, p.bio, p.titre, p.objectif,
     p.formations.length, p.experiences.length, p.competences.length, p.langues.length, p.cv];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
@@ -282,7 +312,6 @@ function useCountUp(target, duration = 1600) {
 // =====================================================================
 // PETITS COMPOSANTS
 // =====================================================================
-// Image qui se remplace par un contenu de secours si le fichier est introuvable.
 function SafeImg({ src, alt, className, fallback }) {
   const [failed, setFailed] = useState(null);
   if (!src || failed === src) return fallback;
@@ -311,7 +340,6 @@ const SchoolLogo = ({ code, dark, small }) => {
   return <SafeImg src={images[`ecole:${code}`]} alt={`Logo ${code}`} className={`${size} object-contain rounded-xl bg-white ${small ? "p-0.5" : "p-1.5 shadow-sm"}`} fallback={fallback} />;
 };
 
-// Photo d'un membre du bureau (ou ses initiales s'il n'y a pas de photo).
 const MemberPhoto = ({ name, size = "w-20 h-20", text = "text-xl", gradient = "from-orange-500 to-amber-400", className = "" }) => {
   const images = useImages();
   return <SafeImg src={images[`membre:${name}`]} alt={name} className={`${size} rounded-full object-cover ${className}`}
@@ -352,7 +380,7 @@ const Locked = ({ onLogin, label }) => (
 );
 
 const Stat = ({ value, suffix, label }) => {
-  const v = useCountUp(value);
+  const v = useCountUp(Number(value) || 0);
   return (
     <div className="text-center">
       <div className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">{v}{suffix}</div>
@@ -390,6 +418,30 @@ const FullLoader = () => (
   </div>
 );
 
+const SectionTitle = ({ kicker, title, action, onAction }) => (
+  <div className="flex items-end justify-between gap-4 mb-8">
+    <div><p className="text-orange-600 font-bold text-sm uppercase tracking-widest">{kicker}</p><h2 className="text-3xl font-extrabold text-slate-900 mt-1">{title}</h2></div>
+    {action && <button onClick={onAction} className="text-orange-600 font-semibold flex items-center gap-1 hover:gap-2 transition-all whitespace-nowrap">{action} <ChevronRight size={18} /></button>}
+  </div>
+);
+
+const TypeBadge = ({ type }) => {
+  const [, Icon, badge] = TYPE_STYLES[type] || TYPE_STYLES.Stage;
+  return <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${badge}`}><Icon size={13} /> {type}</span>;
+};
+
+// Date limite d'une offre, en rouge quand elle approche.
+const Deadline = ({ date }) => {
+  if (!date) return <span className="text-xs text-slate-400 flex items-center gap-1"><Clock size={13} /> Sans date limite</span>;
+  const left = daysUntil(date);
+  const cls = left < 0 ? "text-slate-400" : left <= 3 ? "text-rose-600" : "text-slate-600";
+  return (
+    <span className={`text-xs font-semibold flex items-center gap-1 ${cls}`}>
+      <Clock size={13} /> {left < 0 ? `Clôturée le ${fmtDate(date)}` : `Clôture le ${fmtDate(date)} · ${left === 0 ? "dernier jour" : `J-${left}`}`}
+    </span>
+  );
+};
+
 // =====================================================================
 // APPLICATION
 // =====================================================================
@@ -414,7 +466,10 @@ function App() {
   const [alumni, setAlumni] = useState([]);
   const [applications, setApplications] = useState([]);
   const [registrations, setRegistrations] = useState([]);
-  const [members, setMembers] = useState([]); // visible uniquement par les admins
+  const [members, setMembers] = useState([]);   // visible uniquement par les admins
+  const [messages, setMessages] = useState([]); // visible uniquement par les admins
+  const [stats, setStats] = useState({});
+  const [apercu, setApercu] = useState([]);     // aperçu public des opportunités
   const [imgOverrides, setImgOverrides] = useState({});
   const [newsFilter, setNewsFilter] = useState("Toutes");
   const [alumniQuery, setAlumniQuery] = useState("");
@@ -452,7 +507,7 @@ function App() {
   const loadAll = async () => {
     const id = ++loadId.current;
     const errors = [];
-    const q = (query) => query.then(({ data, error }) => { if (error) errors.push(error); return data || []; });
+    const q = (query) => query.then(({ data, error }) => { if (error) errors.push(error); return data ?? []; });
     try {
       let myRow = null;
       if (uid) {
@@ -469,7 +524,7 @@ function App() {
       }
       const active = !!myRow;
       const admin = active && myRow.role === "admin";
-      const [n, e, j, a, apps, regs, imgs, mem] = await Promise.all([
+      const [n, e, j, a, apps, regs, imgs, mem, st, ap, msgs] = await Promise.all([
         q(sb.from("news").select("*").order("date", { ascending: false })),
         q(sb.from("events").select("*").order("date")),
         active ? q(sb.from("jobs").select("*").order("created_at", { ascending: false })) : [],
@@ -478,6 +533,9 @@ function App() {
         active ? q(sb.from("registrations").select("*")) : [],
         q(sb.from("site_images").select("*")),
         admin ? q(sb.from("profiles").select("*").order("created_at", { ascending: false })) : [],
+        q(sb.rpc("stats_publiques")),
+        q(sb.rpc("opportunites_apercu")),
+        admin ? q(sb.from("messages").select("*").order("created_at", { ascending: false })) : [],
       ]);
       if (id !== loadId.current) return;
       setMe(myRow);
@@ -485,7 +543,9 @@ function App() {
       setNews(n.map(newsFromDb)); setEvents(e); setJobs(j); setAlumni(a);
       setApplications(apps.map(appFromDb)); setRegistrations(regs.map(regFromDb));
       setImgOverrides(Object.fromEntries(imgs.map((r) => [r.key, r.url])));
-      setMembers(mem);
+      setMembers(mem); setMessages(msgs);
+      setStats(st && !Array.isArray(st) ? st : {});
+      setApercu(Array.isArray(ap) ? ap : []);
       if (errors.length) notify("Connexion à la base incomplète : " + errors[0].message, "error");
     } catch (err) {
       console.error(err);
@@ -508,14 +568,14 @@ function App() {
   const isAdmin = user?.role === "admin";
   const pct = completion(profile);
   const fullName = [profile.prenoms, profile.nom].filter(Boolean).join(" ") || user?.name || "";
-  const pendingCount = members.filter((m) => m.statut === "en_attente").length;
+  const adminAlerts = members.filter((m) => m.statut === "en_attente").length + messages.filter((m) => !m.lu).length;
   const myApplications = user ? applications.filter((a) => a.userId === user.id) : [];
   const myRegs = user ? registrations.filter((r) => r.userId === user.id).map((r) => r.eventId) : [];
 
   const nav = [
     ["accueil", "Accueil"], ["apropos", "À propos"], ["bureau", "Bureau"], ["actualites", "Actualités"],
-    ["evenements", "Événements"], ["emplois", "Emplois & Stages"], ["alumni", "Alumni"],
-    ...(isAdmin ? [["admin", `Administration${pendingCount ? ` (${pendingCount})` : ""}`]] : []),
+    ["evenements", "Événements"], ["opportunites", "Opportunités"], ["alumni", "Alumni"], ["contact", "Contact"],
+    ...(isAdmin ? [["admin", `Administration${adminAlerts ? ` (${adminAlerts})` : ""}`]] : []),
   ];
 
   const visibleNews = [...news].sort((a, b) => b.date.localeCompare(a.date));
@@ -524,6 +584,15 @@ function App() {
   const pastEvents = sortedEvents.filter((e) => daysUntil(e.date) < 0).reverse();
   const nextEvent = upcoming[0];
   const categories = ["Toutes", ...new Set(visibleNews.map((n) => n.category))];
+  const openJobs = jobs.filter((j) => !isExpired(j));
+  // Pour les membres, on utilise la liste complète (toujours à jour) ; pour les visiteurs, l'aperçu public.
+  const homeOpps = user ? [...openJobs].slice(0, 4) : apercu;
+  const homeStats = [
+    [user ? openJobs.length : stats.offres, "", "Opportunités ouvertes"],
+    [stats.membres, "", "Membres inscrits"],
+    [upcoming.length, "", "Événements à venir"],
+    [new Date().getFullYear() - ANNEE_CREATION, "", `Ans d'existence (depuis ${ANNEE_CREATION})`],
+  ];
 
   // ----- Connexion, inscription, mot de passe -----
   const handleLogin = async (email, password) => {
@@ -639,7 +708,7 @@ function App() {
 
       {/* ===== EN-TÊTE ===== */}
       <header className="sticky top-0 z-40 bg-white bg-opacity-95 backdrop-blur border-b border-slate-200 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <button onClick={() => go("accueil")} className="flex items-center gap-3 text-left">
             <Logo />
             <div>
@@ -647,11 +716,11 @@ function App() {
               <div className="text-xs text-slate-500">Conférence des Grandes Écoles</div>
             </div>
           </button>
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav className="hidden xl:flex items-center gap-0.5">
             {nav.map(([id, label]) => (
-              <button key={id} onClick={() => go(id)} className={`relative px-3 py-2 text-sm font-medium transition ${page === id ? "text-orange-600" : "text-slate-600 hover:text-slate-900"}`}>
+              <button key={id} onClick={() => go(id)} className={`relative px-2.5 py-2 text-sm font-medium transition whitespace-nowrap ${page === id ? "text-orange-600" : "text-slate-600 hover:text-slate-900"}`}>
                 {label}
-                {page === id && <span className="absolute left-3 right-3 -bottom-0.5 h-0.5 rounded-full bg-orange-600" />}
+                {page === id && <span className="absolute left-2.5 right-2.5 -bottom-0.5 h-0.5 rounded-full bg-orange-600" />}
               </button>
             ))}
           </nav>
@@ -669,11 +738,11 @@ function App() {
                 <User size={16} /> Espace membre
               </button>
             )}
-            <button onClick={() => setMenuOpen(!menuOpen)} className="lg:hidden p-2" aria-label="Menu">{menuOpen ? <X /> : <Menu />}</button>
+            <button onClick={() => setMenuOpen(!menuOpen)} className="xl:hidden p-2" aria-label="Menu">{menuOpen ? <X /> : <Menu />}</button>
           </div>
         </div>
         {menuOpen && (
-          <div className="lg:hidden border-t border-slate-200 bg-white px-4 py-3 flex flex-col">
+          <div className="xl:hidden border-t border-slate-200 bg-white px-4 py-3 flex flex-col max-h-[80vh] overflow-y-auto">
             {nav.map(([id, label]) => (
               <button key={id} onClick={() => go(id)} className={`text-left px-3 py-3 rounded-lg ${page === id ? "text-orange-600 bg-orange-50 font-semibold" : "text-slate-700"}`}>{label}</button>
             ))}
@@ -690,7 +759,7 @@ function App() {
       </header>
 
       <div key={page} className="fade-up">
-        {page === "accueil" && <Home go={go} user={user} openLogin={openLogin} visibleNews={visibleNews} upcoming={upcoming} nextEvent={nextEvent} pct={pct} />}
+        {page === "accueil" && <Home go={go} user={user} openLogin={openLogin} visibleNews={visibleNews} upcoming={upcoming} nextEvent={nextEvent} pct={pct} homeOpps={homeOpps} homeStats={homeStats} />}
 
         {/* ===== À PROPOS ===== */}
         {page === "apropos" && (
@@ -837,7 +906,7 @@ function App() {
                         <h3 className="text-xl font-bold text-slate-900">{e.title}</h3>
                         <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold">{left === 0 ? "Aujourd'hui" : `J-${left}`}</span>
                       </div>
-                      <p className="text-sm text-slate-500 mt-1 flex flex-wrap gap-4"><span className="flex items-center gap-1"><Clock size={14} /> {e.time}</span><span className="flex items-center gap-1"><MapPin size={14} /> {e.place}</span></p>
+                      <p className="text-sm text-slate-500 mt-1 flex flex-wrap gap-4">{e.time && <span className="flex items-center gap-1"><Clock size={14} /> {e.time}</span>}{e.place && <span className="flex items-center gap-1"><MapPin size={14} /> {e.place}</span>}</p>
                       <p className="text-slate-600 mt-2">{e.text}</p>
                     </div>
                     <button onClick={() => toggleRegistration(e)} className={`self-start sm:self-center px-5 py-3 rounded-xl font-semibold text-sm whitespace-nowrap transition ${reg ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-orange-600 text-white hover:bg-orange-700 hover:shadow-lg"}`}>
@@ -868,50 +937,9 @@ function App() {
           </>
         )}
 
-        {/* ===== EMPLOIS ===== */}
-        {page === "emplois" && (
-          <>
-            <PageHero kicker="Carrière" title="Emplois & Stages" sub="Postulez en un clic avec votre profil et votre CV." icon={Briefcase} />
-            <main className="max-w-5xl mx-auto px-4 py-16">
-              {!user ? <Locked onLogin={openLogin} label="aux offres d'emplois et de stages" /> : (
-                <div className="space-y-5">
-                  {pct < 50 && (
-                    <div className="rounded-2xl bg-amber-50 border border-amber-200 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <p className="text-sm text-amber-800"><strong>Votre profil est complété à {pct} %.</strong> Il faut au moins 50 % pour postuler.</p>
-                      <button onClick={() => go("profil")} className="px-4 py-2 rounded-xl bg-amber-500 text-white font-semibold text-sm">Compléter mon profil</button>
-                    </div>
-                  )}
-                  {jobs.map((j) => {
-                    const app = myApplications.find((a) => a.jobId === j.id);
-                    return (
-                      <div key={j.id} className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl transition flex flex-col md:flex-row md:items-center gap-5">
-                        <div className={`w-14 h-14 flex-shrink-0 rounded-2xl bg-gradient-to-br ${j.type === "Stage" ? "from-sky-700 to-cyan-500" : "from-orange-500 to-amber-400"} flex items-center justify-center shadow-md`}>
-                          {j.type === "Stage" ? <GraduationCap className="text-white" /> : <Briefcase className="text-white" />}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex flex-wrap gap-2 text-xs font-semibold">
-                            <span className="px-2 py-1 rounded-md bg-orange-100 text-orange-700">{j.type}</span>
-                            {j.duration && <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600">{j.duration}</span>}
-                          </div>
-                          <h3 className="text-xl font-bold text-slate-900 mt-2">{j.title}</h3>
-                          <p className="text-sm text-slate-500 mt-1 flex flex-wrap gap-4"><span className="flex items-center gap-1"><Building2 size={14} /> {j.company}</span><span className="flex items-center gap-1"><MapPin size={14} /> {j.place}</span></p>
-                          {j.text && <p className="text-slate-600 text-sm mt-2">{j.text}</p>}
-                        </div>
-                        {app ? (
-                          <span className={`px-5 py-3 rounded-xl font-semibold text-sm whitespace-nowrap flex items-center gap-2 ${STATUS_STYLES[app.status] || STATUS_STYLES["Envoyée"]}`}><CheckCircle2 size={16} /> {app.status}</span>
-                        ) : (
-                          <button onClick={() => apply(j)} className="px-5 py-3 rounded-xl font-semibold text-sm whitespace-nowrap transition bg-orange-600 text-white hover:bg-orange-700 hover:shadow-lg">
-                            <span className="flex items-center gap-2"><Send size={16} /> Postuler</span>
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {jobs.length === 0 && <p className="text-slate-500 text-center">Aucune offre pour le moment.</p>}
-                </div>
-              )}
-            </main>
-          </>
+        {/* ===== OPPORTUNITÉS ===== */}
+        {page === "opportunites" && (
+          <OpportunitiesPage user={user} jobs={openJobs} apercu={apercu} myApplications={myApplications} pct={pct} apply={apply} go={go} openLogin={openLogin} />
         )}
 
         {/* ===== ALUMNI ===== */}
@@ -943,6 +971,9 @@ function App() {
           </>
         )}
 
+        {/* ===== CONTACT ===== */}
+        {page === "contact" && <ContactPage user={user} profile={profile} notify={notify} />}
+
         {/* ===== MON ESPACE ===== */}
         {page === "profil" && (user
           ? <ProfileSpace uid={user.id} profile={profile} update={updateProfile} pct={pct} fullName={fullName} applications={myApplications} registrations={myRegs} events={events} notify={notify} go={go} />
@@ -954,7 +985,8 @@ function App() {
             <PageHero kicker="Réservé aux administrateurs" title="Administration" icon={Shield} />
             <AdminPanel news={news} setNews={setNews} events={events} setEvents={setEvents} jobs={jobs} setJobs={setJobs} alumni={alumni} setAlumni={setAlumni}
               applications={applications} setApplications={setApplications} registrations={registrations}
-              members={members} setMembers={setMembers} currentId={user.id} notify={notify} reload={loadAll} />
+              members={members} setMembers={setMembers} messages={messages} setMessages={setMessages}
+              currentId={user.id} notify={notify} reload={loadAll} />
           </>
         )}
       </div>
@@ -968,20 +1000,21 @@ function App() {
           </div>
           <div>
             <h4 className="text-white font-semibold mb-4">Contact</h4>
-            <p className="text-sm flex items-center gap-2"><MapPin size={14} className="text-orange-500" /> ARSTM, Abidjan</p>
-            <p className="text-sm flex items-center gap-2 mt-2"><Mail size={14} className="text-orange-500" /> email à compléter</p>
-            <p className="text-sm flex items-center gap-2 mt-2"><Phone size={14} className="text-orange-500" /> téléphone à compléter</p>
-            <a href="https://www.facebook.com/ci.cge/" target="_blank" rel="noopener noreferrer" className="text-sm flex items-center gap-2 mt-2 hover:text-orange-400 transition"><Globe size={14} className="text-orange-500" /> Facebook CGE Côte d'Ivoire</a>
-            <p className="text-sm flex items-center gap-2 mt-4"><Handshake size={14} className="text-orange-500" /> Partenaire officiel : Fondation Benianh International</p>
+            {CONTACT.adresse && <p className="text-sm flex items-center gap-2"><MapPin size={14} className="text-orange-500 flex-shrink-0" /> {CONTACT.adresse}</p>}
+            {CONTACT.email && <a href={`mailto:${CONTACT.email}`} className="text-sm flex items-center gap-2 mt-2 hover:text-orange-400 transition"><Mail size={14} className="text-orange-500" /> {CONTACT.email}</a>}
+            {CONTACT.telephone && <a href={`tel:${CONTACT.telephone.replace(/\s/g, "")}`} className="text-sm flex items-center gap-2 mt-2 hover:text-orange-400 transition"><Phone size={14} className="text-orange-500" /> {CONTACT.telephone}</a>}
+            {CONTACT.facebook && <a href={CONTACT.facebook} target="_blank" rel="noopener noreferrer" className="text-sm flex items-center gap-2 mt-2 hover:text-orange-400 transition"><Globe size={14} className="text-orange-500" /> Facebook CGE Côte d'Ivoire</a>}
+            <button onClick={() => go("contact")} className="text-sm flex items-center gap-2 mt-2 hover:text-orange-400 transition"><Send size={14} className="text-orange-500" /> Nous écrire</button>
+            <p className="text-sm flex items-center gap-2 mt-4"><Handshake size={14} className="text-orange-500 flex-shrink-0" /> Partenaire officiel : Fondation Benianh International</p>
           </div>
           <div>
             <h4 className="text-white font-semibold mb-4">Liens rapides</h4>
             <div className="flex flex-col gap-2 text-sm">
-              {nav.slice(1, 7).map(([id, label]) => <button key={id} onClick={() => go(id)} className="text-left hover:text-orange-400 transition">{label}</button>)}
+              {nav.slice(1, 8).map(([id, label]) => <button key={id} onClick={() => go(id)} className="text-left hover:text-orange-400 transition">{label}</button>)}
             </div>
           </div>
         </div>
-        <div className="border-t border-slate-800 text-center text-xs py-5">© 2026 CGE ARSTM · Tous droits réservés</div>
+        <div className="border-t border-slate-800 text-center text-xs py-5">© {new Date().getFullYear()} CGE ARSTM · Tous droits réservés</div>
       </footer>
 
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onLogin={handleLogin} onRegister={handleRegister} onForgot={handleForgot} />}
@@ -994,7 +1027,7 @@ function App() {
 // =====================================================================
 // PAGE D'ACCUEIL
 // =====================================================================
-function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct }) {
+function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct, homeOpps, homeStats }) {
   const images = useImages();
   const left = nextEvent ? daysUntil(nextEvent.date) : null;
   return (
@@ -1010,12 +1043,14 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct }) {
             <h1 className="text-4xl md:text-6xl font-extrabold mt-6 leading-tight">
               Unis pour naviguer vers <span className="bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">l'excellence</span>
             </h1>
-            <p className="text-slate-300 text-lg mt-6 max-w-xl">Section ARSTM de la Conférence des Grandes Écoles de Côte d'Ivoire, l'association qui regroupe depuis 1992 les ingénieurs de conception des grandes écoles publiques.</p>
+            <p className="text-slate-300 text-lg mt-6 max-w-xl">Connecter les talents de l'ARSTM, créer des opportunités et construire ensemble l'avenir maritime.</p>
             <div className="flex flex-wrap gap-3 mt-8">
-              <button onClick={() => (user ? go("profil") : openLogin())} className="group px-6 py-3.5 rounded-xl bg-orange-600 font-semibold hover:bg-orange-500 shadow-lg transition flex items-center gap-2">
-                {user ? "Mon espace" : "Rejoindre l'espace membre"} <ArrowRight size={18} className="group-hover:translate-x-1 transition" />
+              <button onClick={() => go("opportunites")} className="group px-6 py-3.5 rounded-xl bg-orange-600 font-semibold hover:bg-orange-500 shadow-lg transition flex items-center gap-2">
+                Voir les opportunités <ArrowRight size={18} className="group-hover:translate-x-1 transition" />
               </button>
-              <button onClick={() => go("apropos")} className="px-6 py-3.5 rounded-xl border border-white border-opacity-30 font-semibold hover:bg-white hover:text-slate-900 transition">Découvrir la CGE</button>
+              <button onClick={() => (user ? go("profil") : openLogin())} className="px-6 py-3.5 rounded-xl border border-white border-opacity-30 font-semibold hover:bg-white hover:text-slate-900 transition">
+                {user ? "Mon espace" : "Espace membre"}
+              </button>
             </div>
           </div>
           <div className="relative hidden lg:block h-96">
@@ -1024,7 +1059,7 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct }) {
               <div className="float absolute left-0 top-6 w-72 bg-white text-slate-900 rounded-3xl p-6 shadow-2xl">
                 <p className="text-xs font-bold text-orange-600 uppercase tracking-wider flex items-center gap-2"><Calendar size={14} /> Prochain événement</p>
                 <p className="font-bold mt-2 text-lg leading-snug">{nextEvent.title}</p>
-                <p className="text-sm text-slate-500 mt-1">{fmtDate(nextEvent.date)} · {nextEvent.place}</p>
+                <p className="text-sm text-slate-500 mt-1">{fmtDate(nextEvent.date)}{nextEvent.place && ` · ${nextEvent.place}`}</p>
                 <div className="mt-4"><span className="text-4xl font-extrabold text-orange-600">{left === 0 ? "Aujourd'hui" : `J-${left}`}</span></div>
               </div>
             )}
@@ -1047,13 +1082,55 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct }) {
         </div>
       </div>
 
-      <section className="max-w-6xl mx-auto px-4 -mb-8 relative z-10 mt-12">
+      <section className="max-w-6xl mx-auto px-4 relative z-10 mt-12">
         <div className="bg-white rounded-3xl shadow-xl p-8 grid grid-cols-2 md:grid-cols-4 gap-8">
-          {STATS.map(([v, s, l]) => <Stat key={l} value={v} suffix={s} label={l} />)}
+          {homeStats.map(([v, s, l]) => <Stat key={l} value={v} suffix={s} label={l} />)}
         </div>
       </section>
 
-      <section className="max-w-6xl mx-auto px-4 pt-24 pb-16">
+      {/* OPPORTUNITÉS DU MOMENT */}
+      <section className="max-w-6xl mx-auto px-4 pt-20">
+        <SectionTitle kicker="Ne les ratez pas" title="Opportunités du moment" action="Toutes les opportunités" onAction={() => go("opportunites")} />
+        {homeOpps.length === 0 ? (
+          <div className="bg-white rounded-3xl p-8 text-center text-slate-500 shadow-sm">Aucune opportunité ouverte pour le moment. Revenez bientôt !</div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {homeOpps.map((j) => (
+              <button key={j.id} onClick={() => go("opportunites")} className="group text-left bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition flex flex-col">
+                <TypeBadge type={j.type} />
+                <h4 className="font-bold text-slate-900 mt-4 leading-snug group-hover:text-orange-600 transition">{j.title}</h4>
+                <p className="text-sm text-slate-500 mt-2 flex items-center gap-1.5"><MapPin size={13} /> {j.place || j.zone}</p>
+                {j.domaine && <p className="text-xs text-slate-400 mt-1">{j.domaine}</p>}
+                <div className="mt-auto pt-4"><Deadline date={j.cloture} /></div>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="max-w-6xl mx-auto px-4 pt-20">
+        <SectionTitle kicker="Agenda" title="Prochains événements" action="Voir l'agenda" onAction={() => go("evenements")} />
+        <div className="grid md:grid-cols-3 gap-6">
+          {upcoming.slice(0, 3).map((e) => { const [d, m] = dayMonth(e.date); return (
+            <button key={e.id} onClick={() => go("evenements")} className="group text-left bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl transition flex gap-4 items-center">
+              <div className="w-16 h-16 flex-shrink-0 rounded-2xl bg-orange-50 text-orange-600 flex flex-col items-center justify-center group-hover:bg-orange-600 group-hover:text-white transition">
+                <span className="text-2xl font-extrabold leading-none">{d}</span><span className="text-xs uppercase font-semibold">{m}</span>
+              </div>
+              <div><h4 className="font-bold text-slate-900">{e.title}</h4><p className="text-sm text-slate-500 mt-1">{[e.place, e.time].filter(Boolean).join(" · ")}</p></div>
+            </button>
+          ); })}
+          {upcoming.length === 0 && <p className="text-slate-500 md:col-span-3">Aucun événement à venir pour le moment.</p>}
+        </div>
+      </section>
+
+      <section className="max-w-6xl mx-auto px-4 pt-20">
+        <SectionTitle kicker="En ce moment" title="Dernières actualités" action="Tout voir" onAction={() => go("actualites")} />
+        <div className="grid md:grid-cols-3 gap-6">
+          {visibleNews.slice(0, 3).map((n, i) => <NewsCard key={n.id} n={n} i={i} />)}
+        </div>
+      </section>
+
+      <section className="max-w-6xl mx-auto px-4 pt-20">
         <div className="relative rounded-3xl overflow-hidden text-white p-8 md:p-12 shadow-2xl" style={{ background: NAVY }}>
           <Quote size={120} className="absolute right-6 top-4 text-orange-500 opacity-20" />
           <div className="relative grid md:grid-cols-4 gap-8 items-center">
@@ -1070,45 +1147,19 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct }) {
         </div>
       </section>
 
-      <section className="max-w-6xl mx-auto px-4 py-16">
+      <section className="max-w-6xl mx-auto px-4 py-20">
         <div className="text-center max-w-2xl mx-auto">
           <p className="text-orange-600 font-bold text-sm uppercase tracking-widest">Ce que la CGE vous apporte</p>
           <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mt-2">Bien plus qu'une association</h2>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
-          {[[Megaphone, "Représentation", "Votre voix portée auprès de la direction et des partenaires."], [Calendar, "Événements", "Conférences, sport, culture et moments de partage toute l'année."], [Briefcase, "Carrière", "Offres de stages et d'emplois, candidature en un clic."], [GraduationCap, "Réseau Alumni", "Des anciens pour vous guider et vous recommander."], [Handshake, "Entraide", "Parrainage des nouveaux et soutien entre promotions."], [Globe, "Rayonnement", "Faire briller l'ARSTM dans toute la sous-région."]].map(([Icon, t, d], i) => (
+          {[[Megaphone, "Représentation", "Votre voix portée auprès de la direction et des partenaires."], [Calendar, "Événements", "Conférences, sport, culture et moments de partage toute l'année."], [Briefcase, "Carrière", "Stages, emplois, formations et bourses, candidature en un clic."], [GraduationCap, "Réseau Alumni", "Des anciens pour vous guider et vous recommander."], [Handshake, "Entraide", "Parrainage des nouveaux et soutien entre promotions."], [Globe, "Rayonnement", "Faire briller l'ARSTM dans toute la sous-région."]].map(([Icon, t, d], i) => (
             <div key={t} className="group bg-white rounded-3xl p-7 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition duration-300">
               <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${CARD_GRADIENTS[i % 4]} flex items-center justify-center shadow-lg group-hover:rotate-6 group-hover:scale-110 transition`}><Icon className="text-white" /></div>
               <h3 className="text-lg font-bold text-slate-900 mt-5">{t}</h3>
               <p className="text-slate-600 mt-2 text-sm">{d}</p>
             </div>
           ))}
-        </div>
-      </section>
-
-      <section className="max-w-6xl mx-auto px-4 py-16">
-        <div className="flex items-end justify-between mb-8">
-          <div><p className="text-orange-600 font-bold text-sm uppercase tracking-widest">En ce moment</p><h2 className="text-3xl font-extrabold text-slate-900 mt-1">Dernières actualités</h2></div>
-          <button onClick={() => go("actualites")} className="text-orange-600 font-semibold flex items-center gap-1 hover:gap-2 transition-all">Tout voir <ChevronRight size={18} /></button>
-        </div>
-        <div className="grid md:grid-cols-3 gap-6">
-          {visibleNews.slice(0, 3).map((n, i) => <NewsCard key={n.id} n={n} i={i} />)}
-        </div>
-
-        <div className="flex items-end justify-between mb-8 mt-16">
-          <div><p className="text-orange-600 font-bold text-sm uppercase tracking-widest">Agenda</p><h2 className="text-3xl font-extrabold text-slate-900 mt-1">Prochains événements</h2></div>
-          <button onClick={() => go("evenements")} className="text-orange-600 font-semibold flex items-center gap-1 hover:gap-2 transition-all">Voir l'agenda <ChevronRight size={18} /></button>
-        </div>
-        <div className="grid md:grid-cols-3 gap-6">
-          {upcoming.slice(0, 3).map((e) => { const [d, m] = dayMonth(e.date); return (
-            <button key={e.id} onClick={() => go("evenements")} className="group text-left bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl transition flex gap-4 items-center">
-              <div className="w-16 h-16 flex-shrink-0 rounded-2xl bg-orange-50 text-orange-600 flex flex-col items-center justify-center group-hover:bg-orange-600 group-hover:text-white transition">
-                <span className="text-2xl font-extrabold leading-none">{d}</span><span className="text-xs uppercase font-semibold">{m}</span>
-              </div>
-              <div><h4 className="font-bold text-slate-900">{e.title}</h4><p className="text-sm text-slate-500 mt-1">{e.place} · {e.time}</p></div>
-            </button>
-          ); })}
-          {upcoming.length === 0 && <p className="text-slate-500 md:col-span-3">Aucun événement à venir pour le moment.</p>}
         </div>
       </section>
 
@@ -1140,7 +1191,7 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct }) {
           <Ship size={220} strokeWidth={0.8} className="absolute -right-6 -bottom-10 opacity-20 float" />
           <div className="relative max-w-xl">
             <h2 className="text-3xl md:text-4xl font-extrabold">Votre profil, votre vitrine professionnelle</h2>
-            <p className="mt-4 text-orange-50 text-lg">Renseignez vos informations, votre parcours et déposez votre CV. Postulez ensuite aux offres en un seul clic.</p>
+            <p className="mt-4 text-orange-50 text-lg">Renseignez vos informations, votre objectif et déposez votre CV. Postulez ensuite aux opportunités en un seul clic.</p>
             <button onClick={() => (user ? go("profil") : openLogin())} className="mt-8 px-7 py-3.5 rounded-xl bg-white text-orange-700 font-bold hover:shadow-xl hover:scale-105 transition flex items-center gap-2">
               {user ? "Compléter mon profil" : "Créer mon profil"} <ArrowRight size={18} />
             </button>
@@ -1174,6 +1225,218 @@ function NewsCard({ n, i }) {
 }
 
 // =====================================================================
+// OPPORTUNITÉS
+// =====================================================================
+function JobCard({ j, app, onApply }) {
+  const [grad, Icon] = TYPE_STYLES[j.type] || TYPE_STYLES.Stage;
+  return (
+    <div className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl transition flex flex-col md:flex-row md:items-center gap-5">
+      <div className={`w-14 h-14 flex-shrink-0 rounded-2xl bg-gradient-to-br ${grad} flex items-center justify-center shadow-md`}><Icon className="text-white" /></div>
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap gap-2 text-xs font-semibold">
+          <TypeBadge type={j.type} />
+          {j.domaine && <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600">{j.domaine}</span>}
+          {j.zone && <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600">{j.zone}</span>}
+          {j.niveau && <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600">Niveau : {j.niveau}</span>}
+          {j.duration && <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600">{j.duration}</span>}
+        </div>
+        <h3 className="text-xl font-bold text-slate-900 mt-3">{j.title}</h3>
+        <p className="text-sm text-slate-500 mt-1 flex flex-wrap gap-4">
+          {j.company && <span className="flex items-center gap-1"><Building2 size={14} /> {j.company}</span>}
+          {j.place && <span className="flex items-center gap-1"><MapPin size={14} /> {j.place}</span>}
+        </p>
+        {j.text && <p className="text-slate-600 text-sm mt-2">{j.text}</p>}
+        <div className="mt-3"><Deadline date={j.cloture} /></div>
+      </div>
+      <div className="flex flex-col gap-2 md:items-end">
+        {app ? (
+          <span className={`px-5 py-3 rounded-xl font-semibold text-sm whitespace-nowrap flex items-center gap-2 ${STATUS_STYLES[app.status] || STATUS_STYLES["Envoyée"]}`}><CheckCircle2 size={16} /> {app.status}</span>
+        ) : (
+          <button onClick={() => onApply(j)} className="px-5 py-3 rounded-xl font-semibold text-sm whitespace-nowrap transition bg-orange-600 text-white hover:bg-orange-700 hover:shadow-lg flex items-center gap-2"><Send size={16} /> Postuler via la CGE</button>
+        )}
+        {j.lien && <a href={j.lien} target="_blank" rel="noopener noreferrer" className="px-5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-700 hover:border-orange-500 hover:text-orange-600 transition flex items-center justify-center gap-2 whitespace-nowrap">Voir l'offre <ExternalLink size={14} /></a>}
+      </div>
+    </div>
+  );
+}
+
+function OpportunitiesPage({ user, jobs, apercu, myApplications, pct, apply, go, openLogin }) {
+  const [type, setType] = useState("Tous");
+  const [domaine, setDomaine] = useState("");
+  const [zone, setZone] = useState("");
+  const [q, setQ] = useState("");
+  const filtered = jobs
+    .filter((j) => (type === "Tous" || j.type === type) && (!domaine || j.domaine === domaine) && (!zone || j.zone === zone)
+      && (!q || [j.title, j.company, j.place, j.text, j.niveau].join(" ").toLowerCase().includes(q.toLowerCase())))
+    .sort(byDeadline);
+  const typesPresent = JOB_TYPES.filter((t) => jobs.some((j) => j.type === t));
+  const hasFilter = type !== "Tous" || domaine || zone || q;
+  const reset = () => { setType("Tous"); setDomaine(""); setZone(""); setQ(""); };
+
+  return (
+    <>
+      <PageHero kicker="Carrière" title="Opportunités" sub="Stages, emplois, alternances, formations, bourses et concours sélectionnés pour les élèves de l'ARSTM." icon={Briefcase} />
+      <main className="max-w-5xl mx-auto px-4 py-16">
+        {!user ? (
+          <div className="space-y-8">
+            {apercu.length > 0 && (
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 mb-4">En ce moment</h2>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {apercu.map((j) => (
+                    <div key={j.id} className="bg-white rounded-2xl p-5 shadow-sm">
+                      <TypeBadge type={j.type} />
+                      <p className="font-bold text-slate-900 mt-3">{j.title}</p>
+                      <p className="text-sm text-slate-500 mt-1 flex items-center gap-1.5"><MapPin size={13} /> {j.place || j.zone}</p>
+                      <div className="mt-3"><Deadline date={j.cloture} /></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <Locked onLogin={openLogin} label="au détail des opportunités et pour postuler" />
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {pct < 50 && (
+              <div className="rounded-2xl bg-amber-50 border border-amber-200 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <p className="text-sm text-amber-800"><strong>Votre profil est complété à {pct} %.</strong> Il faut au moins 50 % pour postuler via la CGE.</p>
+                <button onClick={() => go("profil")} className="px-4 py-2 rounded-xl bg-amber-500 text-white font-semibold text-sm">Compléter mon profil</button>
+              </div>
+            )}
+
+            {/* Filtres */}
+            <div className="bg-white rounded-3xl shadow-sm p-5 space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {["Tous", ...typesPresent].map((t) => {
+                  const n = t === "Tous" ? jobs.length : jobs.filter((j) => j.type === t).length;
+                  return (
+                    <button key={t} onClick={() => setType(t)} className={`px-4 py-2 rounded-full text-sm font-semibold transition ${type === t ? "bg-orange-600 text-white shadow-md" : "bg-slate-100 text-slate-600 hover:text-orange-600"}`}>
+                      {t} <span className="opacity-70">({n})</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="grid sm:grid-cols-3 gap-2">
+                <div className="relative">
+                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher..." className={inputCls + " mt-0 pl-10"} />
+                </div>
+                <select value={domaine} onChange={(e) => setDomaine(e.target.value)} className={inputCls + " mt-0"}>
+                  <option value="">Tous les domaines</option>{DOMAINES.map((d) => <option key={d}>{d}</option>)}
+                </select>
+                <select value={zone} onChange={(e) => setZone(e.target.value)} className={inputCls + " mt-0"}>
+                  <option value="">Toutes les zones</option>{ZONES.map((z) => <option key={z}>{z}</option>)}
+                </select>
+              </div>
+              {hasFilter && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-500">{filtered.length} résultat{filtered.length > 1 ? "s" : ""}</span>
+                  <button onClick={reset} className="text-orange-600 font-semibold">Effacer les filtres</button>
+                </div>
+              )}
+            </div>
+
+            {filtered.map((j) => <JobCard key={j.id} j={j} app={myApplications.find((a) => a.jobId === j.id)} onApply={apply} />)}
+            {jobs.length === 0 && <p className="text-slate-500 text-center py-8">Aucune opportunité ouverte pour le moment. Revenez bientôt !</p>}
+            {jobs.length > 0 && filtered.length === 0 && <p className="text-slate-500 text-center py-8">Aucune opportunité ne correspond à ces filtres.</p>}
+          </div>
+        )}
+      </main>
+    </>
+  );
+}
+
+// =====================================================================
+// CONTACT
+// =====================================================================
+function ContactPage({ user, profile, notify }) {
+  const init = {
+    name: user ? [profile.prenoms, profile.nom].filter(Boolean).join(" ") : "",
+    email: user ? profile.email || user.email || "" : "",
+    subject: CONTACT_SUBJECTS[0], body: "", website: "",
+  };
+  const [f, setF] = useState(init);
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+
+  const send = async () => {
+    if (f.website) return setSent(true); // champ piège invisible : rempli uniquement par les robots
+    if (f.name.trim().length < 2) return notify("Indiquez votre nom.", "error");
+    if (!EMAIL_RE.test(f.email.trim())) return notify("Adresse email invalide.", "error");
+    if (f.body.trim().length < 5) return notify("Votre message est trop court.", "error");
+    setBusy(true);
+    const { error } = await sb.from("messages").insert({ name: f.name.trim(), email: f.email.trim(), subject: f.subject, body: f.body.trim().slice(0, 3000) });
+    setBusy(false);
+    if (error) return notify("Envoi impossible : " + error.message, "error");
+    setSent(true);
+  };
+
+  const infos = [
+    [MapPin, "Adresse", CONTACT.adresse, null],
+    [Mail, "Email", CONTACT.email, CONTACT.email && `mailto:${CONTACT.email}`],
+    [Phone, "Téléphone", CONTACT.telephone, CONTACT.telephone && `tel:${CONTACT.telephone.replace(/\s/g, "")}`],
+    [Globe, "Facebook", CONTACT.facebook && "CGE Côte d'Ivoire", CONTACT.facebook],
+  ].filter(([, , v]) => v);
+
+  return (
+    <>
+      <PageHero kicker="Écrivez-nous" title="Contact" sub="Une question, une proposition de partenariat ou une offre à partager ? Le bureau vous répond." icon={Mail} />
+      <main className="max-w-6xl mx-auto px-4 py-16 grid lg:grid-cols-5 gap-6">
+        <div className="lg:col-span-2 space-y-4">
+          {infos.map(([Icon, label, value, href]) => (
+            <div key={label} className="bg-white rounded-3xl p-6 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 flex-shrink-0 rounded-2xl bg-orange-100 flex items-center justify-center"><Icon size={20} className="text-orange-600" /></div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</p>
+                {href ? <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel="noopener noreferrer" className="font-semibold text-slate-900 hover:text-orange-600 break-words">{value}</a> : <p className="font-semibold text-slate-900">{value}</p>}
+              </div>
+            </div>
+          ))}
+          <div className="rounded-3xl p-6 text-white shadow-xl" style={{ background: NAVY }}>
+            <Handshake className="text-orange-400" />
+            <p className="font-bold text-lg mt-3">Entreprises et partenaires</p>
+            <p className="text-sm text-slate-300 mt-2">Vous recrutez des stagiaires ou des jeunes diplômés du maritime ? Choisissez le sujet « Proposer une offre » : nous la diffuserons auprès de nos membres.</p>
+          </div>
+        </div>
+
+        <div className="lg:col-span-3">
+          <Panel title="Envoyer un message" Icon={Send}>
+            {sent ? (
+              <div className="text-center py-10">
+                <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-100 flex items-center justify-center"><CheckCircle2 className="text-emerald-600" /></div>
+                <p className="font-bold text-slate-900 text-lg mt-5">Message envoyé, merci !</p>
+                <p className="text-sm text-slate-600 mt-2">Le bureau de la CGE vous répondra à l'adresse indiquée.</p>
+                <button onClick={() => { setF(init); setSent(false); }} className="mt-6 px-5 py-2.5 rounded-xl bg-white border border-slate-300 font-semibold text-sm">Écrire un autre message</button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <label className="block"><span className="text-xs font-semibold text-slate-600">Nom complet</span><input value={f.name} onChange={set("name")} className={inputCls} /></label>
+                  <label className="block"><span className="text-xs font-semibold text-slate-600">Email</span><input type="email" value={f.email} onChange={set("email")} className={inputCls} /></label>
+                </div>
+                <label className="block"><span className="text-xs font-semibold text-slate-600">Sujet</span>
+                  <select value={f.subject} onChange={set("subject")} className={inputCls}>{CONTACT_SUBJECTS.map((s) => <option key={s}>{s}</option>)}</select>
+                </label>
+                <label className="block"><span className="text-xs font-semibold text-slate-600">Message ({f.body.length}/3000)</span>
+                  <textarea rows={6} maxLength={3000} value={f.body} onChange={set("body")} className={inputCls} />
+                </label>
+                {/* Champ piège anti-robots : invisible pour les humains */}
+                <input type="text" value={f.website} onChange={set("website")} tabIndex={-1} autoComplete="off" aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1 }} />
+                <div className="flex justify-end">
+                  <button onClick={send} disabled={busy} className="px-6 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700 hover:shadow-lg transition disabled:opacity-60 flex items-center gap-2"><Send size={16} /> {busy ? "Envoi..." : "Envoyer"}</button>
+                </div>
+              </div>
+            )}
+          </Panel>
+        </div>
+      </main>
+    </>
+  );
+}
+
+// =====================================================================
 // ESPACE PERSONNEL
 // =====================================================================
 function ProfileSpace({ uid, profile, update, pct, fullName, applications, registrations, events, notify, go }) {
@@ -1195,6 +1458,7 @@ function ProfileSpace({ uid, profile, update, pct, fullName, applications, regis
             <p className="text-orange-400 text-sm font-semibold uppercase tracking-widest">Mon espace</p>
             <h1 className="text-3xl md:text-4xl font-extrabold mt-1">{fullName}</h1>
             <p className="text-slate-300 mt-1">{profile.titre || [profile.filiere, profile.promotion && `Promotion ${profile.promotion}`].filter(Boolean).join(" · ") || "Complétez votre profil pour vous démarquer"}</p>
+            {profile.disponible && <span className="inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full bg-emerald-500 text-white text-xs font-bold"><span className="w-2 h-2 rounded-full bg-white pulse-dot" /> Disponible pour un stage</span>}
           </div>
         </div>
         <Waves />
@@ -1237,7 +1501,7 @@ function ProfileSpace({ uid, profile, update, pct, fullName, applications, regis
               {applications.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-slate-500">Vous n'avez pas encore postulé.</p>
-                  <button onClick={() => go("emplois")} className="mt-4 px-5 py-2.5 rounded-xl bg-orange-600 text-white font-semibold text-sm">Voir les offres</button>
+                  <button onClick={() => go("opportunites")} className="mt-4 px-5 py-2.5 rounded-xl bg-orange-600 text-white font-semibold text-sm">Voir les opportunités</button>
                 </div>
               ) : (
                 <ul className="divide-y divide-slate-100">
@@ -1264,6 +1528,7 @@ function Dashboard({ profile, pct, fullName, applications, registrations, events
     ["Ajouter une photo de profil", "infos", profile.photo],
     ["Renseigner téléphone et email", "infos", profile.telephone && profile.email],
     ["Indiquer filière et promotion", "infos", profile.filiere && profile.promotion],
+    ["Préciser votre objectif professionnel", "infos", profile.objectif],
     ["Écrire une courte présentation", "infos", profile.bio],
     ["Ajouter une formation", "parcours", profile.formations.length],
     ["Ajouter une expérience ou un stage", "parcours", profile.experiences.length],
@@ -1278,6 +1543,7 @@ function Dashboard({ profile, pct, fullName, applications, registrations, events
         <div className="flex-1 text-center md:text-left">
           <h2 className="text-2xl font-extrabold text-slate-900">Bonjour {fullName.split(" ")[0]} 👋</h2>
           <p className="text-slate-600 mt-2">{pct === 100 ? "Votre profil est complet. Bravo ! Vous êtes prêt(e) à postuler." : pct >= 50 ? "Bon début ! Complétez encore votre profil pour maximiser vos chances." : "Complétez votre profil : il servira à vos candidatures et au réseau CGE."}</p>
+          {!profile.disponible && <button onClick={() => setTab("infos")} className="mt-3 text-sm text-orange-600 font-semibold">Vous cherchez un stage ? Indiquez-le dans votre profil →</button>}
         </div>
       </div>
       <div className="grid sm:grid-cols-3 gap-4">
@@ -1357,7 +1623,20 @@ function InfosTab({ uid, profile, update, notify }) {
           </div>
         </div>
       </div>
-      <h3 className="font-bold text-slate-900 mb-3">Identité</h3>
+
+      <h3 className="font-bold text-slate-900 mb-3">Projet professionnel</h3>
+      <div className="space-y-4">
+        {F({ label: "Objectif professionnel", k: "objectif", placeholder: "ex. Devenir officier mécanicien dans la marine marchande" })}
+        <label className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition ${d.disponible ? "border-emerald-400 bg-emerald-50" : "border-slate-200 hover:border-orange-300"}`}>
+          <input type="checkbox" checked={!!d.disponible} onChange={(e) => setD({ ...d, disponible: e.target.checked })} className="w-5 h-5 mt-0.5 accent-emerald-600" />
+          <span>
+            <span className="font-semibold text-slate-900 block">Je suis disponible pour un stage</span>
+            <span className="text-xs text-slate-500">Le bureau pourra transmettre votre profil aux entreprises qui recherchent des stagiaires.</span>
+          </span>
+        </label>
+      </div>
+
+      <h3 className="font-bold text-slate-900 mt-8 mb-3">Identité</h3>
       <div className="grid sm:grid-cols-2 gap-4">
         {F({ label: "Prénoms", k: "prenoms" })}{F({ label: "Nom", k: "nom" })}
         {F({ label: "Date de naissance", k: "naissance", type: "date" })}{F({ label: "Nationalité", k: "nationalite" })}
@@ -1547,6 +1826,7 @@ function CVPreview({ profile: p, fullName, onClose, notify }) {
             <div>
               <h1 className="text-3xl font-extrabold">{fullName}</h1>
               {p.titre && <p className="text-orange-400 font-semibold mt-1">{p.titre}</p>}
+              {p.disponible && <p className="text-emerald-300 text-sm font-semibold mt-1">Disponible pour un stage</p>}
               <div className="text-sm text-slate-300 mt-3 space-y-1">
                 {p.telephone && <p className="flex items-center gap-2"><Phone size={13} /> {p.telephone}</p>}
                 {p.email && <p className="flex items-center gap-2"><Mail size={13} /> {p.email}</p>}
@@ -1556,6 +1836,7 @@ function CVPreview({ profile: p, fullName, onClose, notify }) {
             </div>
           </div>
           <div className="p-8 text-slate-800">
+            {p.objectif && <Section title="Objectif professionnel"><p className="text-sm leading-relaxed">{p.objectif}</p></Section>}
             {p.bio && <Section title="Profil"><p className="text-sm leading-relaxed">{p.bio}</p></Section>}
             {p.experiences.length > 0 && <Section title="Expériences">{p.experiences.map((x) => (
               <div key={x.id} className="mb-3"><p className="font-bold">{x.poste} — <span className="font-normal">{x.entreprise}</span></p>{x.periode && <p className="text-xs text-slate-500">{x.periode}</p>}{x.description && <p className="text-sm mt-1">{x.description}</p>}</div>
@@ -1568,7 +1849,7 @@ function CVPreview({ profile: p, fullName, onClose, notify }) {
               {p.competences.length > 0 && <Section title="Compétences"><div className="flex flex-wrap gap-2">{p.competences.map((c) => <span key={c} className="px-3 py-1 rounded-full bg-orange-100 text-orange-800 text-xs font-semibold">{c}</span>)}</div></Section>}
               {p.langues.length > 0 && <Section title="Langues">{p.langues.map((l) => <p key={l.id} className="text-sm"><strong>{l.langue}</strong> — {l.niveau}</p>)}</Section>}
             </div>
-            {!p.bio && !p.experiences.length && !p.formations.length && !p.competences.length && (
+            {!p.bio && !p.objectif && !p.experiences.length && !p.formations.length && !p.competences.length && (
               <p className="text-center text-slate-500 py-8">Ce profil n'est pas encore assez rempli pour générer un CV.</p>
             )}
           </div>
@@ -1756,11 +2037,57 @@ function NewPasswordModal({ onClose, notify }) {
 // =====================================================================
 // ADMINISTRATION
 // =====================================================================
+// Champs des formulaires : k = nom, type = text/date/url/select/textarea/checkbox, optional = facultatif
 const ADMIN_SECTIONS = {
-  news: { table: "news", fromDb: newsFromDb, toDb: newsToDb, label: "Actualités", icon: Newspaper, fields: [["title", "Titre"], ["date", "Date", "date"], ["category", "Catégorie"], ["text", "Texte", "textarea"], ["membersOnly", "Réservée aux membres", "checkbox"]], show: (i) => `${i.title} — ${fmtDate(i.date)}${i.membersOnly ? " (membres)" : ""}` },
-  events: { table: "events", fromDb: plainFromDb, toDb: plainToDb, label: "Événements", icon: Calendar, fields: [["title", "Titre"], ["date", "Date", "date"], ["time", "Heure"], ["place", "Lieu"], ["text", "Description", "textarea"]], show: (i) => `${i.title} — ${fmtDate(i.date)}` },
-  jobs: { table: "jobs", fromDb: plainFromDb, toDb: plainToDb, label: "Offres", icon: Briefcase, fields: [["title", "Intitulé"], ["company", "Entreprise"], ["type", "Type", "select", ["Stage", "Emploi"]], ["duration", "Durée / contrat"], ["place", "Lieu"], ["text", "Description", "textarea"]], show: (i) => `${i.title} — ${i.company}` },
-  alumni: { table: "alumni", fromDb: plainFromDb, toDb: plainToDb, label: "Alumni", icon: GraduationCap, fields: [["name", "Nom"], ["promo", "Promotion"], ["role", "Poste"], ["company", "Entreprise"]], show: (i) => `${i.name} — Promo ${i.promo}` },
+  news: {
+    table: "news", fromDb: newsFromDb, toDb: newsToDb, label: "Actualités", icon: Newspaper,
+    fields: [
+      { k: "title", label: "Titre" },
+      { k: "date", label: "Date", type: "date" },
+      { k: "category", label: "Catégorie", type: "select", opts: NEWS_CATEGORIES },
+      { k: "text", label: "Texte", type: "textarea", optional: true },
+      { k: "membersOnly", label: "Réservée aux membres", type: "checkbox" },
+    ],
+    show: (i) => `${i.title} — ${fmtDate(i.date)}${i.membersOnly ? " (membres)" : ""}`,
+  },
+  events: {
+    table: "events", fromDb: plainFromDb, toDb: plainToDb, label: "Événements", icon: Calendar,
+    fields: [
+      { k: "title", label: "Titre" },
+      { k: "date", label: "Date", type: "date" },
+      { k: "time", label: "Heure", optional: true, placeholder: "ex. 14h00" },
+      { k: "place", label: "Lieu", optional: true },
+      { k: "text", label: "Description", type: "textarea", optional: true },
+    ],
+    show: (i) => `${i.title} — ${fmtDate(i.date)}`,
+  },
+  jobs: {
+    table: "jobs", fromDb: plainFromDb, toDb: jobToDb, label: "Opportunités", icon: Briefcase,
+    fields: [
+      { k: "title", label: "Intitulé", placeholder: "ex. Stage mécanicien — XYZ Marine" },
+      { k: "type", label: "Type", type: "select", opts: JOB_TYPES },
+      { k: "company", label: "Entreprise / organisme", optional: true },
+      { k: "domaine", label: "Domaine", type: "select", opts: ["", ...DOMAINES] },
+      { k: "zone", label: "Zone", type: "select", opts: ZONES },
+      { k: "place", label: "Lieu précis", optional: true, placeholder: "ex. Abidjan, Port autonome" },
+      { k: "niveau", label: "Niveau requis", optional: true, placeholder: "ex. L2 / L3" },
+      { k: "duration", label: "Durée / contrat", optional: true, placeholder: "ex. 3 mois" },
+      { k: "cloture", label: "Date de clôture", type: "date", optional: true },
+      { k: "lien", label: "Lien vers l'offre complète", type: "url", optional: true, placeholder: "https://..." },
+      { k: "text", label: "Description", type: "textarea", optional: true },
+    ],
+    show: (i) => `${i.title}${i.company ? ` — ${i.company}` : ""}`,
+  },
+  alumni: {
+    table: "alumni", fromDb: plainFromDb, toDb: plainToDb, label: "Alumni", icon: GraduationCap,
+    fields: [
+      { k: "name", label: "Nom" },
+      { k: "promo", label: "Promotion" },
+      { k: "role", label: "Poste" },
+      { k: "company", label: "Entreprise" },
+    ],
+    show: (i) => `${i.name} — Promo ${i.promo}`,
+  },
 };
 
 // Une case d'image modifiable : aperçu + bouton « Changer » + bouton « Retirer ».
@@ -1804,7 +2131,7 @@ function ImageSlot({ imgKey, label, sub, round, notify }) {
 
 function ImagesManager({ notify }) {
   const groups = [
-    { title: "Logo de la CGE-ARSTM", hint: "Affiché dans l'en-tête, le pied de page, la fenêtre de connexion et l'onglet du navigateur. Idéal : PNG carré à fond transparent.", items: [["logo", "Logo CGE-ARSTM"]] },
+    { title: "Logo de la CGE-ARSTM", hint: "Par défaut, le site utilise le fichier logos/cge-arstm.svg. Ne le remplacez ici que si nécessaire (l'image envoyée est convertie en PNG).", items: [["logo", "Logo CGE-ARSTM"]] },
     { title: "Logos des écoles membres", hint: "Affichés dans la page « À propos ».", items: Object.keys(LOGOS_ECOLES).map((k) => [`ecole:${k}`, k, ["ESA", "ESCAE", "ESI", "ESMG", "ESTP"].includes(k) ? "École de l'INP-HB" : null]) },
     { title: "Logos des partenaires", hint: "Affichés dans la section « Notre partenaire officiel » de l'accueil.", items: PARTENAIRES.map((p) => [`partenaire:${p.name}`, p.name, p.role]) },
     { title: "Photos du bureau exécutif", hint: "Photo portrait, visage centré. Recadrée automatiquement en rond.", round: true, items: BUREAU.flatMap((g) => g.members.map(([n, r]) => [`membre:${n}`, n, `${r} · ${g.dept}`])) },
@@ -1827,12 +2154,82 @@ function ImagesManager({ notify }) {
   );
 }
 
-function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, setAlumni, applications, setApplications, registrations, members, setMembers, currentId, notify, reload }) {
-  const [tab, setTab] = useState("news");
+// Tableau de bord du bureau : les chiffres clés en un coup d'œil.
+function AdminDashboard({ members, jobs, applications, registrations, events, messages, onOpen }) {
+  const pending = members.filter((m) => m.statut === "en_attente").length;
+  const actifs = members.filter((m) => m.statut === "actif").length;
+  const dispo = members.filter((m) => m.statut === "actif" && m.data?.disponible).length;
+  const open = jobs.filter((j) => !isExpired(j));
+  const retenues = applications.filter((a) => a.status === "Retenue").length;
+  const upcomingIds = new Set(events.filter((e) => daysUntil(e.date) >= 0).map((e) => e.id));
+  const insc = registrations.filter((r) => upcomingIds.has(r.eventId)).length;
+  const unread = messages.filter((m) => !m.lu).length;
+  const closingSoon = open.filter((j) => j.cloture && daysUntil(j.cloture) <= 7).sort(byDeadline);
+
+  const cards = [
+    [UserPlus, pending, "Demandes d'inscription", () => onOpen("members"), pending > 0],
+    [Mail, unread, "Messages non lus", () => onOpen("messages"), unread > 0],
+    [Users, actifs, "Membres actifs", () => onOpen("members")],
+    [GraduationCap, dispo, "Élèves disponibles pour un stage", () => onOpen("members", true)],
+    [Briefcase, open.length, "Opportunités ouvertes", () => onOpen("jobs")],
+    [Send, applications.length, "Candidatures reçues", () => onOpen("applications")],
+    [Trophy, retenues, "Candidatures retenues", () => onOpen("applications")],
+    [Calendar, insc, "Inscriptions aux événements à venir", () => onOpen("events")],
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {cards.map(([Icon, v, l, fn, alert]) => (
+          <button key={l} onClick={fn} className={`rounded-3xl shadow-sm p-5 text-left hover:shadow-lg transition ${alert ? "bg-amber-50 ring-2 ring-amber-300" : "bg-white"}`}>
+            <Icon size={20} className={alert ? "text-amber-600" : "text-orange-600"} />
+            <p className="text-3xl font-extrabold text-slate-900 mt-3">{v}</p>
+            <p className="text-sm text-slate-500 leading-snug">{l}</p>
+          </button>
+        ))}
+      </div>
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Panel title="Candidatures par statut" Icon={BarChart3}>
+          {applications.length === 0 ? <p className="text-sm text-slate-500">Aucune candidature pour le moment.</p> : (
+            <div className="space-y-4">
+              {APP_STATUSES.map((s) => {
+                const n = applications.filter((a) => a.status === s).length;
+                return (
+                  <div key={s}>
+                    <div className="flex justify-between text-sm"><span className="font-medium text-slate-700">{s}</span><span className="font-bold text-slate-900">{n}</span></div>
+                    <div className="mt-1.5 h-2.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" style={{ width: `${(n / applications.length) * 100}%` }} /></div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Panel>
+        <Panel title="Offres qui ferment bientôt" Icon={Flame}>
+          {closingSoon.length === 0 ? <p className="text-sm text-slate-500">Aucune offre ne ferme dans les 7 prochains jours.</p> : (
+            <ul className="divide-y divide-slate-100">
+              {closingSoon.map((j) => (
+                <li key={j.id} className="py-3 flex items-center justify-between gap-3">
+                  <span className="text-sm font-semibold text-slate-900">{j.title}</span>
+                  <Deadline date={j.cloture} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, setAlumni, applications, setApplications, registrations, members, setMembers, messages, setMessages, currentId, notify, reload }) {
+  const [tab, setTab] = useState("dashboard");
   const [form, setForm] = useState({});
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [viewing, setViewing] = useState(null); // { profile, name } pour afficher le CV d'un membre
+  const [mq, setMq] = useState("");
+  const [mf, setMf] = useState("");
+  const [dispoOnly, setDispoOnly] = useState(false);
   const formRef = useRef(null);
 
   const store = { news: [news, setNews], events: [events, setEvents], jobs: [jobs, setJobs], alumni: [alumni, setAlumni] };
@@ -1840,16 +2237,23 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
   const [items, setItems] = store[tab] || [[], () => {}];
   const pending = members.filter((m) => m.statut === "en_attente");
   const active = members.filter((m) => m.statut === "actif");
+  const unread = messages.filter((m) => !m.lu).length;
+  const shownMembers = active.filter((m) =>
+    (!mf || m.filiere === mf) && (!dispoOnly || m.data?.disponible)
+    && (!mq || [accountName(m), m.email, m.matricule, m.promotion, m.data?.objectif].join(" ").toLowerCase().includes(mq.toLowerCase())));
 
   const resetForm = () => { setForm({}); setEditingId(null); };
   const switchTab = (k) => { setTab(k); resetForm(); };
+  const openFromDashboard = (k, dispo) => { if (dispo) setDispoOnly(true); switchTab(k); };
 
-  // ----- Contenus (actualités, événements, offres, alumni) -----
+  // ----- Contenus (actualités, événements, opportunités, alumni) -----
   const save = async () => {
     if (saving) return;
-    const missing = cfg.fields.find(([k, , t]) => t !== "checkbox" && t !== "select" && k !== "text" && !String(form[k] || "").trim());
-    if (missing) return notify(`Le champ « ${missing[1]} » est obligatoire.`, "error");
-    const defaults = {}; cfg.fields.forEach(([k, , t, opts]) => { if (t === "select") defaults[k] = opts[0]; });
+    const missing = cfg.fields.find((f) => !f.optional && f.type !== "checkbox" && f.type !== "select" && !String(form[f.k] ?? "").trim());
+    if (missing) return notify(`Le champ « ${missing.label} » est obligatoire.`, "error");
+    const badUrl = cfg.fields.find((f) => f.type === "url" && form[f.k] && !/^https?:\/\//i.test(String(form[f.k]).trim()));
+    if (badUrl) return notify(`Le champ « ${badUrl.label} » doit commencer par https://`, "error");
+    const defaults = {}; cfg.fields.forEach((f) => { if (f.type === "select") defaults[f.k] = f.opts[0]; });
     const payload = cfg.toDb({ ...defaults, ...form });
     setSaving(true);
     const query = editingId ? sb.from(cfg.table).update(payload).eq("id", editingId) : sb.from(cfg.table).insert(payload);
@@ -1858,7 +2262,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
     if (error) return notify("Enregistrement impossible : " + error.message, "error");
     const item = cfg.fromDb(data);
     const id = editingId;
-    setItems((list) => (id ? list.map((x) => (x.id === id ? item : x)) : [...list, item]));
+    setItems((list) => (id ? list.map((x) => (x.id === id ? item : x)) : [item, ...list]));
     notify(id ? "Modifications enregistrées." : "Ajouté avec succès.");
     resetForm();
   };
@@ -1903,12 +2307,37 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
     notify(`Statut mis à jour : ${status}`);
   };
 
+  // ----- Messages -----
+  const toggleRead = async (m) => {
+    const { error } = await sb.from("messages").update({ lu: !m.lu }).eq("id", m.id);
+    if (error) return notify("Mise à jour impossible : " + error.message, "error");
+    setMessages((list) => list.map((x) => (x.id === m.id ? { ...x, lu: !m.lu } : x)));
+  };
+  const deleteMessage = async (m) => {
+    const { error } = await sb.from("messages").delete().eq("id", m.id);
+    if (error) return notify("Suppression impossible : " + error.message, "error");
+    setMessages((list) => list.filter((x) => x.id !== m.id));
+    notify("Message supprimé.");
+  };
+
   const tabs = [
+    ["dashboard", { label: "Tableau de bord", icon: BarChart3 }],
     ...Object.entries(ADMIN_SECTIONS),
     ["members", { label: `Membres${pending.length ? ` (${pending.length} en attente)` : ""}`, icon: Users }],
     ["applications", { label: `Candidatures (${applications.length})`, icon: Send }],
+    ["messages", { label: `Messages${unread ? ` (${unread})` : ""}`, icon: Inbox }],
     ["images", { label: "Images & logos", icon: ImageIcon }],
   ];
+
+  const renderField = (f) => {
+    const val = form[f.k];
+    const onChange = (e) => setForm({ ...form, [f.k]: f.type === "checkbox" ? e.target.checked : e.target.value });
+    if (f.type === "checkbox") return <label key={f.k} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!val} onChange={onChange} className="w-4 h-4 accent-orange-600" /> {f.label}</label>;
+    const lab = <span className="text-xs font-semibold text-slate-600">{f.label}{f.optional && <span className="font-normal text-slate-400"> (facultatif)</span>}</span>;
+    if (f.type === "select") return <label key={f.k} className="block">{lab}<select value={val ?? f.opts[0]} onChange={onChange} className={inputCls}>{f.opts.map((o) => <option key={o} value={o}>{o || "— Non précisé —"}</option>)}</select></label>;
+    if (f.type === "textarea") return <label key={f.k} className="block">{lab}<textarea rows={3} value={val ?? ""} onChange={onChange} placeholder={f.placeholder} className={inputCls} /></label>;
+    return <label key={f.k} className="block">{lab}<input type={f.type === "url" ? "url" : f.type || "text"} value={val ?? ""} onChange={onChange} placeholder={f.placeholder} className={inputCls} /></label>;
+  };
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-12">
@@ -1917,18 +2346,13 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
         <button onClick={() => { reload(); notify("Données actualisées."); }} className="self-start px-4 py-2 rounded-xl bg-white shadow-sm text-sm font-semibold text-slate-600 hover:text-orange-600 flex items-center gap-2"><RotateCcw size={15} /> Actualiser</button>
       </div>
 
-      {pending.length > 0 && tab !== "members" && (
-        <button onClick={() => switchTab("members")} className="w-full mb-6 rounded-2xl bg-amber-50 border border-amber-200 p-4 flex items-center justify-between gap-3 text-left text-sm text-amber-800 hover:bg-amber-100 transition">
-          <span className="flex items-center gap-2"><UserPlus size={18} /> <strong>{pending.length} demande{pending.length > 1 ? "s" : ""} d'inscription</strong> en attente de validation.</span>
-          <ChevronRight size={18} />
-        </button>
-      )}
-
       <div className="flex flex-wrap gap-2 mb-6">
         {tabs.map(([k, s]) => { const I = s.icon; return (
           <button key={k} onClick={() => switchTab(k)} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${tab === k ? "bg-orange-600 text-white shadow-md" : "bg-white shadow-sm text-slate-700 hover:text-orange-600"}`}><I size={16} /> {s.label}</button>
         ); })}
       </div>
+
+      {tab === "dashboard" && <AdminDashboard members={members} jobs={jobs} applications={applications} registrations={registrations} events={events} messages={messages} onOpen={openFromDashboard} />}
 
       {tab === "images" && <ImagesManager notify={notify} />}
 
@@ -1957,20 +2381,35 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
             )}
           </Panel>
           <Panel title={`Membres actifs (${active.length})`} Icon={Users}>
+            <div className="flex flex-col md:flex-row gap-2 mb-5">
+              <div className="relative flex-1">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input value={mq} onChange={(e) => setMq(e.target.value)} placeholder="Nom, email, matricule, objectif..." className={inputCls + " mt-0 pl-10"} />
+              </div>
+              <select value={mf} onChange={(e) => setMf(e.target.value)} className={inputCls + " mt-0 md:w-56"}>
+                <option value="">Toutes les filières</option>{FILIERES.map((f) => <option key={f}>{f}</option>)}
+              </select>
+              <label className={`flex items-center gap-2 text-sm font-semibold whitespace-nowrap px-4 py-2.5 rounded-xl border cursor-pointer ${dispoOnly ? "border-emerald-400 bg-emerald-50 text-emerald-700" : "border-slate-300 text-slate-600"}`}>
+                <input type="checkbox" checked={dispoOnly} onChange={(e) => setDispoOnly(e.target.checked)} className="accent-emerald-600" /> Disponibles pour un stage
+              </label>
+            </div>
+            {(mq || mf || dispoOnly) && <p className="text-sm text-slate-500 mb-3">{shownMembers.length} membre{shownMembers.length > 1 ? "s" : ""} correspond{shownMembers.length > 1 ? "ent" : ""} à la recherche.</p>}
             <ul className="divide-y divide-slate-100">
-              {active.map((m) => {
+              {shownMembers.map((m) => {
                 const self = m.id === currentId;
                 return (
                   <li key={m.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <Avatar photo={m.data?.photo} name={accountName(m)} size="w-10 h-10" text="text-sm" />
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-semibold text-slate-900 flex flex-wrap items-center gap-2">
                           {accountName(m)}
                           {m.role === "admin" && <span className="text-xs px-2 py-0.5 rounded-full bg-slate-900 text-white">Admin</span>}
+                          {m.data?.disponible && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Dispo stage</span>}
                           {self && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Vous</span>}
                         </p>
-                        <p className="text-xs text-slate-500">{m.email}{m.matricule && ` · ${m.matricule}`}{m.promotion && ` · Promo ${m.promotion}`}</p>
+                        <p className="text-xs text-slate-500">{[m.email, m.matricule, m.filiere, m.promotion && `Promo ${m.promotion}`].filter(Boolean).join(" · ")}</p>
+                        {m.data?.objectif && <p className="text-xs text-slate-600 mt-0.5 italic">Objectif : {m.data.objectif}</p>}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -1988,6 +2427,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                   </li>
                 );
               })}
+              {shownMembers.length === 0 && <li className="py-3 text-sm text-slate-500">Aucun membre ne correspond.</li>}
             </ul>
           </Panel>
         </div>
@@ -2001,7 +2441,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                 <li key={a.id} className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <div>
                     <p className="font-bold text-slate-900">{a.applicant}</p>
-                    <p className="text-sm text-slate-600">{a.title} · {a.company}</p>
+                    <p className="text-sm text-slate-600">{a.title}{a.company && ` · ${a.company}`}</p>
                     <p className="text-xs text-slate-500 mt-0.5">{a.email || "email non renseigné"} · {a.cvName ? `CV : ${a.cvName}` : "pas de CV déposé"} · {fmtDate(a.date)}</p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -2017,20 +2457,37 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
         </Panel>
       )}
 
+      {tab === "messages" && (
+        <Panel title={`Messages reçus (${messages.length})`} Icon={Inbox}>
+          {messages.length === 0 ? <p className="text-sm text-slate-500">Aucun message pour le moment.</p> : (
+            <ul className="space-y-3">
+              {messages.map((m) => (
+                <li key={m.id} className={`p-5 rounded-2xl border transition ${m.lu ? "border-slate-200" : "border-orange-300 bg-orange-50"}`}>
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                    <div>
+                      <p className="font-bold text-slate-900 flex flex-wrap items-center gap-2">{m.name} {!m.lu && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-600 text-white">Nouveau</span>}</p>
+                      <p className="text-xs text-slate-500">{m.email} · {m.subject} · {fmtDate(m.created_at)}</p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <a href={`mailto:${m.email}?subject=${encodeURIComponent("Re : " + m.subject + " — CGE ARSTM")}`} onClick={() => { if (!m.lu) toggleRead(m); }} className="px-3 py-1.5 rounded-lg bg-orange-600 text-white text-xs font-semibold hover:bg-orange-700 flex items-center gap-1"><Send size={13} /> Répondre</a>
+                      <button onClick={() => toggleRead(m)} className="p-2 rounded-lg text-slate-500 hover:bg-white" title={m.lu ? "Marquer comme non lu" : "Marquer comme lu"} aria-label={m.lu ? "Marquer comme non lu" : "Marquer comme lu"}>{m.lu ? <Mail size={16} /> : <MailOpen size={16} />}</button>
+                      <ConfirmButton onConfirm={() => deleteMessage(m)} confirmLabel="Supprimer ?" ariaLabel="Supprimer le message" className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={16} /></ConfirmButton>
+                    </div>
+                  </div>
+                  <p className="text-sm text-slate-700 mt-3 whitespace-pre-line">{m.body}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      )}
+
       {cfg && (
         <div className="grid lg:grid-cols-2 gap-6">
           <div ref={formRef} className="scroll-mt-24">
             <Panel title={editingId ? "Modifier" : "Ajouter"} Icon={editingId ? Pencil : Plus}>
               <div className="space-y-3">
-                {cfg.fields.map(([k, label, type, opts]) => type === "checkbox" ? (
-                  <label key={k} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.checked })} className="w-4 h-4 accent-orange-600" /> {label}</label>
-                ) : type === "select" ? (
-                  <label key={k} className="block"><span className="text-xs font-semibold text-slate-600">{label}</span><select value={form[k] || opts[0]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className={inputCls}>{opts.map((o) => <option key={o}>{o}</option>)}</select></label>
-                ) : type === "textarea" ? (
-                  <label key={k} className="block"><span className="text-xs font-semibold text-slate-600">{label}</span><textarea rows={3} value={form[k] || ""} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className={inputCls} /></label>
-                ) : (
-                  <label key={k} className="block"><span className="text-xs font-semibold text-slate-600">{label}</span><input type={type || "text"} value={form[k] || ""} onChange={(e) => setForm({ ...form, [k]: e.target.value })} className={inputCls} /></label>
-                ))}
+                {cfg.fields.map(renderField)}
                 <div className="flex gap-2 pt-1">
                   {editingId && <button onClick={resetForm} className="flex-1 py-3 rounded-xl bg-white border border-slate-300 font-semibold text-slate-700">Annuler</button>}
                   <button onClick={save} disabled={saving} className="flex-1 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700 disabled:opacity-60">{saving ? "Enregistrement..." : editingId ? "Enregistrer les modifications" : "Ajouter"}</button>
@@ -2042,13 +2499,14 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
             <ul className="divide-y divide-slate-100">
               {items.map((i) => {
                 const count = tab === "events" ? registrations.filter((r) => r.eventId === i.id).length : null;
-                const past = tab === "events" && daysUntil(i.date) < 0;
+                const past = (tab === "events" && daysUntil(i.date) < 0) || (tab === "jobs" && isExpired(i));
                 return (
                   <li key={i.id} className={`py-3 flex items-center justify-between gap-3 ${editingId === i.id ? "bg-orange-50 -mx-3 px-3 rounded-xl" : ""}`}>
                     <div className="text-sm text-slate-700">
+                      {tab === "jobs" && <span className="mr-2"><TypeBadge type={i.type} /></span>}
                       <span className={past ? "text-slate-400" : ""}>{cfg.show(i)}</span>
                       {count !== null && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-semibold whitespace-nowrap">{count} inscrit{count > 1 ? "s" : ""}</span>}
-                      {past && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">passé</span>}
+                      {past && <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">{tab === "jobs" ? "clôturée" : "passé"}</span>}
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button onClick={() => startEdit(i)} className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-orange-600" aria-label="Modifier" title="Modifier"><Pencil size={16} /></button>
