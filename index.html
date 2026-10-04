@@ -26,6 +26,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
 <script>window.react = window.React; /* la bibliothèque d'icônes cherche React sous ce nom */</script>
 <script src="https://cdn.jsdelivr.net/npm/lucide-react@0.383.0/dist/umd/lucide-react.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
 
 <style>
@@ -54,7 +55,7 @@
 <noscript><p style="padding:2rem;font-family:sans-serif">Ce site a besoin de JavaScript pour fonctionner.</p></noscript>
 
 <script>
-  // Diagnostic : si le site n'a pas démarré après 10 secondes, on affiche la cause probable.
+  // Diagnostic : si le site n'a pas démarré après 12 secondes, on affiche la cause probable.
   setTimeout(function () {
     if (window.__CGE_STARTED) return;
     var missing = [];
@@ -63,13 +64,24 @@
     if (!window.Babel) missing.push("Babel");
     if (!window.LucideReact) missing.push("Icônes");
     if (!window.tailwind) missing.push("Tailwind");
+    if (!window.supabase) missing.push("Supabase");
     document.getElementById("root").innerHTML = '<div style="padding:32px;font-family:sans-serif;max-width:700px;margin:40px auto"><h1 style="color:#e67700;font-size:22px;font-weight:800">Le site ne parvient pas à démarrer</h1><p style="margin-top:12px;line-height:1.6">' +
       (missing.length ? "Outils non chargés : <b>" + missing.join(", ") + "</b>. Vérifiez la connexion internet ou désactivez un éventuel bloqueur de publicités." : "Les outils sont bien chargés : l'erreur vient du code. Appuyez sur F12, ouvrez l'onglet « Console » et envoyez une capture des messages en rouge.") + "</p></div>";
-  }, 10000);
+  }, 12000);
 </script>
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useContext, useRef, createContext } = React;
+
+// =====================================================================
+// CONNEXION À SUPABASE (base de données en ligne)
+// La clé "publishable" est faite pour être publique : la sécurité est assurée par les règles de la base.
+// ⚠️ Ne mettez JAMAIS ici la "secret key" (sb_secret_...).
+// =====================================================================
+const SUPABASE_URL = "https://jusggszkkvpufejnswlo.supabase.co";
+const SUPABASE_KEY = "sb_publishable_ai-O9eBluMELsW-qY2ODAQ_eVdQBVp3";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SITE_URL = () => window.location.origin + window.location.pathname;
 
 // Icônes : si une icône manque, on affiche un espace vide au lieu de faire planter tout le site.
 const LR = window.LucideReact || {};
@@ -85,19 +97,14 @@ const Anchor = pickIcon("Anchor"), Menu = pickIcon("Menu"), X = pickIcon("X"), C
   LayoutDashboard = pickIcon("LayoutDashboard", "LayoutGrid"), Quote = pickIcon("Quote"), Globe = pickIcon("Globe"), Search = pickIcon("Search"),
   Ship = pickIcon("Ship"), Megaphone = pickIcon("Megaphone"), Handshake = pickIcon("Handshake", "HeartHandshake"), ImageIcon = pickIcon("Image", "ImageIcon"),
   Info = pickIcon("Info"), UserPlus = pickIcon("UserPlus"), Pencil = pickIcon("Pencil", "PenLine", "Edit"), Eye = pickIcon("Eye"),
-  RotateCcw = pickIcon("RotateCcw", "RefreshCw"), Hourglass = pickIcon("Hourglass", "Clock");
+  RotateCcw = pickIcon("RotateCcw", "RefreshCw"), Hourglass = pickIcon("Hourglass", "Clock"), KeyRound = pickIcon("KeyRound", "Key");
 
 // =====================================================================
 // À PERSONNALISER — images par défaut (l'administrateur peut aussi les changer depuis le site)
 // =====================================================================
-// Logo de la CGE-ARSTM. Deux possibilités :
-//  1) le chemin d'un fichier image envoyé sur l'hébergeur : "logos/cge-arstm.png"
-//  2) le code du logo copié depuis l'ancien site : "data:image/png;base64,iVBOR..."
 const LOGO_SRC = "logos/cge-arstm.png";
-
 // Logos des écoles membres : lien ou chemin de l'image (ex. "logos/ensea.png"). null = sigle affiché.
 const LOGOS_ECOLES = { ARSTM: null, ENSEA: null, ESATIC: null, "INP-HB": null, ESA: null, ESCAE: null, ESI: null, ESMG: null, ESTP: null };
-
 // Photos du bureau : nom exact du membre => chemin de la photo (ex. "NANGUI AKRE": "photos/nangui-akre.jpg").
 const PHOTOS_BUREAU = {};
 
@@ -109,13 +116,6 @@ const PARTENAIRES = [
     text: "Fondation ivoirienne créée en 1996 et reconnue d'utilité publique en 2012, elle œuvre pour la promotion de l'excellence et du mérite : bourses d'études, soutien aux associations d'étudiants et accompagnement des programmes de formation et d'emploi.",
     tags: ["Bourses d'excellence", "Soutien aux associations étudiantes", "Formation & emploi"],
   },
-];
-
-// Comptes de DÉMONSTRATION (toujours disponibles, impossibles à supprimer depuis le site).
-// ⚠️ La vraie version utilisera une connexion sécurisée côté serveur : ces mots de passe sont visibles dans le code.
-const DEMO_ACCOUNTS = [
-  { login: "ARSTM-001", password: "demo1234", name: "Membre Démo", role: "membre" },
-  { login: "admin", password: "admin1234", name: "Administrateur", role: "admin" },
 ];
 
 const PRESIDENT = {
@@ -141,26 +141,6 @@ const BUREAU = [
   { dept: "Porte-parole", members: [["ADEGOKE SARAH", "Porte-parole"], ["MAHUDO LUCIE", "Porte-parole Adjointe"]] },
 ];
 
-const INIT_NEWS = [
-  { id: 1, title: "Lancement du nouveau site de la CGE", date: "2026-10-03", category: "Vie de la CGE", text: "La CGE ARSTM se dote d'un site moderne pour informer, rassembler et accompagner tous ses membres. Créez votre profil dès maintenant !", membersOnly: false },
-  { id: 2, title: "Assemblée générale de rentrée", date: "2026-10-10", category: "Annonce", text: "Tous les membres sont conviés à l'assemblée générale de rentrée. L'ordre du jour sera communiqué prochainement.", membersOnly: false },
-  { id: 3, title: "Ouverture de la campagne de stages", date: "2026-10-08", category: "Carrière", text: "Les premières offres de stage de l'année sont en ligne. Pensez à compléter votre profil et à déposer votre CV.", membersOnly: false },
-  { id: 4, title: "Compte rendu de la réunion du bureau", date: "2026-10-01", category: "Interne", text: "Le compte rendu de la dernière réunion du bureau exécutif est disponible auprès du Secrétariat Général.", membersOnly: true },
-];
-const INIT_EVENTS = [
-  { id: 1, title: "Assemblée générale de rentrée", date: "2026-10-15", time: "10h00", place: "Amphithéâtre ARSTM", text: "Présentation du bureau, du programme de l'année et échanges avec les élèves." },
-  { id: 2, title: "Conférence métiers de la mer", date: "2026-11-05", time: "14h00", place: "Campus ARSTM", text: "Rencontre avec des professionnels du transport maritime, de la logistique et de la sécurité." },
-  { id: 3, title: "Tournoi sportif inter-filières", date: "2026-11-21", time: "08h00", place: "Terrain de sport", text: "Football, basket et relais : défendez les couleurs de votre filière !" },
-];
-const INIT_JOBS = [
-  { id: 1, title: "Stage — Assistant logistique portuaire", company: "Entreprise exemple", type: "Stage", duration: "6 mois", place: "Abidjan", text: "Appui à la coordination des opérations de manutention et au suivi documentaire." },
-  { id: 2, title: "Officier mécanicien junior", company: "Compagnie exemple", type: "Emploi", duration: "CDD 12 mois", place: "Abidjan / en mer", text: "Maintenance des installations machines et suivi des équipements à bord." },
-];
-const INIT_ALUMNI = [
-  { id: 1, name: "Exemple ALUMNI", promo: "2022", role: "Officier pont", company: "Compagnie maritime" },
-  { id: 2, name: "Exemple DIPLÔMÉE", promo: "2021", role: "Responsable logistique", company: "Port autonome" },
-];
-
 const EMPTY_PROFILE = {
   photo: null, prenoms: "", nom: "", naissance: "", nationalite: "", telephone: "", email: "", ville: "",
   filiere: "", promotion: "", matricule: "", linkedin: "", titre: "", bio: "",
@@ -176,52 +156,40 @@ const STATUS_STYLES = {
   "Non retenue": "bg-slate-200 text-slate-600",
 };
 
-const CV_MAX = 2 * 1048576; // 2 Mo en version démo (le navigateur a peu de place)
+const CV_MAX = 5 * 1048576;
+const CV_TYPES = { pdf: "application/pdf", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
 
 // =====================================================================
-// SAUVEGARDE — version démo : les données restent dans le navigateur du visiteur.
-// La version finale remplacera ce bloc par un vrai serveur (Supabase, Firebase...).
+// CONVERSIONS entre la base de données et le site
 // =====================================================================
-const STORE_PREFIX = "cge-arstm:v1:";
-const STORAGE_OK = (() => {
-  try { const k = STORE_PREFIX + "test"; window.localStorage.setItem(k, "1"); window.localStorage.removeItem(k); return true; }
-  catch (e) { return false; }
-})();
-const memoryStore = {};
-const DB = {
-  get(key, fallback) {
-    try {
-      const raw = STORAGE_OK ? window.localStorage.getItem(STORE_PREFIX + key) : memoryStore[key];
-      return raw == null ? fallback : JSON.parse(raw);
-    } catch (e) { console.warn("Lecture impossible :", key, e); return fallback; }
-  },
-  set(key, value) {
-    const raw = JSON.stringify(value);
-    if (!STORAGE_OK) { memoryStore[key] = raw; return true; }
-    try { window.localStorage.setItem(STORE_PREFIX + key, raw); return true; }
-    catch (e) { console.warn("Écriture impossible :", key, e); return false; }
-  },
-  remove(key) {
-    delete memoryStore[key];
-    try { if (STORAGE_OK) window.localStorage.removeItem(STORE_PREFIX + key); } catch (e) {}
-  },
-  clearAll() {
-    Object.keys(memoryStore).forEach((k) => delete memoryStore[k]);
-    try { Object.keys(window.localStorage).filter((k) => k.startsWith(STORE_PREFIX)).forEach((k) => window.localStorage.removeItem(k)); } catch (e) {}
-  },
+const accountName = (r) => [r?.prenoms, r?.nom].filter(Boolean).join(" ") || r?.email || "Membre";
+const rowToProfile = (r) => ({
+  ...EMPTY_PROFILE, email: r.email || "", ...(r.data || {}),
+  prenoms: r.prenoms || "", nom: r.nom || "", matricule: r.matricule || "", filiere: r.filiere || "", promotion: r.promotion || "",
+});
+const profileToRow = (p) => {
+  const { prenoms, nom, matricule, filiere, promotion, ...data } = p;
+  return { prenoms: prenoms || "", nom: nom || "", matricule: matricule ? matricule.trim() : null, filiere: filiere || "", promotion: promotion || "", data };
 };
+const plainFromDb = (r) => r;
+const plainToDb = ({ id, created_at, ...r }) => r;
+const newsFromDb = ({ members_only, ...r }) => ({ ...r, membersOnly: !!members_only });
+const newsToDb = ({ id, created_at, membersOnly, ...r }) => ({ ...r, members_only: !!membersOnly });
+const appFromDb = (r) => ({ id: r.id, jobId: r.job_id, userId: r.user_id, title: r.title, company: r.company, status: r.status, applicant: r.applicant, email: r.email, cvName: r.cv_name, date: r.date });
+const regFromDb = (r) => ({ eventId: r.event_id, userId: r.user_id, name: r.name });
 
-const isDemoAccount = (login) => DEMO_ACCOUNTS.some((d) => d.login.toLowerCase() === String(login).toLowerCase());
-const loadAccounts = () => [
-  ...DEMO_ACCOUNTS.map((a) => ({ ...a, status: "actif" })),
-  ...DB.get("accounts", []).filter((a) => !isDemoAccount(a.login)),
-];
-const publicUser = (a) => ({ login: a.login, name: a.name, role: a.role });
-// Profil enregistré, ou profil pré-rempli avec les informations données à l'inscription.
-const loadProfile = (acc) => {
-  const saved = DB.get(`profile:${acc.login}`, null);
-  if (saved) return { ...EMPTY_PROFILE, ...saved };
-  return { ...EMPTY_PROFILE, prenoms: acc.prenoms || "", nom: acc.nom || "", email: acc.email || "", filiere: acc.filiere || "", promotion: acc.promotion || "", matricule: acc.role === "membre" ? acc.login : "" };
+// Messages d'erreur de connexion traduits en français.
+const authMessage = (error) => {
+  const m = String(error?.message || "");
+  if (/invalid login credentials/i.test(m)) return "Email ou mot de passe incorrect.";
+  if (/already registered|already exists/i.test(m)) return "Un compte existe déjà avec cet email.";
+  if (/email not confirmed/i.test(m)) return "Votre email n'est pas encore confirmé : ouvrez le lien reçu par email.";
+  if (/rate limit|too many/i.test(m)) return "Trop de tentatives. Patientez un moment puis réessayez.";
+  if (/password should|weak password/i.test(m)) return "Mot de passe trop faible (8 caractères minimum).";
+  if (/database error saving new user/i.test(m)) return "Inscription impossible : ce matricule est peut-être déjà utilisé.";
+  if (/unable to validate email|invalid.*email/i.test(m)) return "Adresse email invalide.";
+  if (/failed to fetch|network/i.test(m)) return "Connexion internet impossible. Réessayez.";
+  return m || "Une erreur est survenue.";
 };
 
 // =====================================================================
@@ -234,10 +202,10 @@ const DEFAULT_IMAGES = {
   ...Object.fromEntries(PARTENAIRES.map((p) => [`partenaire:${p.name}`, p.logo])),
   ...Object.fromEntries(Object.entries(PHOTOS_BUREAU).map(([k, v]) => [`membre:${k}`, v])),
 };
-const ImgCtx = createContext({ images: DEFAULT_IMAGES, setImage: () => {} });
+const ImgCtx = createContext({ images: DEFAULT_IMAGES, overrides: {}, saveImage: async () => {} });
 const useImages = () => useContext(ImgCtx).images;
 
-// Réduit une image avant de l'utiliser (une photo de téléphone de 5 Mo devient ~100 Ko).
+// Réduit une image avant l'envoi (une photo de téléphone de 5 Mo devient ~100 Ko).
 const compressImage = (file, max = 700) => new Promise((resolve, reject) => {
   if (!file || !file.type || !file.type.startsWith("image/")) return reject(new Error("Ce fichier n'est pas une image."));
   if (file.size > 10 * 1048576) return reject(new Error("Image trop lourde (10 Mo maximum)."));
@@ -250,12 +218,32 @@ const compressImage = (file, max = 700) => new Promise((resolve, reject) => {
     c.height = Math.max(1, Math.round(img.naturalHeight * scale));
     c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
     URL.revokeObjectURL(url);
-    // PNG/WebP gardent la transparence (idéal pour les logos), les photos passent en JPEG.
-    resolve(/png|webp|svg|gif/.test(file.type) ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", 0.85));
+    // PNG garde la transparence (idéal pour les logos), les photos passent en JPEG.
+    const type = /png|webp|svg|gif/.test(file.type) ? "image/png" : "image/jpeg";
+    c.toBlob((b) => (b ? resolve(b) : reject(new Error("Conversion de l'image impossible."))), type, 0.85);
   };
   img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Image illisible. Essayez une image JPG ou PNG.")); };
   img.src = url;
 });
+
+const slugify = (s) => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+// Envoie une image dans l'espace public "images" et renvoie son adresse.
+const uploadPublicImage = async (folder, blob) => {
+  const ext = blob.type === "image/png" ? "png" : "jpg";
+  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+  const { error } = await sb.storage.from("images").upload(path, blob, { contentType: blob.type });
+  if (error) throw new Error("Envoi de l'image impossible : " + error.message);
+  return sb.storage.from("images").getPublicUrl(path).data.publicUrl;
+};
+
+// Télécharge un CV privé grâce à un lien temporaire (valable 2 minutes).
+const downloadCV = async (cv, notify) => {
+  if (!cv?.path) return notify && notify("CV introuvable.", "error");
+  const { data, error } = await sb.storage.from("cvs").createSignedUrl(cv.path, 120, { download: cv.name || true });
+  if (error) return notify && notify("Téléchargement impossible : " + error.message, "error");
+  window.location.href = data.signedUrl;
+};
 
 // =====================================================================
 // OUTILS
@@ -266,7 +254,7 @@ const inputCls = "mt-1 w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const initials = (n) => String(n || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-const fmtDate = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+const fmtDate = (iso) => (iso ? new Date(String(iso).slice(0, 10) + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "");
 const dayMonth = (iso) => { const d = new Date(iso + "T12:00:00"); return [d.getDate(), d.toLocaleDateString("fr-FR", { month: "short" }).replace(".", "")]; };
 // Nombre de jours entre aujourd'hui et la date (0 = aujourd'hui, négatif = passé).
 const daysUntil = (iso) => { const t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((new Date(iso + "T00:00:00") - t) / 86400000); };
@@ -330,7 +318,7 @@ const MemberPhoto = ({ name, size = "w-20 h-20", text = "text-xl", gradient = "f
 };
 
 const Avatar = ({ photo, name, size = "w-12 h-12", text = "text-base" }) =>
-  photo ? <img src={photo} alt={name} className={`${size} rounded-full object-cover`} /> :
+  photo ? <img src={photo} alt={name} className={`${size} flex-shrink-0 rounded-full object-cover`} /> :
   <div className={`${size} ${text} flex-shrink-0 rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-white font-bold flex items-center justify-center`}>{initials(name)}</div>;
 
 const Waves = ({ fill = "#fafaf9" }) => (
@@ -395,6 +383,12 @@ const Panel = ({ title, Icon, children, action }) => (
   </div>
 );
 
+const FullLoader = () => (
+  <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
+    <div className="loader" /><p className="font-bold text-slate-900">CGE ARSTM</p>
+  </div>
+);
+
 // =====================================================================
 // APPLICATION
 // =====================================================================
@@ -402,53 +396,104 @@ function App() {
   const [page, setPage] = useState("accueil");
   const [menuOpen, setMenuOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [recovery, setRecovery] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
 
-  // Données chargées depuis la sauvegarde du navigateur (ou valeurs de départ).
-  const [accounts, setAccounts] = useState(loadAccounts);
-  const [user, setUser] = useState(() => {
-    const login = DB.get("session", null);
-    const acc = login && accounts.find((a) => a.login === login && a.status === "actif");
-    return acc ? publicUser(acc) : null;
-  });
-  const [profile, setProfile] = useState(() => (user ? loadProfile(accounts.find((a) => a.login === user.login)) : EMPTY_PROFILE));
-  const [news, setNews] = useState(() => DB.get("content", {}).news || INIT_NEWS);
-  const [events, setEvents] = useState(() => DB.get("content", {}).events || INIT_EVENTS);
-  const [jobs, setJobs] = useState(() => DB.get("content", {}).jobs || INIT_JOBS);
-  const [alumni, setAlumni] = useState(() => DB.get("content", {}).alumni || INIT_ALUMNI);
-  const [applications, setApplications] = useState(() => DB.get("applications", []));
-  const [registrations, setRegistrations] = useState(() => DB.get("registrations", []));
-  const [imgOverrides, setImgOverrides] = useState(() => DB.get("images", {}));
+  const [session, setSession] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [firstLoad, setFirstLoad] = useState(true);
+  const [me, setMe] = useState(null); // ligne "profiles" du membre connecté (validé)
+  const [profile, setProfile] = useState(EMPTY_PROFILE);
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
+  const [news, setNews] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [jobs, setJobs] = useState([]);
+  const [alumni, setAlumni] = useState([]);
+  const [applications, setApplications] = useState([]);
+  const [registrations, setRegistrations] = useState([]);
+  const [members, setMembers] = useState([]); // visible uniquement par les admins
+  const [imgOverrides, setImgOverrides] = useState({});
   const [newsFilter, setNewsFilter] = useState("Toutes");
   const [alumniQuery, setAlumniQuery] = useState("");
+  const loadId = useRef(0);
+  const quietUntil = useRef(0);
+  const busy = useRef(new Set());
 
   const images = { ...DEFAULT_IMAGES, ...imgOverrides };
-  const setImage = (key, value) => setImgOverrides((s) => ({ ...s, [key]: value }));
+  const uid = session?.user?.id || null;
 
   const notify = (msg, type = "success") => {
     clearTimeout(toastTimer.current);
     setToast({ msg, type });
-    toastTimer.current = setTimeout(() => setToast(null), 3500);
+    toastTimer.current = setTimeout(() => setToast(null), 4000);
   };
 
-  // Enregistrement automatique à chaque changement.
-  const warned = useRef(false);
-  const persist = (key, value) => {
-    if (!DB.set(key, value) && !warned.current) {
-      warned.current = true;
-      notify("Espace de stockage du navigateur plein : la dernière modification n'a pas pu être enregistrée.", "error");
-      setTimeout(() => { warned.current = false; }, 6000);
+  // Évite les doubles clics sur une même action pendant qu'elle s'exécute.
+  const once = async (key, fn) => {
+    if (busy.current.has(key)) return;
+    busy.current.add(key);
+    try { await fn(); } finally { busy.current.delete(key); }
+  };
+
+  // ----- Session de connexion -----
+  useEffect(() => {
+    sb.auth.getSession().then(({ data }) => { setSession(data.session); setAuthReady(true); });
+    const { data: sub } = sb.auth.onAuthStateChange((event, s) => {
+      setSession(s);
+      if (event === "PASSWORD_RECOVERY") setRecovery(true);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  // ----- Chargement des données (relancé à chaque connexion / déconnexion) -----
+  const loadAll = async () => {
+    const id = ++loadId.current;
+    const errors = [];
+    const q = (query) => query.then(({ data, error }) => { if (error) errors.push(error); return data || []; });
+    try {
+      let myRow = null;
+      if (uid) {
+        const { data, error } = await sb.from("profiles").select("*").eq("id", uid).maybeSingle();
+        if (id !== loadId.current) return;
+        if (error) errors.push(error);
+        myRow = data;
+        if (!error && (!myRow || myRow.statut !== "actif")) {
+          const quiet = Date.now() < quietUntil.current;
+          await sb.auth.signOut(); // relance automatiquement le chargement en mode visiteur
+          if (!quiet) notify(!myRow ? "Ce compte n'existe plus. Contactez la CGE." : "Votre compte est en attente de validation par l'administrateur.", "error");
+          return;
+        }
+      }
+      const active = !!myRow;
+      const admin = active && myRow.role === "admin";
+      const [n, e, j, a, apps, regs, imgs, mem] = await Promise.all([
+        q(sb.from("news").select("*").order("date", { ascending: false })),
+        q(sb.from("events").select("*").order("date")),
+        active ? q(sb.from("jobs").select("*").order("created_at", { ascending: false })) : [],
+        active ? q(sb.from("alumni").select("*").order("name")) : [],
+        active ? q(sb.from("applications").select("*").order("id")) : [],
+        active ? q(sb.from("registrations").select("*")) : [],
+        q(sb.from("site_images").select("*")),
+        admin ? q(sb.from("profiles").select("*").order("created_at", { ascending: false })) : [],
+      ]);
+      if (id !== loadId.current) return;
+      setMe(myRow);
+      setProfile(myRow ? rowToProfile(myRow) : EMPTY_PROFILE);
+      setNews(n.map(newsFromDb)); setEvents(e); setJobs(j); setAlumni(a);
+      setApplications(apps.map(appFromDb)); setRegistrations(regs.map(regFromDb));
+      setImgOverrides(Object.fromEntries(imgs.map((r) => [r.key, r.url])));
+      setMembers(mem);
+      if (errors.length) notify("Connexion à la base incomplète : " + errors[0].message, "error");
+    } catch (err) {
+      console.error(err);
+      notify("Impossible de joindre la base de données. Vérifiez votre connexion internet.", "error");
+    } finally {
+      if (id === loadId.current) setFirstLoad(false);
     }
   };
-  useEffect(() => persist("content", { news, events, jobs, alumni }), [news, events, jobs, alumni]);
-  useEffect(() => persist("accounts", accounts.filter((a) => !isDemoAccount(a.login))), [accounts]);
-  useEffect(() => persist("applications", applications), [applications]);
-  useEffect(() => persist("registrations", registrations), [registrations]);
-  useEffect(() => persist("images", imgOverrides), [imgOverrides]);
-  useEffect(() => persist("session", user ? user.login : null), [user]);
-  useEffect(() => { if (user) persist(`profile:${user.login}`, profile); }, [profile, user]);
-  useEffect(() => { if (!STORAGE_OK) notify("Votre navigateur bloque la sauvegarde : les données seront perdues au rechargement.", "error"); }, []);
+  useEffect(() => { if (authReady) loadAll(); }, [uid, authReady]);
 
   // L'icône de l'onglet suit le logo choisi par l'administrateur.
   useEffect(() => {
@@ -458,12 +503,13 @@ function App() {
 
   const go = (p) => { setPage(p); setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const openLogin = () => { setLoginOpen(true); setMenuOpen(false); };
+  const user = me ? { id: me.id, name: accountName(me), role: me.role, email: me.email } : null;
   const isAdmin = user?.role === "admin";
   const pct = completion(profile);
   const fullName = [profile.prenoms, profile.nom].filter(Boolean).join(" ") || user?.name || "";
-  const pendingCount = accounts.filter((a) => a.status === "en_attente").length;
-  const myApplications = user ? applications.filter((a) => a.login === user.login) : [];
-  const myRegs = user ? registrations.filter((r) => r.login === user.login).map((r) => r.eventId) : [];
+  const pendingCount = members.filter((m) => m.statut === "en_attente").length;
+  const myApplications = user ? applications.filter((a) => a.userId === user.id) : [];
+  const myRegs = user ? registrations.filter((r) => r.userId === user.id).map((r) => r.eventId) : [];
 
   const nav = [
     ["accueil", "Accueil"], ["apropos", "À propos"], ["bureau", "Bureau"], ["actualites", "Actualités"],
@@ -471,49 +517,118 @@ function App() {
     ...(isAdmin ? [["admin", `Administration${pendingCount ? ` (${pendingCount})` : ""}`]] : []),
   ];
 
-  const visibleNews = news.filter((n) => !n.membersOnly || user).sort((a, b) => b.date.localeCompare(a.date));
+  const visibleNews = [...news].sort((a, b) => b.date.localeCompare(a.date));
   const sortedEvents = [...events].sort((a, b) => a.date.localeCompare(b.date));
   const upcoming = sortedEvents.filter((e) => daysUntil(e.date) >= 0);
   const pastEvents = sortedEvents.filter((e) => daysUntil(e.date) < 0).reverse();
   const nextEvent = upcoming[0];
   const categories = ["Toutes", ...new Set(visibleNews.map((n) => n.category))];
 
-  const handleLogin = (acc) => {
-    setUser(publicUser(acc));
-    setProfile(loadProfile(acc));
+  // ----- Connexion, inscription, mot de passe -----
+  const handleLogin = async (email, password) => {
+    quietUntil.current = Date.now() + 10000;
+    const { data, error } = await sb.auth.signInWithPassword({ email: email.trim(), password });
+    if (error) return authMessage(error);
+    const { data: row, error: e2 } = await sb.from("profiles").select("statut, prenoms, nom, email").eq("id", data.user.id).maybeSingle();
+    if (e2 || !row || row.statut !== "actif") {
+      await sb.auth.signOut();
+      if (e2) return "Connexion à la base impossible : " + e2.message;
+      return !row ? "Ce compte n'existe plus. Contactez la CGE." : "Votre compte est en attente de validation par l'administrateur. Réessayez un peu plus tard.";
+    }
     setLoginOpen(false);
-    notify(`Bienvenue, ${acc.name} !`);
-  };
-
-  const handleRegister = (acc) => {
-    if (accounts.some((a) => a.login.toLowerCase() === acc.login.toLowerCase())) return "Ce matricule possède déjà un compte.";
-    setAccounts([...accounts, acc]);
+    notify(`Bienvenue, ${accountName(row)} !`);
     return null;
   };
 
-  const logout = () => { setUser(null); setProfile(EMPTY_PROFILE); go("accueil"); notify("Vous êtes déconnecté(e)."); };
+  const handleRegister = async (r) => {
+    quietUntil.current = Date.now() + 10000;
+    const { data: free, error: e1 } = await sb.rpc("matricule_disponible", { m: r.matricule });
+    if (e1) return "Vérification du matricule impossible : " + e1.message;
+    if (free === false) return "Ce matricule possède déjà un compte.";
+    const { data, error } = await sb.auth.signUp({
+      email: r.email, password: r.password,
+      options: { emailRedirectTo: SITE_URL(), data: { prenoms: r.prenoms, nom: r.nom, matricule: r.matricule, filiere: r.filiere, promotion: r.promotion } },
+    });
+    if (error) return authMessage(error);
+    if (data.session) await sb.auth.signOut(); // le compte doit d'abord être validé
+    return null;
+  };
 
+  const handleForgot = async (email) => {
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: SITE_URL() });
+    return error ? authMessage(error) : null;
+  };
+
+  const logout = async () => { await sb.auth.signOut(); go("accueil"); notify("Vous êtes déconnecté(e)."); };
+
+  // ----- Profil -----
+  const updateProfile = async (patch) => {
+    if (!me) return false;
+    const prev = profileRef.current;
+    const next = { ...prev, ...patch };
+    profileRef.current = next;
+    setProfile(next);
+    const { error } = await sb.from("profiles").update(profileToRow(next)).eq("id", me.id);
+    if (error) {
+      profileRef.current = prev;
+      setProfile(prev);
+      notify(error.code === "23505" ? "Ce matricule est déjà utilisé par un autre compte." : "Enregistrement impossible : " + error.message, "error");
+      return false;
+    }
+    return true;
+  };
+
+  // ----- Images du site -----
+  const saveImage = async (key, blob) => {
+    if (!blob) {
+      const { error } = await sb.from("site_images").delete().eq("key", key);
+      if (error) throw new Error("Suppression impossible : " + error.message);
+      setImgOverrides(({ [key]: _, ...rest }) => rest);
+      return;
+    }
+    const url = await uploadPublicImage(`site/${slugify(key)}`, blob);
+    const { error } = await sb.from("site_images").upsert({ key, url, updated_at: new Date().toISOString() });
+    if (error) throw new Error("Enregistrement impossible : " + error.message);
+    setImgOverrides((s) => ({ ...s, [key]: url }));
+  };
+
+  // ----- Événements et candidatures -----
   const toggleRegistration = (ev) => {
     if (!user) return openLogin();
-    if (myRegs.includes(ev.id)) {
-      setRegistrations(registrations.filter((r) => !(r.eventId === ev.id && r.login === user.login)));
-      notify("Inscription annulée.");
-    } else {
-      setRegistrations([...registrations, { eventId: ev.id, login: user.login, name: fullName }]);
-      notify(`Vous êtes inscrit(e) : ${ev.title}`);
-    }
+    once(`reg-${ev.id}`, async () => {
+      if (myRegs.includes(ev.id)) {
+        const { error } = await sb.from("registrations").delete().eq("event_id", ev.id).eq("user_id", user.id);
+        if (error) return notify("Annulation impossible : " + error.message, "error");
+        setRegistrations((rs) => rs.filter((r) => !(r.eventId === ev.id && r.userId === user.id)));
+        notify("Inscription annulée.");
+      } else {
+        const { data, error } = await sb.from("registrations").insert({ event_id: ev.id, user_id: user.id, name: fullName }).select().single();
+        if (error) return notify("Inscription impossible : " + error.message, "error");
+        setRegistrations((rs) => [...rs, regFromDb(data)]);
+        notify(`Vous êtes inscrit(e) : ${ev.title}`);
+      }
+    });
   };
 
   const apply = (job) => {
     if (!user) return openLogin();
     if (myApplications.some((a) => a.jobId === job.id)) return;
     if (pct < 50) { notify("Complétez votre profil à au moins 50 % avant de postuler.", "error"); go("profil"); return; }
-    setApplications([...applications, { id: Date.now(), jobId: job.id, login: user.login, title: job.title, company: job.company, date: todayISO(), status: "Envoyée", applicant: fullName, email: profile.email, cvName: profile.cv?.name || null }]);
-    notify("Candidature envoyée avec votre profil !");
+    once(`job-${job.id}`, async () => {
+      const { data, error } = await sb.from("applications").insert({
+        job_id: job.id, user_id: user.id, title: job.title, company: job.company,
+        applicant: fullName, email: profile.email || user.email, cv_name: profile.cv?.name || null,
+      }).select().single();
+      if (error) return notify("Envoi impossible : " + error.message, "error");
+      setApplications((list) => [...list, appFromDb(data)]);
+      notify("Candidature envoyée avec votre profil !");
+    });
   };
 
+  if (firstLoad) return <FullLoader />;
+
   return (
-    <ImgCtx.Provider value={{ images, setImage }}>
+    <ImgCtx.Provider value={{ images, overrides: imgOverrides, saveImage }}>
     <div className="min-h-screen bg-stone-50 text-slate-800 font-sans">
       {toast && (
         <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 max-w-md w-max px-5 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-2 fade-up ${toast.type === "error" ? "bg-rose-600 text-white" : "bg-slate-900 text-white"}`}>
@@ -699,6 +814,7 @@ function App() {
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {visibleNews.filter((n) => newsFilter === "Toutes" || n.category === newsFilter).map((n, i) => <NewsCard key={n.id} n={n} i={i} />)}
               </div>
+              {visibleNews.length === 0 && <p className="text-slate-500 text-center">Aucune actualité pour le moment.</p>}
             </main>
           </>
         )}
@@ -774,7 +890,7 @@ function App() {
                         <div className="flex-1">
                           <div className="flex flex-wrap gap-2 text-xs font-semibold">
                             <span className="px-2 py-1 rounded-md bg-orange-100 text-orange-700">{j.type}</span>
-                            <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600">{j.duration}</span>
+                            {j.duration && <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600">{j.duration}</span>}
                           </div>
                           <h3 className="text-xl font-bold text-slate-900 mt-2">{j.title}</h3>
                           <p className="text-sm text-slate-500 mt-1 flex flex-wrap gap-4"><span className="flex items-center gap-1"><Building2 size={14} /> {j.company}</span><span className="flex items-center gap-1"><MapPin size={14} /> {j.place}</span></p>
@@ -828,7 +944,7 @@ function App() {
 
         {/* ===== MON ESPACE ===== */}
         {page === "profil" && (user
-          ? <ProfileSpace user={user} profile={profile} setProfile={setProfile} pct={pct} fullName={fullName} applications={myApplications} registrations={myRegs} events={events} notify={notify} go={go} />
+          ? <ProfileSpace uid={user.id} profile={profile} update={updateProfile} pct={pct} fullName={fullName} applications={myApplications} registrations={myRegs} events={events} notify={notify} go={go} />
           : <main className="max-w-6xl mx-auto px-4 py-20"><Locked onLogin={openLogin} label="à votre espace personnel" /></main>)}
 
         {/* ===== ADMINISTRATION ===== */}
@@ -837,7 +953,7 @@ function App() {
             <PageHero kicker="Réservé aux administrateurs" title="Administration" icon={Shield} />
             <AdminPanel news={news} setNews={setNews} events={events} setEvents={setEvents} jobs={jobs} setJobs={setJobs} alumni={alumni} setAlumni={setAlumni}
               applications={applications} setApplications={setApplications} registrations={registrations}
-              accounts={accounts} setAccounts={setAccounts} currentLogin={user.login} notify={notify} />
+              members={members} setMembers={setMembers} currentId={user.id} notify={notify} reload={loadAll} />
           </>
         )}
       </div>
@@ -867,7 +983,8 @@ function App() {
         <div className="border-t border-slate-800 text-center text-xs py-5">© 2026 CGE ARSTM · Tous droits réservés</div>
       </footer>
 
-      {loginOpen && <LoginModal accounts={accounts} onClose={() => setLoginOpen(false)} onLogin={handleLogin} onRegister={handleRegister} />}
+      {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onLogin={handleLogin} onRegister={handleRegister} onForgot={handleForgot} />}
+      {recovery && <NewPasswordModal onClose={() => setRecovery(false)} notify={notify} />}
     </div>
     </ImgCtx.Provider>
   );
@@ -1058,7 +1175,7 @@ function NewsCard({ n, i }) {
 // =====================================================================
 // ESPACE PERSONNEL
 // =====================================================================
-function ProfileSpace({ user, profile, setProfile, pct, fullName, applications, registrations, events, notify, go }) {
+function ProfileSpace({ uid, profile, update, pct, fullName, applications, registrations, events, notify, go }) {
   const [tab, setTab] = useState("dashboard");
   const [showCV, setShowCV] = useState(false);
   const tabs = [
@@ -1066,7 +1183,6 @@ function ProfileSpace({ user, profile, setProfile, pct, fullName, applications, 
     ["parcours", "Parcours", GraduationCap], ["competences", "Compétences & langues", Award],
     ["cv", "Mon CV", FileText], ["candidatures", "Mes candidatures", Send],
   ];
-  const update = (patch) => setProfile((p) => ({ ...p, ...patch }));
 
   return (
     <>
@@ -1102,7 +1218,7 @@ function ProfileSpace({ user, profile, setProfile, pct, fullName, applications, 
 
         <div key={tab} className="lg:col-span-3 fade-up">
           {tab === "dashboard" && <Dashboard profile={profile} pct={pct} fullName={fullName} applications={applications} registrations={registrations} events={events} setTab={setTab} go={go} />}
-          {tab === "infos" && <InfosTab profile={profile} update={update} notify={notify} />}
+          {tab === "infos" && <InfosTab uid={uid} profile={profile} update={update} notify={notify} />}
           {tab === "parcours" && (
             <div className="space-y-6">
               <ListEditor title="Formations" Icon={GraduationCap} notify={notify} items={profile.formations} onChange={(formations) => update({ formations })}
@@ -1114,7 +1230,7 @@ function ProfileSpace({ user, profile, setProfile, pct, fullName, applications, 
             </div>
           )}
           {tab === "competences" && <SkillsTab profile={profile} update={update} notify={notify} />}
-          {tab === "cv" && <CVTab profile={profile} update={update} notify={notify} openPreview={() => setShowCV(true)} />}
+          {tab === "cv" && <CVTab uid={uid} profile={profile} update={update} notify={notify} openPreview={() => setShowCV(true)} />}
           {tab === "candidatures" && (
             <Panel title="Mes candidatures" Icon={Send}>
               {applications.length === 0 ? (
@@ -1137,7 +1253,7 @@ function ProfileSpace({ user, profile, setProfile, pct, fullName, applications, 
         </div>
       </main>
 
-      {showCV && <CVPreview profile={profile} fullName={fullName} onClose={() => setShowCV(false)} />}
+      {showCV && <CVPreview profile={profile} fullName={fullName} notify={notify} onClose={() => setShowCV(false)} />}
     </>
   );
 }
@@ -1197,18 +1313,30 @@ function Dashboard({ profile, pct, fullName, applications, registrations, events
   );
 }
 
-function InfosTab({ profile, update, notify }) {
+function InfosTab({ uid, profile, update, notify }) {
   const [d, setD] = useState(profile);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const set = (k) => (e) => setD({ ...d, [k]: e.target.value });
-  const onPhoto = (e) => {
+  const onPhoto = async (e) => {
     const f = e.target.files && e.target.files[0]; e.target.value = "";
     if (!f) return;
-    compressImage(f, 500).then((data) => setD((x) => ({ ...x, photo: data }))).catch((err) => notify(err.message, "error"));
+    setUploading(true);
+    try {
+      const url = await uploadPublicImage(`avatars/${uid}`, await compressImage(f, 500));
+      setD((x) => ({ ...x, photo: url }));
+      if (await update({ photo: url })) notify("Photo mise à jour.");
+    } catch (err) { notify(err.message, "error"); }
+    finally { setUploading(false); }
   };
-  const save = () => {
+  const removePhoto = async () => { setD((x) => ({ ...x, photo: null })); if (await update({ photo: null })) notify("Photo retirée."); };
+  const save = async () => {
     if (d.email && !EMAIL_RE.test(d.email)) return notify("Adresse email invalide.", "error");
     const { formations, experiences, competences, langues, cv, ...infos } = d;
-    update(infos); notify("Informations enregistrées.");
+    setSaving(true);
+    const ok = await update(infos);
+    setSaving(false);
+    if (ok) notify("Informations enregistrées.");
   };
   const F = ({ label, k, type = "text", placeholder }) => (
     <label className="block"><span className="text-xs font-semibold text-slate-600">{label}</span><input type={type} value={d[k] || ""} onChange={set(k)} placeholder={placeholder} className={inputCls} /></label>
@@ -1221,8 +1349,10 @@ function InfosTab({ profile, update, notify }) {
           <p className="font-semibold text-slate-900">Photo de profil</p>
           <p className="text-xs text-slate-500">Une photo professionnelle, visage bien visible. JPG ou PNG.</p>
           <div className="flex gap-2 mt-3 justify-center sm:justify-start">
-            <label className="cursor-pointer px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-semibold hover:bg-orange-700 flex items-center gap-2"><Camera size={16} /> Choisir<input type="file" accept="image/*" onChange={onPhoto} className="hidden" /></label>
-            {d.photo && <button onClick={() => setD({ ...d, photo: null })} className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-sm">Retirer</button>}
+            <label className={`cursor-pointer px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 ${uploading ? "bg-slate-200 text-slate-500" : "bg-orange-600 text-white hover:bg-orange-700"}`}>
+              <Camera size={16} /> {uploading ? "Envoi..." : "Choisir"}<input type="file" accept="image/*" onChange={onPhoto} disabled={uploading} className="hidden" />
+            </label>
+            {d.photo && !uploading && <button onClick={removePhoto} className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-sm">Retirer</button>}
           </div>
         </div>
       </div>
@@ -1233,7 +1363,7 @@ function InfosTab({ profile, update, notify }) {
       </div>
       <h3 className="font-bold text-slate-900 mt-8 mb-3">Coordonnées</h3>
       <div className="grid sm:grid-cols-2 gap-4">
-        {F({ label: "Téléphone", k: "telephone", type: "tel", placeholder: "+225 ..." })}{F({ label: "Email", k: "email", type: "email" })}
+        {F({ label: "Téléphone", k: "telephone", type: "tel", placeholder: "+225 ..." })}{F({ label: "Email de contact", k: "email", type: "email" })}
         {F({ label: "Ville", k: "ville" })}{F({ label: "LinkedIn (facultatif)", k: "linkedin", placeholder: "https://linkedin.com/in/..." })}
       </div>
       <h3 className="font-bold text-slate-900 mt-8 mb-3">Scolarité</h3>
@@ -1248,7 +1378,7 @@ function InfosTab({ profile, update, notify }) {
       <label className="block mt-4"><span className="text-xs font-semibold text-slate-600">À propos de moi ({(d.bio || "").length}/500)</span>
         <textarea rows={4} maxLength={500} value={d.bio || ""} onChange={set("bio")} placeholder="Présentez-vous en quelques lignes : vos objectifs, ce qui vous motive..." className={inputCls} />
       </label>
-      <div className="flex justify-end mt-8"><button onClick={save} className="px-6 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700 hover:shadow-lg transition">Enregistrer</button></div>
+      <div className="flex justify-end mt-8"><button onClick={save} disabled={saving} className="px-6 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700 hover:shadow-lg transition disabled:opacity-60">{saving ? "Enregistrement..." : "Enregistrer"}</button></div>
     </Panel>
   );
 }
@@ -1340,17 +1470,27 @@ function SkillsTab({ profile, update, notify }) {
   );
 }
 
-function CVTab({ profile, update, notify, openPreview }) {
-  // Le CV est converti en texte pour pouvoir être sauvegardé (et téléchargé plus tard par l'administrateur).
-  const onCV = (e) => {
+function CVTab({ uid, profile, update, notify, openPreview }) {
+  const [busy, setBusy] = useState(false);
+  const onCV = async (e) => {
     const f = e.target.files && e.target.files[0]; e.target.value = "";
     if (!f) return;
-    if (!/\.(pdf|doc|docx)$/i.test(f.name)) return notify("Format accepté : PDF, DOC ou DOCX.", "error");
-    if (f.size > CV_MAX) return notify(`Fichier trop lourd (${fileSize(CV_MAX)} maximum en version démo).`, "error");
-    const reader = new FileReader();
-    reader.onload = () => { update({ cv: { name: f.name, size: f.size, data: reader.result, date: todayISO() } }); notify("CV déposé avec succès."); };
-    reader.onerror = () => notify("Lecture du fichier impossible.", "error");
-    reader.readAsDataURL(f);
+    const ext = (f.name.split(".").pop() || "").toLowerCase();
+    if (!CV_TYPES[ext]) return notify("Format accepté : PDF, DOC ou DOCX.", "error");
+    if (f.size > CV_MAX) return notify(`Fichier trop lourd (${fileSize(CV_MAX)} maximum).`, "error");
+    setBusy(true);
+    const safe = f.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "_");
+    const path = `${uid}/${Date.now()}-${safe}`;
+    const { error } = await sb.storage.from("cvs").upload(path, f, { contentType: CV_TYPES[ext] });
+    if (error) { setBusy(false); return notify("Envoi du CV impossible : " + error.message, "error"); }
+    const old = profile.cv?.path;
+    const ok = await update({ cv: { name: f.name, size: f.size, path, date: todayISO() } });
+    setBusy(false);
+    if (ok) { if (old) sb.storage.from("cvs").remove([old]); notify("CV déposé avec succès."); }
+  };
+  const removeCV = async () => {
+    const old = profile.cv?.path;
+    if (await update({ cv: null })) { if (old) sb.storage.from("cvs").remove([old]); notify("CV retiré."); }
   };
   return (
     <div className="space-y-6">
@@ -1363,16 +1503,16 @@ function CVTab({ profile, update, notify, openPreview }) {
               <p className="text-sm text-slate-500">{fileSize(profile.cv.size)} · déposé le {fmtDate(profile.cv.date)}</p>
             </div>
             <div className="flex gap-2">
-              {profile.cv.data && <a href={profile.cv.data} download={profile.cv.name} className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-sm font-semibold flex items-center gap-1"><Download size={15} /> Télécharger</a>}
-              <button onClick={() => { update({ cv: null }); notify("CV retiré."); }} className="p-2 rounded-xl text-rose-600 hover:bg-rose-100" aria-label="Retirer le CV"><Trash2 size={17} /></button>
+              <button onClick={() => downloadCV(profile.cv, notify)} className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-sm font-semibold flex items-center gap-1"><Download size={15} /> Télécharger</button>
+              <ConfirmButton onConfirm={removeCV} confirmLabel="Retirer ?" ariaLabel="Retirer le CV" className="p-2 rounded-xl text-rose-600 hover:bg-rose-100"><Trash2 size={17} /></ConfirmButton>
             </div>
           </div>
         )}
-        <label className="mt-5 cursor-pointer block border-2 border-dashed border-slate-300 rounded-3xl p-10 text-center hover:border-orange-500 hover:bg-orange-50 transition">
+        <label className={`mt-5 block border-2 border-dashed rounded-3xl p-10 text-center transition ${busy ? "border-slate-200 bg-slate-50 cursor-wait" : "cursor-pointer border-slate-300 hover:border-orange-500 hover:bg-orange-50"}`}>
           <Upload className="mx-auto text-orange-600" size={36} />
-          <p className="font-bold text-slate-900 mt-3">{profile.cv ? "Remplacer mon CV" : "Déposer mon CV"}</p>
-          <p className="text-sm text-slate-500 mt-1">PDF, DOC ou DOCX · {fileSize(CV_MAX)} maximum</p>
-          <input type="file" accept=".pdf,.doc,.docx" onChange={onCV} className="hidden" />
+          <p className="font-bold text-slate-900 mt-3">{busy ? "Envoi en cours..." : profile.cv ? "Remplacer mon CV" : "Déposer mon CV"}</p>
+          <p className="text-sm text-slate-500 mt-1">PDF, DOC ou DOCX · {fileSize(CV_MAX)} maximum · visible uniquement par vous et les administrateurs</p>
+          <input type="file" accept=".pdf,.doc,.docx" onChange={onCV} disabled={busy} className="hidden" />
         </label>
       </Panel>
       <div className="relative rounded-3xl overflow-hidden p-8 text-white shadow-xl" style={{ background: NAVY }}>
@@ -1388,7 +1528,7 @@ function CVTab({ profile, update, notify, openPreview }) {
   );
 }
 
-function CVPreview({ profile: p, fullName, onClose }) {
+function CVPreview({ profile: p, fullName, onClose, notify }) {
   const Section = ({ title, children }) => (
     <div className="mt-6"><h3 className="text-sm font-extrabold uppercase tracking-widest text-orange-600 border-b-2 border-orange-500 pb-1">{title}</h3><div className="mt-3">{children}</div></div>
   );
@@ -1396,7 +1536,7 @@ function CVPreview({ profile: p, fullName, onClose }) {
     <div className="fixed inset-0 z-50 bg-black bg-opacity-60 overflow-y-auto p-4" onClick={onClose}>
       <div className="max-w-3xl mx-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-wrap justify-end gap-2 mb-3">
-          {p.cv?.data && <a href={p.cv.data} download={p.cv.name} className="px-4 py-2 rounded-xl bg-white font-semibold flex items-center gap-2"><Download size={16} /> CV déposé</a>}
+          {p.cv?.path && <button onClick={() => downloadCV(p.cv, notify)} className="px-4 py-2 rounded-xl bg-white font-semibold flex items-center gap-2"><Download size={16} /> CV déposé</button>}
           <button onClick={() => window.print()} className="px-4 py-2 rounded-xl bg-orange-600 text-white font-semibold flex items-center gap-2"><Printer size={16} /> Imprimer / PDF</button>
           <button onClick={onClose} className="px-4 py-2 rounded-xl bg-white font-semibold">Fermer</button>
         </div>
@@ -1438,39 +1578,66 @@ function CVPreview({ profile: p, fullName, onClose }) {
 }
 
 // =====================================================================
-// CONNEXION ET INSCRIPTION
+// CONNEXION, INSCRIPTION ET MOT DE PASSE
 // =====================================================================
 const EMPTY_REG = { prenoms: "", nom: "", matricule: "", email: "", filiere: "", promotion: "", password: "", confirm: "" };
 
-function LoginModal({ accounts, onClose, onLogin, onRegister }) {
-  const [mode, setMode] = useState("login"); // "login" | "register" | "done"
-  const [login, setLogin] = useState("");
+function ModalShell({ onClose, title, sub, children }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-60 overflow-y-auto flex items-start sm:items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl fade-up my-8" onClick={(e) => e.stopPropagation()}>
+        <div className="relative p-8 text-white" style={{ background: NAVY }}>
+          <button onClick={onClose} className="absolute top-4 right-4 text-slate-300 hover:text-white" aria-label="Fermer"><X /></button>
+          <Compass size={110} strokeWidth={0.7} className="absolute -right-4 -bottom-6 opacity-10 spin-slow" />
+          <Logo size="w-16 h-16" />
+          <h3 className="text-2xl font-extrabold mt-4">{title}</h3>
+          <p className="text-sm text-slate-300 mt-1">{sub}</p>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function LoginModal({ onClose, onLogin, onRegister, onForgot }) {
+  const [mode, setMode] = useState("login"); // login | register | forgot | done | sent
+  const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
   const [reg, setReg] = useState(EMPTY_REG);
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const switchMode = (m) => { setMode(m); setErr(""); };
-
-  const submit = () => {
-    const acc = accounts.find((a) => a.login.toLowerCase() === login.trim().toLowerCase() && a.password === pwd);
-    if (!acc) return setErr("Matricule ou mot de passe incorrect.");
-    if (acc.status !== "actif") return setErr("Votre compte est en attente de validation par l'administrateur. Réessayez un peu plus tard.");
-    onLogin(acc);
+  const run = async (fn) => {
+    if (busy) return;
+    setBusy(true); setErr("");
+    try { await fn(); } catch (e) { setErr(e.message || "Une erreur est survenue."); }
+    finally { setBusy(false); }
   };
 
-  const register = () => {
+  const submit = () => run(async () => {
+    if (!email.trim() || !pwd) return setErr("Saisissez votre email et votre mot de passe.");
+    const e = await onLogin(email, pwd);
+    if (e) setErr(e);
+  });
+
+  const register = () => run(async () => {
     const r = { ...reg, prenoms: reg.prenoms.trim(), nom: reg.nom.trim(), matricule: reg.matricule.trim(), email: reg.email.trim(), promotion: reg.promotion.trim() };
     if (!r.prenoms || !r.nom || !r.matricule || !r.email || !r.filiere || !r.promotion) return setErr("Tous les champs sont obligatoires.");
     if (!EMAIL_RE.test(r.email)) return setErr("Adresse email invalide.");
     if (r.password.length < 8) return setErr("Le mot de passe doit contenir au moins 8 caractères.");
     if (r.password !== r.confirm) return setErr("Les deux mots de passe ne correspondent pas.");
-    const error = onRegister({
-      login: r.matricule, password: r.password, name: `${r.prenoms} ${r.nom}`, role: "membre", status: "en_attente",
-      prenoms: r.prenoms, nom: r.nom, email: r.email, filiere: r.filiere, promotion: r.promotion, createdAt: todayISO(),
-    });
-    if (error) return setErr(error);
-    setLogin(r.matricule); setPwd(""); setMode("done");
-  };
+    const e = await onRegister(r);
+    if (e) return setErr(e);
+    setEmail(r.email); setPwd(""); setReg(EMPTY_REG); setMode("done");
+  });
+
+  const forgot = () => run(async () => {
+    if (!EMAIL_RE.test(email.trim())) return setErr("Saisissez l'email de votre compte.");
+    const e = await onForgot(email.trim());
+    if (e) return setErr(e);
+    setMode("sent");
+  });
 
   const regField = (label, k, type = "text", placeholder = "") => (
     <label className="block">
@@ -1479,71 +1646,109 @@ function LoginModal({ accounts, onClose, onLogin, onRegister }) {
     </label>
   );
 
-  const titles = { login: ["Espace membre", "Connectez-vous avec votre matricule."], register: ["Créer un compte", "Réservé aux élèves de l'ARSTM. Votre demande sera validée par le bureau."], done: ["Demande envoyée", "Plus qu'une étape : la validation."] };
+  const titles = {
+    login: ["Espace membre", "Connectez-vous avec votre email."],
+    register: ["Créer un compte", "Réservé aux élèves de l'ARSTM. Votre demande sera validée par le bureau."],
+    forgot: ["Mot de passe oublié", "Recevez un lien pour choisir un nouveau mot de passe."],
+    done: ["Demande envoyée", "Plus qu'une étape : la validation."],
+    sent: ["Email envoyé", "Consultez votre boîte de réception."],
+  };
+  const btn = "w-full py-3.5 rounded-xl bg-orange-600 text-white font-bold hover:bg-orange-700 hover:shadow-lg transition disabled:opacity-60 flex items-center justify-center gap-2";
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-60 overflow-y-auto flex items-start sm:items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl fade-up my-8" onClick={(e) => e.stopPropagation()}>
-        <div className="relative p-8 text-white" style={{ background: NAVY }}>
-          <button onClick={onClose} className="absolute top-4 right-4 text-slate-300 hover:text-white" aria-label="Fermer"><X /></button>
-          <Compass size={110} strokeWidth={0.7} className="absolute -right-4 -bottom-6 opacity-10 spin-slow" />
-          <Logo size="w-16 h-16" />
-          <h3 className="text-2xl font-extrabold mt-4">{titles[mode][0]}</h3>
-          <p className="text-sm text-slate-300 mt-1">{titles[mode][1]}</p>
+    <ModalShell onClose={onClose} title={titles[mode][0]} sub={titles[mode][1]}>
+      {(mode === "login" || mode === "register") && (
+        <div className="grid grid-cols-2 border-b border-slate-200">
+          {[["login", "Connexion"], ["register", "Créer un compte"]].map(([m, l]) => (
+            <button key={m} onClick={() => switchMode(m)} className={`py-3.5 text-sm font-semibold transition ${mode === m ? "text-orange-600 border-b-2 border-orange-600" : "text-slate-500 hover:text-slate-800"}`}>{l}</button>
+          ))}
         </div>
+      )}
 
-        {mode !== "done" && (
-          <div className="grid grid-cols-2 border-b border-slate-200">
-            {[["login", "Connexion"], ["register", "Créer un compte"]].map(([m, l]) => (
-              <button key={m} onClick={() => switchMode(m)} className={`py-3.5 text-sm font-semibold transition ${mode === m ? "text-orange-600 border-b-2 border-orange-600" : "text-slate-500 hover:text-slate-800"}`}>{l}</button>
-            ))}
-          </div>
-        )}
+      {mode === "login" && (
+        <div className="p-8">
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Email</span><input type="email" autoFocus value={email} onChange={(e) => { setEmail(e.target.value); setErr(""); }} className={inputCls} /></label>
+          <label className="block mt-4"><span className="text-xs font-semibold text-slate-600">Mot de passe</span><input type="password" value={pwd} onChange={(e) => { setPwd(e.target.value); setErr(""); }} onKeyDown={(e) => e.key === "Enter" && submit()} className={inputCls} /></label>
+          {err && <p className="text-sm text-rose-600 mt-3">{err}</p>}
+          <button onClick={submit} disabled={busy} className={btn + " mt-6"}>{busy ? "Connexion..." : "Se connecter"}</button>
+          <button onClick={() => switchMode("forgot")} className="w-full text-sm text-slate-500 hover:text-orange-600 mt-4">Mot de passe oublié ?</button>
+        </div>
+      )}
 
-        {mode === "login" && (
-          <div className="p-8">
-            <label className="block"><span className="text-xs font-semibold text-slate-600">Matricule</span><input autoFocus value={login} onChange={(e) => { setLogin(e.target.value); setErr(""); }} className={inputCls} /></label>
-            <label className="block mt-4"><span className="text-xs font-semibold text-slate-600">Mot de passe</span><input type="password" value={pwd} onChange={(e) => { setPwd(e.target.value); setErr(""); }} onKeyDown={(e) => e.key === "Enter" && submit()} className={inputCls} /></label>
-            {err && <p className="text-sm text-rose-600 mt-3">{err}</p>}
-            <button onClick={submit} className="w-full mt-6 py-3.5 rounded-xl bg-orange-600 text-white font-bold hover:bg-orange-700 hover:shadow-lg transition">Se connecter</button>
-            <p className="text-xs text-slate-500 mt-4 text-center">Mot de passe oublié ? Contactez le département Informatique de la CGE.</p>
-            <div className="mt-5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
-              <strong>Mode démo :</strong> membre <code>ARSTM-001</code> / <code>demo1234</code> · admin <code>admin</code> / <code>admin1234</code>
-            </div>
+      {mode === "register" && (
+        <div className="p-8 space-y-4">
+          <div className="grid grid-cols-2 gap-3">{regField("Prénoms", "prenoms")}{regField("Nom", "nom")}</div>
+          {regField("Matricule", "matricule", "text", "ex. ARSTM-2026-045")}
+          {regField("Email (servira à vous connecter)", "email", "email", "prenom.nom@exemple.com")}
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block"><span className="text-xs font-semibold text-slate-600">Filière</span>
+              <select value={reg.filiere} onChange={(e) => { setReg({ ...reg, filiere: e.target.value }); setErr(""); }} className={inputCls}>
+                <option value="">Choisir...</option>{FILIERES.map((f) => <option key={f}>{f}</option>)}
+              </select>
+            </label>
+            {regField("Promotion", "promotion", "text", "ex. 2026")}
           </div>
-        )}
+          {regField("Mot de passe (8 caractères min.)", "password", "password")}
+          {regField("Confirmer le mot de passe", "confirm", "password")}
+          {err && <p className="text-sm text-rose-600">{err}</p>}
+          <button onClick={register} disabled={busy} className={btn}><UserPlus size={18} /> {busy ? "Envoi..." : "Envoyer ma demande"}</button>
+        </div>
+      )}
 
-        {mode === "register" && (
-          <div className="p-8 space-y-4">
-            <div className="grid grid-cols-2 gap-3">{regField("Prénoms", "prenoms")}{regField("Nom", "nom")}</div>
-            {regField("Matricule (servira d'identifiant)", "matricule", "text", "ex. ARSTM-2026-045")}
-            {regField("Email", "email", "email", "prenom.nom@exemple.com")}
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block"><span className="text-xs font-semibold text-slate-600">Filière</span>
-                <select value={reg.filiere} onChange={(e) => { setReg({ ...reg, filiere: e.target.value }); setErr(""); }} className={inputCls}>
-                  <option value="">Choisir...</option>{FILIERES.map((f) => <option key={f}>{f}</option>)}
-                </select>
-              </label>
-              {regField("Promotion", "promotion", "text", "ex. 2026")}
-            </div>
-            {regField("Mot de passe (8 caractères min.)", "password", "password")}
-            {regField("Confirmer le mot de passe", "confirm", "password")}
-            {err && <p className="text-sm text-rose-600">{err}</p>}
-            <button onClick={register} className="w-full py-3.5 rounded-xl bg-orange-600 text-white font-bold hover:bg-orange-700 hover:shadow-lg transition flex items-center justify-center gap-2"><UserPlus size={18} /> Envoyer ma demande</button>
-            <p className="text-xs text-slate-500 text-center">Pour tester : créez un compte, puis connectez-vous en admin → Administration → Membres pour le valider.</p>
-          </div>
-        )}
+      {mode === "forgot" && (
+        <div className="p-8">
+          <label className="block"><span className="text-xs font-semibold text-slate-600">Email de votre compte</span><input type="email" autoFocus value={email} onChange={(e) => { setEmail(e.target.value); setErr(""); }} onKeyDown={(e) => e.key === "Enter" && forgot()} className={inputCls} /></label>
+          {err && <p className="text-sm text-rose-600 mt-3">{err}</p>}
+          <button onClick={forgot} disabled={busy} className={btn + " mt-6"}><KeyRound size={18} /> {busy ? "Envoi..." : "Recevoir le lien"}</button>
+          <button onClick={() => switchMode("login")} className="w-full text-sm text-slate-500 hover:text-orange-600 mt-4">Retour à la connexion</button>
+        </div>
+      )}
 
-        {mode === "done" && (
-          <div className="p-8 text-center">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-100 flex items-center justify-center"><Hourglass className="text-emerald-600" /></div>
-            <p className="font-bold text-slate-900 mt-5 text-lg">Votre demande a bien été envoyée !</p>
-            <p className="text-sm text-slate-600 mt-2">Un administrateur de la CGE va vérifier vos informations. Vous pourrez ensuite vous connecter avec votre matricule <strong>{login}</strong>.</p>
-            <button onClick={() => switchMode("login")} className="mt-6 px-6 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700">Retour à la connexion</button>
-          </div>
-        )}
+      {mode === "done" && (
+        <div className="p-8 text-center">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-100 flex items-center justify-center"><Hourglass className="text-emerald-600" /></div>
+          <p className="font-bold text-slate-900 mt-5 text-lg">Votre demande a bien été enregistrée !</p>
+          <p className="text-sm text-slate-600 mt-2">Un administrateur de la CGE va vérifier vos informations. Vous pourrez ensuite vous connecter avec <strong>{email}</strong>.</p>
+          <button onClick={() => switchMode("login")} className="mt-6 px-6 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700">Retour à la connexion</button>
+        </div>
+      )}
+
+      {mode === "sent" && (
+        <div className="p-8 text-center">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-sky-100 flex items-center justify-center"><Mail className="text-sky-600" /></div>
+          <p className="text-sm text-slate-600 mt-5">Si un compte existe pour <strong>{email}</strong>, un email contenant un lien vient de vous être envoyé. Pensez à vérifier vos courriers indésirables.</p>
+          <button onClick={() => switchMode("login")} className="mt-6 px-6 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700">Retour à la connexion</button>
+        </div>
+      )}
+    </ModalShell>
+  );
+}
+
+// Fenêtre affichée quand on revient sur le site depuis le lien « mot de passe oublié ».
+function NewPasswordModal({ onClose, notify }) {
+  const [p1, setP1] = useState("");
+  const [p2, setP2] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    if (p1.length < 8) return setErr("Le mot de passe doit contenir au moins 8 caractères.");
+    if (p1 !== p2) return setErr("Les deux mots de passe ne correspondent pas.");
+    setBusy(true);
+    const { error } = await sb.auth.updateUser({ password: p1 });
+    setBusy(false);
+    if (error) return setErr(authMessage(error));
+    notify("Mot de passe modifié.");
+    onClose();
+  };
+  return (
+    <ModalShell onClose={onClose} title="Nouveau mot de passe" sub="Choisissez votre nouveau mot de passe.">
+      <div className="p-8 space-y-4">
+        <label className="block"><span className="text-xs font-semibold text-slate-600">Nouveau mot de passe</span><input type="password" autoFocus value={p1} onChange={(e) => { setP1(e.target.value); setErr(""); }} className={inputCls} /></label>
+        <label className="block"><span className="text-xs font-semibold text-slate-600">Confirmer</span><input type="password" value={p2} onChange={(e) => { setP2(e.target.value); setErr(""); }} onKeyDown={(e) => e.key === "Enter" && save()} className={inputCls} /></label>
+        {err && <p className="text-sm text-rose-600">{err}</p>}
+        <button onClick={save} disabled={busy} className="w-full py-3.5 rounded-xl bg-orange-600 text-white font-bold hover:bg-orange-700 disabled:opacity-60">{busy ? "Enregistrement..." : "Enregistrer"}</button>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -1551,25 +1756,26 @@ function LoginModal({ accounts, onClose, onLogin, onRegister }) {
 // ADMINISTRATION
 // =====================================================================
 const ADMIN_SECTIONS = {
-  news: { label: "Actualités", icon: Newspaper, fields: [["title", "Titre"], ["date", "Date", "date"], ["category", "Catégorie"], ["text", "Texte", "textarea"], ["membersOnly", "Réservée aux membres", "checkbox"]], show: (i) => `${i.title} — ${fmtDate(i.date)}${i.membersOnly ? " (membres)" : ""}` },
-  events: { label: "Événements", icon: Calendar, fields: [["title", "Titre"], ["date", "Date", "date"], ["time", "Heure"], ["place", "Lieu"], ["text", "Description", "textarea"]], show: (i) => `${i.title} — ${fmtDate(i.date)}` },
-  jobs: { label: "Offres", icon: Briefcase, fields: [["title", "Intitulé"], ["company", "Entreprise"], ["type", "Type", "select", ["Stage", "Emploi"]], ["duration", "Durée / contrat"], ["place", "Lieu"], ["text", "Description", "textarea"]], show: (i) => `${i.title} — ${i.company}` },
-  alumni: { label: "Alumni", icon: GraduationCap, fields: [["name", "Nom"], ["promo", "Promotion"], ["role", "Poste"], ["company", "Entreprise"]], show: (i) => `${i.name} — Promo ${i.promo}` },
+  news: { table: "news", fromDb: newsFromDb, toDb: newsToDb, label: "Actualités", icon: Newspaper, fields: [["title", "Titre"], ["date", "Date", "date"], ["category", "Catégorie"], ["text", "Texte", "textarea"], ["membersOnly", "Réservée aux membres", "checkbox"]], show: (i) => `${i.title} — ${fmtDate(i.date)}${i.membersOnly ? " (membres)" : ""}` },
+  events: { table: "events", fromDb: plainFromDb, toDb: plainToDb, label: "Événements", icon: Calendar, fields: [["title", "Titre"], ["date", "Date", "date"], ["time", "Heure"], ["place", "Lieu"], ["text", "Description", "textarea"]], show: (i) => `${i.title} — ${fmtDate(i.date)}` },
+  jobs: { table: "jobs", fromDb: plainFromDb, toDb: plainToDb, label: "Offres", icon: Briefcase, fields: [["title", "Intitulé"], ["company", "Entreprise"], ["type", "Type", "select", ["Stage", "Emploi"]], ["duration", "Durée / contrat"], ["place", "Lieu"], ["text", "Description", "textarea"]], show: (i) => `${i.title} — ${i.company}` },
+  alumni: { table: "alumni", fromDb: plainFromDb, toDb: plainToDb, label: "Alumni", icon: GraduationCap, fields: [["name", "Nom"], ["promo", "Promotion"], ["role", "Poste"], ["company", "Entreprise"]], show: (i) => `${i.name} — Promo ${i.promo}` },
 };
 
 // Une case d'image modifiable : aperçu + bouton « Changer » + bouton « Retirer ».
 function ImageSlot({ imgKey, label, sub, round, notify }) {
-  const { images, setImage } = useContext(ImgCtx);
+  const { images, overrides, saveImage } = useContext(ImgCtx);
   const [busy, setBusy] = useState(false);
   const src = images[imgKey];
+  const hasOverride = Object.prototype.hasOwnProperty.call(overrides, imgKey);
+  const run = async (fn, msg) => {
+    setBusy(true);
+    try { await fn(); notify(msg); } catch (err) { notify(err.message, "error"); } finally { setBusy(false); }
+  };
   const onFile = (e) => {
     const f = e.target.files && e.target.files[0]; e.target.value = "";
     if (!f) return;
-    setBusy(true);
-    compressImage(f, round ? 500 : 700)
-      .then((data) => { setImage(imgKey, data); notify(`Image mise à jour : ${label}`); })
-      .catch((err) => notify(err.message, "error"))
-      .finally(() => setBusy(false));
+    run(async () => saveImage(imgKey, await compressImage(f, round ? 500 : 700)), `Image mise à jour : ${label}`);
   };
   return (
     <div className="flex items-center gap-4 p-4 rounded-2xl border border-slate-200 hover:border-orange-300 transition">
@@ -1581,10 +1787,14 @@ function ImageSlot({ imgKey, label, sub, round, notify }) {
         {sub && <p className="text-xs text-slate-500 truncate">{sub}</p>}
         <div className="flex gap-2 mt-2">
           <label className={`cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition ${busy ? "bg-slate-200 text-slate-500" : "bg-orange-600 text-white hover:bg-orange-700"}`}>
-            <Camera size={13} /> {busy ? "Traitement..." : src ? "Changer" : "Ajouter"}
+            <Camera size={13} /> {busy ? "Envoi..." : src ? "Changer" : "Ajouter"}
             <input type="file" accept="image/*" onChange={onFile} disabled={busy} className="hidden" />
           </label>
-          {src && <button onClick={() => { setImage(imgKey, null); notify(`Image retirée : ${label}`); }} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 text-slate-600 hover:text-rose-600">Retirer</button>}
+          {hasOverride && !busy && (
+            <button onClick={() => run(() => saveImage(imgKey, null), `Image retirée : ${label}`)} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 text-slate-600 hover:text-rose-600">
+              {DEFAULT_IMAGES[imgKey] ? "Image d'origine" : "Retirer"}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -1602,7 +1812,7 @@ function ImagesManager({ notify }) {
     <div className="space-y-6">
       <div className="rounded-2xl bg-sky-50 border border-sky-200 p-5 flex gap-3 text-sm text-sky-900">
         <Info size={20} className="flex-shrink-0 text-sky-600 mt-0.5" />
-        <p><strong>Mode démo :</strong> les images changées ici sont enregistrées dans ce navigateur uniquement. Dans la version finale, elles seront enregistrées sur le serveur et visibles par tous les visiteurs. Les images sont automatiquement réduites pour rester légères.</p>
+        <p>Les images sont enregistrées en ligne et deviennent visibles immédiatement pour tous les visiteurs. Elles sont automatiquement réduites pour rester légères.</p>
       </div>
       {groups.map((g) => (
         <Panel key={g.title} title={g.title} Icon={ImageIcon}>
@@ -1616,60 +1826,81 @@ function ImagesManager({ notify }) {
   );
 }
 
-function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, setAlumni, applications, setApplications, registrations, accounts, setAccounts, currentLogin, notify }) {
+function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, setAlumni, applications, setApplications, registrations, members, setMembers, currentId, notify, reload }) {
   const [tab, setTab] = useState("news");
   const [form, setForm] = useState({});
   const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [viewing, setViewing] = useState(null); // { profile, name } pour afficher le CV d'un membre
   const formRef = useRef(null);
 
   const store = { news: [news, setNews], events: [events, setEvents], jobs: [jobs, setJobs], alumni: [alumni, setAlumni] };
   const cfg = ADMIN_SECTIONS[tab];
   const [items, setItems] = store[tab] || [[], () => {}];
-  const pending = accounts.filter((a) => a.status === "en_attente");
-  const active = accounts.filter((a) => a.status === "actif");
+  const pending = members.filter((m) => m.statut === "en_attente");
+  const active = members.filter((m) => m.statut === "actif");
 
   const resetForm = () => { setForm({}); setEditingId(null); };
   const switchTab = (k) => { setTab(k); resetForm(); };
 
   // ----- Contenus (actualités, événements, offres, alumni) -----
-  const save = () => {
+  const save = async () => {
+    if (saving) return;
     const missing = cfg.fields.find(([k, , t]) => t !== "checkbox" && t !== "select" && k !== "text" && !String(form[k] || "").trim());
     if (missing) return notify(`Le champ « ${missing[1]} » est obligatoire.`, "error");
     const defaults = {}; cfg.fields.forEach(([k, , t, opts]) => { if (t === "select") defaults[k] = opts[0]; });
-    const clean = { ...defaults, ...form };
-    if (tab === "news") clean.membersOnly = !!form.membersOnly;
-    if (editingId) {
-      setItems(items.map((x) => (x.id === editingId ? { ...clean, id: editingId } : x)));
-      notify("Modifications enregistrées.");
-    } else {
-      setItems([...items, { ...clean, id: Date.now() }]);
-      notify("Ajouté avec succès.");
-    }
+    const payload = cfg.toDb({ ...defaults, ...form });
+    setSaving(true);
+    const query = editingId ? sb.from(cfg.table).update(payload).eq("id", editingId) : sb.from(cfg.table).insert(payload);
+    const { data, error } = await query.select().single();
+    setSaving(false);
+    if (error) return notify("Enregistrement impossible : " + error.message, "error");
+    const item = cfg.fromDb(data);
+    const id = editingId;
+    setItems((list) => (id ? list.map((x) => (x.id === id ? item : x)) : [...list, item]));
+    notify(id ? "Modifications enregistrées." : "Ajouté avec succès.");
     resetForm();
   };
   const startEdit = (item) => {
     setForm({ ...item }); setEditingId(item.id);
     if (formRef.current) formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-  const remove = (item) => {
-    setItems(items.filter((x) => x.id !== item.id));
+  const remove = async (item) => {
+    const { error } = await sb.from(cfg.table).delete().eq("id", item.id);
+    if (error) return notify("Suppression impossible : " + error.message, "error");
+    setItems((list) => list.filter((x) => x.id !== item.id));
     if (editingId === item.id) resetForm();
     notify("Supprimé.");
   };
 
   // ----- Membres -----
-  const approve = (acc) => { setAccounts(accounts.map((a) => (a.login === acc.login ? { ...a, status: "actif" } : a))); notify(`Compte validé : ${acc.name}`); };
-  const removeAccount = (acc, msg) => { setAccounts(accounts.filter((a) => a.login !== acc.login)); DB.remove(`profile:${acc.login}`); notify(msg); };
-  const openProfile = (login, name) => {
-    const p = DB.get(`profile:${login}`, null);
-    if (!p) return notify("Ce membre n'a pas encore rempli son profil.", "error");
-    const profile = { ...EMPTY_PROFILE, ...p };
-    setViewing({ profile, name: [profile.prenoms, profile.nom].filter(Boolean).join(" ") || name });
+  const updateMember = async (m, patch, msg) => {
+    const { data, error } = await sb.from("profiles").update(patch).eq("id", m.id).select().single();
+    if (error) return notify("Action impossible : " + error.message, "error");
+    setMembers((list) => list.map((x) => (x.id === m.id ? data : x)));
+    notify(msg);
+  };
+  const deleteMember = async (m, msg) => {
+    if (m.data?.cv?.path) await sb.storage.from("cvs").remove([m.data.cv.path]);
+    const { error } = await sb.rpc("admin_delete_user", { target: m.id });
+    if (error) return notify("Suppression impossible : " + error.message, "error");
+    setMembers((list) => list.filter((x) => x.id !== m.id));
+    setApplications((list) => list.filter((a) => a.userId !== m.id));
+    notify(msg);
+  };
+  const openProfile = (userId) => {
+    const m = members.find((x) => x.id === userId);
+    if (!m) return notify("Ce membre n'existe plus.", "error");
+    setViewing({ profile: rowToProfile(m), name: accountName(m) });
   };
 
   // ----- Candidatures -----
-  const setStatus = (id, status) => { setApplications(applications.map((a) => (a.id === id ? { ...a, status } : a))); notify(`Statut mis à jour : ${status}`); };
+  const setStatus = async (id, status) => {
+    const { error } = await sb.from("applications").update({ status }).eq("id", id);
+    if (error) return notify("Mise à jour impossible : " + error.message, "error");
+    setApplications((list) => list.map((a) => (a.id === id ? { ...a, status } : a)));
+    notify(`Statut mis à jour : ${status}`);
+  };
 
   const tabs = [
     ...Object.entries(ADMIN_SECTIONS),
@@ -1681,11 +1912,8 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
   return (
     <main className="max-w-6xl mx-auto px-4 py-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-        <p className="text-sm text-slate-500">Version démo : les données sont enregistrées dans ce navigateur uniquement.</p>
-        <ConfirmButton onConfirm={() => { DB.clearAll(); window.location.reload(); }} confirmLabel="Tout effacer ?"
-          className="self-start px-4 py-2 rounded-xl bg-white shadow-sm text-sm font-semibold text-slate-600 hover:text-rose-600 flex items-center gap-2">
-          <RotateCcw size={15} /> Réinitialiser la démo
-        </ConfirmButton>
+        <p className="text-sm text-slate-500">Les modifications sont enregistrées en ligne et visibles immédiatement par tous.</p>
+        <button onClick={() => { reload(); notify("Données actualisées."); }} className="self-start px-4 py-2 rounded-xl bg-white shadow-sm text-sm font-semibold text-slate-600 hover:text-orange-600 flex items-center gap-2"><RotateCcw size={15} /> Actualiser</button>
       </div>
 
       {pending.length > 0 && tab !== "members" && (
@@ -1708,19 +1936,19 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
           <Panel title={`Demandes d'inscription (${pending.length})`} Icon={UserPlus}>
             {pending.length === 0 ? <p className="text-sm text-slate-500">Aucune demande en attente.</p> : (
               <ul className="divide-y divide-slate-100">
-                {pending.map((a) => (
-                  <li key={a.login} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                {pending.map((m) => (
+                  <li key={m.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <Avatar name={a.name} size="w-11 h-11" text="text-sm" />
+                      <Avatar name={accountName(m)} size="w-11 h-11" text="text-sm" />
                       <div>
-                        <p className="font-bold text-slate-900">{a.name}</p>
-                        <p className="text-sm text-slate-500">Matricule <strong>{a.login}</strong> · {a.filiere} · Promo {a.promotion}</p>
-                        <p className="text-xs text-slate-500">{a.email}{a.createdAt && ` · demande du ${fmtDate(a.createdAt)}`}</p>
+                        <p className="font-bold text-slate-900">{accountName(m)}</p>
+                        <p className="text-sm text-slate-500">Matricule <strong>{m.matricule || "—"}</strong> · {m.filiere || "filière ?"} · Promo {m.promotion || "?"}</p>
+                        <p className="text-xs text-slate-500">{m.email} · demande du {fmtDate(m.created_at)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => approve(a)} className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 flex items-center gap-1"><CheckCircle2 size={15} /> Valider</button>
-                      <ConfirmButton onConfirm={() => removeAccount(a, `Demande refusée : ${a.name}`)} confirmLabel="Refuser ?" className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-sm font-semibold text-slate-600 hover:text-rose-600">Refuser</ConfirmButton>
+                      <button onClick={() => updateMember(m, { statut: "actif" }, `Compte validé : ${accountName(m)}`)} className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 flex items-center gap-1"><CheckCircle2 size={15} /> Valider</button>
+                      <ConfirmButton onConfirm={() => deleteMember(m, `Demande refusée : ${accountName(m)}`)} confirmLabel="Refuser ?" className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-sm font-semibold text-slate-600 hover:text-rose-600">Refuser</ConfirmButton>
                     </div>
                   </li>
                 ))}
@@ -1729,25 +1957,31 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
           </Panel>
           <Panel title={`Membres actifs (${active.length})`} Icon={Users}>
             <ul className="divide-y divide-slate-100">
-              {active.map((a) => {
-                const demo = isDemoAccount(a.login);
+              {active.map((m) => {
+                const self = m.id === currentId;
                 return (
-                  <li key={a.login} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <li key={m.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <Avatar name={a.name} size="w-10 h-10" text="text-sm" />
+                      <Avatar photo={m.data?.photo} name={accountName(m)} size="w-10 h-10" text="text-sm" />
                       <div>
                         <p className="font-semibold text-slate-900 flex flex-wrap items-center gap-2">
-                          {a.name}
-                          {a.role === "admin" && <span className="text-xs px-2 py-0.5 rounded-full bg-slate-900 text-white">Admin</span>}
-                          {demo && <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Démo</span>}
+                          {accountName(m)}
+                          {m.role === "admin" && <span className="text-xs px-2 py-0.5 rounded-full bg-slate-900 text-white">Admin</span>}
+                          {self && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Vous</span>}
                         </p>
-                        <p className="text-xs text-slate-500">{a.login}{a.email && ` · ${a.email}`}{a.promotion && ` · Promo ${a.promotion}`}</p>
+                        <p className="text-xs text-slate-500">{m.email}{m.matricule && ` · ${m.matricule}`}{m.promotion && ` · Promo ${m.promotion}`}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => openProfile(a.login, a.name)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1"><Eye size={14} /> Profil</button>
-                      {!demo && a.login !== currentLogin && (
-                        <ConfirmButton onConfirm={() => removeAccount(a, `Membre supprimé : ${a.name}`)} confirmLabel="Supprimer ?" ariaLabel="Supprimer ce membre" className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={16} /></ConfirmButton>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button onClick={() => openProfile(m.id)} className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1"><Eye size={14} /> Profil</button>
+                      {!self && (
+                        <ConfirmButton onConfirm={() => updateMember(m, { role: m.role === "admin" ? "membre" : "admin" }, m.role === "admin" ? `${accountName(m)} n'est plus administrateur.` : `${accountName(m)} est maintenant administrateur.`)}
+                          confirmLabel={m.role === "admin" ? "Retirer ?" : "Nommer ?"} className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1">
+                          <Shield size={14} /> {m.role === "admin" ? "Retirer admin" : "Nommer admin"}
+                        </ConfirmButton>
+                      )}
+                      {!self && (
+                        <ConfirmButton onConfirm={() => deleteMember(m, `Membre supprimé : ${accountName(m)}`)} confirmLabel="Supprimer ?" ariaLabel="Supprimer ce membre" className="p-2 rounded-lg text-rose-600 hover:bg-rose-50"><Trash2 size={16} /></ConfirmButton>
                       )}
                     </div>
                   </li>
@@ -1773,7 +2007,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                     <select value={a.status} onChange={(e) => setStatus(a.id, e.target.value)} className={`px-3 py-2 rounded-xl text-xs font-bold border-0 focus:ring-2 focus:ring-orange-500 ${STATUS_STYLES[a.status] || ""}`}>
                       {APP_STATUSES.map((s) => <option key={s}>{s}</option>)}
                     </select>
-                    {a.login && <button onClick={() => openProfile(a.login, a.applicant)} className="px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1"><Eye size={14} /> Profil & CV</button>}
+                    <button onClick={() => openProfile(a.userId)} className="px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:text-orange-600 flex items-center gap-1"><Eye size={14} /> Profil & CV</button>
                   </div>
                 </li>
               ))}
@@ -1798,7 +2032,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                 ))}
                 <div className="flex gap-2 pt-1">
                   {editingId && <button onClick={resetForm} className="flex-1 py-3 rounded-xl bg-white border border-slate-300 font-semibold text-slate-700">Annuler</button>}
-                  <button onClick={save} className="flex-1 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700">{editingId ? "Enregistrer les modifications" : "Ajouter"}</button>
+                  <button onClick={save} disabled={saving} className="flex-1 py-3 rounded-xl bg-orange-600 text-white font-semibold hover:bg-orange-700 disabled:opacity-60">{saving ? "Enregistrement..." : editingId ? "Enregistrer les modifications" : "Ajouter"}</button>
                 </div>
               </div>
             </Panel>
@@ -1828,7 +2062,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
         </div>
       )}
 
-      {viewing && <CVPreview profile={viewing.profile} fullName={viewing.name} onClose={() => setViewing(null)} />}
+      {viewing && <CVPreview profile={viewing.profile} fullName={viewing.name} notify={notify} onClose={() => setViewing(null)} />}
     </main>
   );
 }
@@ -1847,7 +2081,7 @@ class ErrorBoundary extends React.Component {
         <h1 style={{ color: "#e67700", fontSize: 22, fontWeight: 800 }}>Le site a rencontré une erreur</h1>
         <p style={{ marginTop: 12 }}>Faites une capture d'écran de ce message et envoyez-la :</p>
         <pre style={{ marginTop: 12, padding: 16, background: "#fee2e2", borderRadius: 12, whiteSpace: "pre-wrap", fontSize: 13 }}>{String(e && e.message) + "\n\n" + String((e && e.stack) || "").split("\n").slice(0, 6).join("\n")}</pre>
-        <button onClick={() => { DB.clearAll(); window.location.reload(); }} style={{ marginTop: 16, padding: "10px 18px", borderRadius: 10, background: "#e67700", color: "white", fontWeight: 700, border: 0, cursor: "pointer" }}>Effacer les données de démo et recharger</button>
+        <button onClick={() => window.location.reload()} style={{ marginTop: 16, padding: "10px 18px", borderRadius: 10, background: "#e67700", color: "white", fontWeight: 700, border: 0, cursor: "pointer" }}>Recharger la page</button>
       </div>
     );
   }
