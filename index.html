@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>CGE ARSTM — Conférence des Grandes Écoles</title>
 <meta name="description" content="Section ARSTM de la Conférence des Grandes Écoles de Côte d'Ivoire : actualités, bureau exécutif, événements, offres de stages et d'emplois, réseau alumni et espace membre." />
-<meta name="theme-color" content="#ea580c" />
+<meta name="theme-color" content="#ff8a00" />
+<link rel="icon" type="image/png" href="logos/cge-arstm.png" />
 
 <!-- Police -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -14,7 +15,13 @@
 
 <!-- Outils (version de TEST : à optimiser avant la mise en ligne définitive) -->
 <script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config = { theme: { extend: { fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"] } } } };</script>
+<script>
+  // Couleurs du site : "orange" est calé sur l'orange du logo CGE-ARSTM (500 = couleur du logo).
+  tailwind.config = { theme: { extend: {
+    fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"] },
+    colors: { orange: { 50: "#fff7eb", 100: "#ffecc9", 200: "#ffd68f", 300: "#ffbb52", 400: "#ffa024", 500: "#ff8a00", 600: "#e67700", 700: "#bf5d00", 800: "#994904", 900: "#7c3d08" } },
+  } } };
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
 <script>window.react = window.React; /* la bibliothèque d'icônes cherche React sous ce nom */</script>
@@ -31,7 +38,7 @@
   @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}.fade-up{animation:fadeUp .6s ease both}
   @keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.3}}.pulse-dot{animation:pulseDot 1.6s ease-in-out infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .loader{width:44px;height:44px;border:4px solid #fed7aa;border-top-color:#ea580c;border-radius:50%;animation:spin .8s linear infinite}
+  .loader{width:44px;height:44px;border:4px solid #ffd68f;border-top-color:#ff8a00;border-radius:50%;animation:spin .8s linear infinite}
   @media (prefers-reduced-motion:reduce){*{animation:none!important}}
   @media print{body *{visibility:hidden!important}.cv-print,.cv-print *{visibility:visible!important}.cv-print{position:absolute;left:0;top:0;width:100%;box-shadow:none!important;margin:0!important}}
 </style>
@@ -56,12 +63,14 @@
     if (!window.Babel) missing.push("Babel");
     if (!window.LucideReact) missing.push("Icônes");
     if (!window.tailwind) missing.push("Tailwind");
-    document.getElementById("root").innerHTML = '<div style="padding:32px;font-family:sans-serif;max-width:700px;margin:40px auto"><h1 style="color:#ea580c;font-size:22px;font-weight:800">Le site ne parvient pas à démarrer</h1><p style="margin-top:12px;line-height:1.6">' +
+    document.getElementById("root").innerHTML = '<div style="padding:32px;font-family:sans-serif;max-width:700px;margin:40px auto"><h1 style="color:#e67700;font-size:22px;font-weight:800">Le site ne parvient pas à démarrer</h1><p style="margin-top:12px;line-height:1.6">' +
       (missing.length ? "Outils non chargés : <b>" + missing.join(", ") + "</b>. Vérifiez la connexion internet ou désactivez un éventuel bloqueur de publicités." : "Les outils sont bien chargés : l'erreur vient du code. Appuyez sur F12, ouvrez l'onglet « Console » et envoyez une capture des messages en rouge.") + "</p></div>";
   }, 10000);
 </script>
+
 <script type="text/babel" data-presets="react">
-const { useState, useEffect } = React;
+const { useState, useEffect, useContext, createContext } = React;
+
 // Icônes : si une icône manque, on affiche un espace vide au lieu de faire planter tout le site.
 const LR = window.LucideReact || {};
 const IconFallback = ({ size = 24, className = "" }) => <span className={className} style={{ display: "inline-block", width: size, height: size }} />;
@@ -74,15 +83,29 @@ const Anchor = pickIcon("Anchor"), Menu = pickIcon("Menu"), X = pickIcon("X"), C
   Camera = pickIcon("Camera"), Award = pickIcon("Award"), CheckCircle2 = pickIcon("CheckCircle2", "CircleCheck", "CheckCircle"), Sparkles = pickIcon("Sparkles"),
   Compass = pickIcon("Compass"), Send = pickIcon("Send"), Download = pickIcon("Download"), Printer = pickIcon("Printer"), ArrowRight = pickIcon("ArrowRight"),
   LayoutDashboard = pickIcon("LayoutDashboard", "LayoutGrid"), Quote = pickIcon("Quote"), Globe = pickIcon("Globe"), Search = pickIcon("Search"),
-  Ship = pickIcon("Ship"), Megaphone = pickIcon("Megaphone"), Handshake = pickIcon("Handshake", "HeartHandshake");
+  Ship = pickIcon("Ship"), Megaphone = pickIcon("Megaphone"), Handshake = pickIcon("Handshake", "HeartHandshake"), ImageIcon = pickIcon("Image", "ImageIcon"),
+  Info = pickIcon("Info");
 
 // =====================================================================
-// À PERSONNALISER
+// À PERSONNALISER — images par défaut (l'administrateur peut aussi les changer depuis le site)
 // =====================================================================
-const LOGO_SRC = null; // lien ou chemin du logo de la CGE (ex. "logos/cge.png"). null = logo provisoire.
+const LOGO_SRC = "logos/cge-arstm.png"; // logo de la CGE-ARSTM, dans le dossier "logos" à côté de index.html
 
 // Logos des écoles membres : lien ou chemin de l'image (ex. "logos/ensea.png"). null = sigle affiché.
 const LOGOS_ECOLES = { ARSTM: null, ENSEA: null, ESATIC: null, "INP-HB": null, ESA: null, ESCAE: null, ESI: null, ESMG: null, ESTP: null };
+
+// Photos du bureau : nom exact du membre => chemin de la photo (ex. "NANGUI AKRE": "photos/nangui-akre.jpg").
+const PHOTOS_BUREAU = {};
+
+// Partenaires : ajouter d'autres partenaires sur le même modèle.
+const PARTENAIRES = [
+  {
+    name: "Fondation Benianh International", short: "BENIANH", role: "Partenaire officiel", logo: null, // ex. "logos/benianh.png"
+    url: "https://fondationbenianh.org", // à vérifier
+    text: "Fondation ivoirienne créée en 1996 et reconnue d'utilité publique en 2012, elle œuvre pour la promotion de l'excellence et du mérite : bourses d'études, soutien aux associations d'étudiants et accompagnement des programmes de formation et d'emploi.",
+    tags: ["Bourses d'excellence", "Soutien aux associations étudiantes", "Formation & emploi"],
+  },
+];
 
 // Comptes de DÉMONSTRATION. La vraie version utilisera une connexion sécurisée côté serveur.
 const DEMO_ACCOUNTS = [
@@ -140,6 +163,39 @@ const EMPTY_PROFILE = {
 };
 
 // =====================================================================
+// IMAGES MODIFIABLES PAR L'ADMINISTRATEUR
+// Clés : "logo", "ecole:ENSEA", "partenaire:<nom>", "membre:<nom>"
+// =====================================================================
+const DEFAULT_IMAGES = {
+  logo: LOGO_SRC,
+  ...Object.fromEntries(Object.entries(LOGOS_ECOLES).map(([k, v]) => [`ecole:${k}`, v])),
+  ...Object.fromEntries(PARTENAIRES.map((p) => [`partenaire:${p.name}`, p.logo])),
+  ...Object.fromEntries(Object.entries(PHOTOS_BUREAU).map(([k, v]) => [`membre:${k}`, v])),
+};
+const ImgCtx = createContext({ images: DEFAULT_IMAGES, setImage: () => {} });
+const useImages = () => useContext(ImgCtx).images;
+
+// Réduit une image avant de l'utiliser (une photo de téléphone de 5 Mo devient ~100 Ko).
+const compressImage = (file, max = 700) => new Promise((resolve, reject) => {
+  if (!file || !file.type || !file.type.startsWith("image/")) return reject(new Error("Ce fichier n'est pas une image."));
+  if (file.size > 10 * 1048576) return reject(new Error("Image trop lourde (10 Mo maximum)."));
+  const url = URL.createObjectURL(file);
+  const img = new window.Image();
+  img.onload = () => {
+    const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    // PNG/WebP gardent la transparence (idéal pour les logos), les photos passent en JPEG.
+    resolve(/png|webp|svg|gif/.test(file.type) ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", 0.85));
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Image illisible. Essayez une image JPG ou PNG.")); };
+  img.src = url;
+});
+
+// =====================================================================
 // OUTILS
 // =====================================================================
 const NAVY = "linear-gradient(135deg, #0b1b33 0%, #13294b 55%, #1e3a5f 100%)";
@@ -172,15 +228,31 @@ function useCountUp(target, duration = 1600) {
 // =====================================================================
 // PETITS COMPOSANTS
 // =====================================================================
-const Logo = ({ size = "w-11 h-11" }) =>
-  LOGO_SRC ? <img src={LOGO_SRC} alt="Logo CGE ARSTM" className={`${size} object-contain`} /> :
-  <div className={`${size} rounded-full bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center text-white font-extrabold text-xs shadow-md`}>CGE</div>;
+// Image qui se remplace par un contenu de secours si le fichier est introuvable.
+function SafeImg({ src, alt, className, fallback }) {
+  const [failed, setFailed] = useState(null);
+  if (!src || failed === src) return fallback;
+  return <img src={src} alt={alt} onError={() => setFailed(src)} className={className} />;
+}
+
+const Logo = ({ size = "w-11 h-11" }) => {
+  const images = useImages();
+  return <SafeImg src={images.logo} alt="Logo CGE ARSTM" className={`${size} object-contain bg-white rounded-xl p-0.5 shadow-sm`}
+    fallback={<div className={`${size} rounded-full bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center text-white font-extrabold text-xs shadow-md`}>CGE</div>} />;
+};
 
 const SchoolLogo = ({ code, dark, small }) => {
+  const images = useImages();
   const size = small ? "w-6 h-6" : "w-16 h-16";
-  if (LOGOS_ECOLES[code]) return <img src={LOGOS_ECOLES[code]} alt={`Logo ${code}`} className={`${size} object-contain rounded-xl bg-white ${small ? "p-0.5" : "p-1.5 shadow-sm"}`} />;
-  if (small) return null;
-  return <div className={`${size} rounded-2xl flex items-center justify-center text-xs font-extrabold ${dark ? "bg-white bg-opacity-20 text-white" : "bg-orange-100 text-orange-700"}`}>{code}</div>;
+  const fallback = small ? null : <div className={`${size} rounded-2xl flex items-center justify-center text-xs font-extrabold ${dark ? "bg-white bg-opacity-20 text-white" : "bg-orange-100 text-orange-700"}`}>{code}</div>;
+  return <SafeImg src={images[`ecole:${code}`]} alt={`Logo ${code}`} className={`${size} object-contain rounded-xl bg-white ${small ? "p-0.5" : "p-1.5 shadow-sm"}`} fallback={fallback} />;
+};
+
+// Photo d'un membre du bureau (ou ses initiales s'il n'y a pas de photo).
+const MemberPhoto = ({ name, size = "w-20 h-20", text = "text-xl", gradient = "from-orange-500 to-amber-400", className = "" }) => {
+  const images = useImages();
+  return <SafeImg src={images[`membre:${name}`]} alt={name} className={`${size} rounded-full object-cover ${className}`}
+    fallback={<div className={`${size} ${text} rounded-full bg-gradient-to-br ${gradient} text-white font-extrabold flex items-center justify-center ${className}`}>{initials(name)}</div>} />;
 };
 
 const Avatar = ({ photo, name, size = "w-12 h-12", text = "text-base" }) =>
@@ -232,7 +304,7 @@ const Ring = ({ pct, size = 120 }) => {
     <div className="relative" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
         <circle cx={size / 2} cy={size / 2} r={r} stroke="#e2e8f0" strokeWidth="10" fill="none" />
-        <circle cx={size / 2} cy={size / 2} r={r} stroke="#ea580c" strokeWidth="10" fill="none" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} style={{ transition: "stroke-dashoffset .8s ease" }} />
+        <circle cx={size / 2} cy={size / 2} r={r} stroke="#ff8a00" strokeWidth="10" fill="none" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct / 100)} style={{ transition: "stroke-dashoffset .8s ease" }} />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center text-2xl font-extrabold text-slate-900">{pct}%</div>
     </div>
@@ -241,8 +313,8 @@ const Ring = ({ pct, size = 120 }) => {
 
 const Panel = ({ title, Icon, children, action }) => (
   <div className="bg-white rounded-3xl shadow-sm p-6 md:p-8">
-    <div className="flex items-center justify-between mb-6">
-      <h2 className="text-xl font-bold text-slate-900 flex items-center gap-3"><span className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center"><Icon size={19} className="text-orange-600" /></span>{title}</h2>
+    <div className="flex items-center justify-between gap-3 mb-6">
+      <h2 className="text-xl font-bold text-slate-900 flex items-center gap-3"><span className="w-10 h-10 flex-shrink-0 rounded-xl bg-orange-100 flex items-center justify-center"><Icon size={19} className="text-orange-600" /></span>{title}</h2>
       {action}
     </div>
     {children}
@@ -267,6 +339,14 @@ function App() {
   const [registrations, setRegistrations] = useState([]);
   const [newsFilter, setNewsFilter] = useState("Toutes");
   const [alumniQuery, setAlumniQuery] = useState("");
+  const [images, setImages] = useState(DEFAULT_IMAGES);
+  const setImage = (key, value) => setImages((s) => ({ ...s, [key]: value }));
+
+  // L'icône de l'onglet suit le logo choisi par l'administrateur.
+  useEffect(() => {
+    const link = document.querySelector('link[rel="icon"]');
+    if (link && images.logo) link.href = images.logo;
+  }, [images.logo]);
 
   const notify = (msg, type = "success") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3200); };
   const go = (p) => { setPage(p); setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
@@ -303,6 +383,7 @@ function App() {
   const logout = () => { setUser(null); go("accueil"); notify("Vous êtes déconnecté(e)."); };
 
   return (
+    <ImgCtx.Provider value={{ images, setImage }}>
     <div className="min-h-screen bg-stone-50 text-slate-800 font-sans">
       {toast && (
         <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-2 fade-up ${toast.type === "error" ? "bg-rose-600 text-white" : "bg-slate-900 text-white"}`}>
@@ -445,7 +526,7 @@ function App() {
             <main className="max-w-6xl mx-auto px-4 py-16 space-y-14">
               <div className="relative rounded-3xl overflow-hidden text-white p-8 md:p-10 flex flex-col md:flex-row items-center gap-8 shadow-2xl" style={{ background: NAVY }}>
                 <div className="absolute -right-10 -bottom-10 w-64 h-64 rounded-full bg-orange-500 opacity-20 blur-3xl" />
-                <div className="relative w-36 h-36 rounded-full bg-gradient-to-br from-orange-500 to-amber-400 flex items-center justify-center text-4xl font-extrabold ring-8 ring-white ring-opacity-10">{initials(PRESIDENT.name)}</div>
+                <MemberPhoto name={PRESIDENT.name} size="w-36 h-36" text="text-4xl" className="relative ring-8 ring-white ring-opacity-10" />
                 <div className="relative text-center md:text-left">
                   <span className="px-3 py-1 rounded-full bg-orange-600 text-xs font-bold uppercase tracking-wider">Président</span>
                   <h2 className="text-3xl md:text-4xl font-extrabold mt-3">{PRESIDENT.name}</h2>
@@ -461,7 +542,9 @@ function App() {
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
                     {g.members.filter(([n]) => n !== PRESIDENT.name).map(([name, role], i) => (
                       <div key={name} className="group bg-white rounded-3xl p-6 text-center shadow-sm hover:shadow-xl hover:-translate-y-1 transition duration-300">
-                        <div className={`w-20 h-20 mx-auto rounded-full bg-gradient-to-br ${i === 0 ? "from-orange-500 to-amber-400" : "from-slate-800 to-slate-600"} text-white flex items-center justify-center text-xl font-bold group-hover:scale-105 transition`}>{initials(name)}</div>
+                        <div className="flex justify-center group-hover:scale-105 transition">
+                          <MemberPhoto name={name} gradient={i === 0 ? "from-orange-500 to-amber-400" : "from-slate-800 to-slate-600"} />
+                        </div>
                         <p className="font-bold text-slate-900 mt-4 text-sm">{name}</p>
                         <p className={`text-xs mt-1 font-medium ${i === 0 ? "text-orange-600" : "text-slate-500"}`}>{role}</p>
                       </div>
@@ -610,7 +693,7 @@ function App() {
       <footer className="relative text-slate-400 mt-10" style={{ background: "#0b1b33" }}>
         <div className="max-w-6xl mx-auto px-4 py-14 grid md:grid-cols-4 gap-10">
           <div className="md:col-span-2">
-            <div className="flex items-center gap-3"><Logo /><span className="font-extrabold text-white text-lg">CGE <span className="text-orange-500">ARSTM</span></span></div>
+            <div className="flex items-center gap-3"><Logo size="w-14 h-14" /><span className="font-extrabold text-white text-lg">CGE <span className="text-orange-500">ARSTM</span></span></div>
             <p className="text-sm mt-4 max-w-sm">Section ARSTM de la Conférence des Grandes Écoles de Côte d'Ivoire, association des ingénieurs de conception des grandes écoles publiques, créée en mai 1992.</p>
           </div>
           <div>
@@ -619,6 +702,7 @@ function App() {
             <p className="text-sm flex items-center gap-2 mt-2"><Mail size={14} className="text-orange-500" /> email à compléter</p>
             <p className="text-sm flex items-center gap-2 mt-2"><Phone size={14} className="text-orange-500" /> téléphone à compléter</p>
             <a href="https://www.facebook.com/ci.cge/" target="_blank" rel="noopener noreferrer" className="text-sm flex items-center gap-2 mt-2 hover:text-orange-400 transition"><Globe size={14} className="text-orange-500" /> Facebook CGE Côte d'Ivoire</a>
+            <p className="text-sm flex items-center gap-2 mt-4"><Handshake size={14} className="text-orange-500" /> Partenaire officiel : Fondation Benianh International</p>
           </div>
           <div>
             <h4 className="text-white font-semibold mb-4">Liens rapides</h4>
@@ -632,6 +716,7 @@ function App() {
 
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onLogin={(u) => { setUser(u); setLoginOpen(false); notify(`Bienvenue, ${u.name} !`); }} />}
     </div>
+    </ImgCtx.Provider>
   );
 }
 
@@ -639,6 +724,7 @@ function App() {
 // PAGE D'ACCUEIL
 // =====================================================================
 function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct }) {
+  const images = useImages();
   const left = nextEvent ? daysUntil(nextEvent.date) : null;
   return (
     <>
@@ -701,7 +787,7 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct }) {
           <Quote size={120} className="absolute right-6 top-4 text-orange-500 opacity-20" />
           <div className="relative grid md:grid-cols-4 gap-8 items-center">
             <div className="text-center">
-              <div className="w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-orange-500 to-amber-400 flex items-center justify-center text-4xl font-extrabold ring-8 ring-white ring-opacity-10">{initials(PRESIDENT.name)}</div>
+              <div className="flex justify-center"><MemberPhoto name={PRESIDENT.name} size="w-32 h-32" text="text-4xl" className="ring-8 ring-white ring-opacity-10" /></div>
               <p className="font-bold mt-4">{PRESIDENT.name}</p>
               <p className="text-orange-400 text-sm">Président</p>
             </div>
@@ -752,6 +838,29 @@ function Home({ go, user, openLogin, visibleNews, upcoming, nextEvent, pct }) {
             </button>
           ); })}
         </div>
+      </section>
+
+      {/* PARTENAIRE OFFICIEL */}
+      <section className="max-w-6xl mx-auto px-4 pb-16">
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <p className="text-orange-600 font-bold text-sm uppercase tracking-widest">Ils nous accompagnent</p>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mt-2">Notre partenaire officiel</h2>
+        </div>
+        {PARTENAIRES.map((p) => (
+          <div key={p.name} className="bg-white rounded-3xl shadow-xl overflow-hidden grid md:grid-cols-3 hover:shadow-2xl transition duration-300">
+            <div className="flex items-center justify-center p-10 bg-gradient-to-br from-orange-50 to-amber-100">
+              <SafeImg src={images[`partenaire:${p.name}`]} alt={`Logo ${p.name}`} className="max-h-36 object-contain"
+                fallback={<div className="w-36 h-36 rounded-3xl bg-gradient-to-br from-orange-500 to-orange-700 text-white flex items-center justify-center text-lg font-extrabold tracking-wider shadow-lg">{p.short}</div>} />
+            </div>
+            <div className="md:col-span-2 p-8 md:p-10">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-bold uppercase tracking-wider"><Handshake size={14} /> {p.role}</span>
+              <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 mt-4">{p.name}</h3>
+              <p className="text-slate-600 mt-3 leading-relaxed">{p.text}</p>
+              <div className="flex flex-wrap gap-2 mt-5">{p.tags.map((t) => <span key={t} className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-sm font-medium">{t}</span>)}</div>
+              {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-6 text-orange-600 font-semibold hover:gap-3 transition-all">Découvrir la fondation <ArrowRight size={18} /></a>}
+            </div>
+          </div>
+        ))}
       </section>
 
       <section className="max-w-6xl mx-auto px-4 pb-20">
@@ -935,9 +1044,7 @@ function InfosTab({ profile, update, notify }) {
   const onPhoto = (e) => {
     const f = e.target.files && e.target.files[0]; e.target.value = "";
     if (!f) return;
-    if (!f.type.startsWith("image/")) return notify("Choisissez une image (JPG ou PNG).", "error");
-    if (f.size > 4 * 1048576) return notify("Image trop lourde (4 Mo maximum).", "error");
-    const r = new FileReader(); r.onload = () => setD((x) => ({ ...x, photo: r.result })); r.readAsDataURL(f);
+    compressImage(f, 500).then((data) => setD((x) => ({ ...x, photo: data }))).catch((err) => notify(err.message, "error"));
   };
   const save = () => {
     if (d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) return notify("Adresse email invalide.", "error");
@@ -953,7 +1060,7 @@ function InfosTab({ profile, update, notify }) {
         <Avatar photo={d.photo} name={`${d.prenoms} ${d.nom}`} size="w-24 h-24" text="text-3xl" />
         <div className="text-center sm:text-left">
           <p className="font-semibold text-slate-900">Photo de profil</p>
-          <p className="text-xs text-slate-500">Une photo professionnelle, visage bien visible. JPG ou PNG, 4 Mo max.</p>
+          <p className="text-xs text-slate-500">Une photo professionnelle, visage bien visible. JPG ou PNG.</p>
           <div className="flex gap-2 mt-3 justify-center sm:justify-start">
             <label className="cursor-pointer px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-semibold hover:bg-orange-700 flex items-center gap-2"><Camera size={16} /> Choisir<input type="file" accept="image/*" onChange={onPhoto} className="hidden" /></label>
             {d.photo && <button onClick={() => setD({ ...d, photo: null })} className="px-4 py-2 rounded-xl bg-white border border-slate-300 text-sm">Retirer</button>}
@@ -1185,7 +1292,7 @@ function LoginModal({ onClose, onLogin }) {
         <div className="relative p-8 text-white" style={{ background: NAVY }}>
           <button onClick={onClose} className="absolute top-4 right-4 text-slate-300 hover:text-white" aria-label="Fermer"><X /></button>
           <Compass size={110} strokeWidth={0.7} className="absolute -right-4 -bottom-6 opacity-10 spin-slow" />
-          <Logo size="w-14 h-14" />
+          <Logo size="w-16 h-16" />
           <h3 className="text-2xl font-extrabold mt-4">Espace membre</h3>
           <p className="text-sm text-slate-300 mt-1">Connectez-vous avec votre matricule.</p>
         </div>
@@ -1213,6 +1320,65 @@ const ADMIN_SECTIONS = {
   alumni: { label: "Alumni", icon: GraduationCap, fields: [["name", "Nom"], ["promo", "Promotion"], ["role", "Poste"], ["company", "Entreprise"]], show: (i) => `${i.name} — Promo ${i.promo}` },
 };
 
+// Une case d'image modifiable : aperçu + bouton « Changer » + bouton « Retirer ».
+function ImageSlot({ imgKey, label, sub, round, notify }) {
+  const { images, setImage } = useContext(ImgCtx);
+  const [busy, setBusy] = useState(false);
+  const src = images[imgKey];
+  const onFile = (e) => {
+    const f = e.target.files && e.target.files[0]; e.target.value = "";
+    if (!f) return;
+    setBusy(true);
+    compressImage(f, round ? 500 : 700)
+      .then((data) => { setImage(imgKey, data); notify(`Image mise à jour : ${label}`); })
+      .catch((err) => notify(err.message, "error"))
+      .finally(() => setBusy(false));
+  };
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-2xl border border-slate-200 hover:border-orange-300 transition">
+      <div className={`w-16 h-16 flex-shrink-0 overflow-hidden flex items-center justify-center bg-slate-100 ${round ? "rounded-full" : "rounded-xl"}`}>
+        <SafeImg src={src} alt={label} className={`w-full h-full ${round ? "object-cover" : "object-contain p-1 bg-white"}`} fallback={<ImageIcon size={22} className="text-slate-400" />} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-slate-900 text-sm truncate">{label}</p>
+        {sub && <p className="text-xs text-slate-500 truncate">{sub}</p>}
+        <div className="flex gap-2 mt-2">
+          <label className={`cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition ${busy ? "bg-slate-200 text-slate-500" : "bg-orange-600 text-white hover:bg-orange-700"}`}>
+            <Camera size={13} /> {busy ? "Traitement..." : src ? "Changer" : "Ajouter"}
+            <input type="file" accept="image/*" onChange={onFile} disabled={busy} className="hidden" />
+          </label>
+          {src && <button onClick={() => { setImage(imgKey, null); notify(`Image retirée : ${label}`); }} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 text-slate-600 hover:text-rose-600">Retirer</button>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ImagesManager({ notify }) {
+  const groups = [
+    { title: "Logo de la CGE-ARSTM", hint: "Affiché dans l'en-tête, le pied de page, la fenêtre de connexion et l'onglet du navigateur. Idéal : PNG carré à fond transparent.", items: [["logo", "Logo CGE-ARSTM"]] },
+    { title: "Logos des écoles membres", hint: "Affichés dans la page « À propos ».", items: Object.keys(LOGOS_ECOLES).map((k) => [`ecole:${k}`, k, ["ESA", "ESCAE", "ESI", "ESMG", "ESTP"].includes(k) ? "École de l'INP-HB" : null]) },
+    { title: "Logos des partenaires", hint: "Affichés dans la section « Notre partenaire officiel » de l'accueil.", items: PARTENAIRES.map((p) => [`partenaire:${p.name}`, p.name, p.role]) },
+    { title: "Photos du bureau exécutif", hint: "Photo portrait, visage centré. Recadrée automatiquement en rond.", round: true, items: BUREAU.flatMap((g) => g.members.map(([n, r]) => [`membre:${n}`, n, `${r} · ${g.dept}`])) },
+  ];
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl bg-sky-50 border border-sky-200 p-5 flex gap-3 text-sm text-sky-900">
+        <Info size={20} className="flex-shrink-0 text-sky-600 mt-0.5" />
+        <p><strong>Mode démo :</strong> les images changées ici s'affichent tout de suite, mais disparaissent au rechargement de la page. Dans la version finale, elles seront enregistrées sur le serveur et visibles par tous les visiteurs. Les images sont automatiquement réduites pour rester légères.</p>
+      </div>
+      {groups.map((g) => (
+        <Panel key={g.title} title={g.title} Icon={ImageIcon}>
+          <p className="text-sm text-slate-500 -mt-3 mb-5">{g.hint}</p>
+          <div className="grid md:grid-cols-2 gap-3">
+            {g.items.map(([key, label, sub]) => <ImageSlot key={key} imgKey={key} label={label} sub={sub} round={g.round} notify={notify} />)}
+          </div>
+        </Panel>
+      ))}
+    </div>
+  );
+}
+
 function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, setAlumni, applications, notify }) {
   const [tab, setTab] = useState("news");
   const [form, setForm] = useState({});
@@ -1228,16 +1394,18 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
     setForm({}); notify("Ajouté avec succès.");
   };
 
+  const tabs = [...Object.entries(ADMIN_SECTIONS), ["images", { label: "Images & logos", icon: ImageIcon }], ["applications", { label: `Candidatures (${applications.length})`, icon: Send }]];
+
   return (
     <main className="max-w-6xl mx-auto px-4 py-12">
       <p className="text-sm text-slate-500 mb-6">En mode démo, les changements disparaissent quand on recharge la page.</p>
       <div className="flex flex-wrap gap-2 mb-6">
-        {[...Object.entries(ADMIN_SECTIONS), ["applications", { label: `Candidatures (${applications.length})`, icon: Send }]].map(([k, s]) => { const I = s.icon; return (
+        {tabs.map(([k, s]) => { const I = s.icon; return (
           <button key={k} onClick={() => { setTab(k); setForm({}); }} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${tab === k ? "bg-orange-600 text-white shadow-md" : "bg-white shadow-sm text-slate-700 hover:text-orange-600"}`}><I size={16} /> {s.label}</button>
         ); })}
       </div>
 
-      {tab === "applications" ? (
+      {tab === "images" ? <ImagesManager notify={notify} /> : tab === "applications" ? (
         <Panel title="Candidatures reçues" Icon={Send}>
           {applications.length === 0 ? <p className="text-sm text-slate-500">Aucune candidature pour le moment.</p> : (
             <ul className="divide-y divide-slate-100">
@@ -1284,9 +1452,8 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
 }
 
 // =====================================================================
-// DÉMARRAGE
+// DÉMARRAGE — si une erreur survient, on l'affiche au lieu d'une page blanche.
 // =====================================================================
-// Si une erreur survient, on l'affiche à l'écran au lieu d'une page blanche.
 class ErrorBoundary extends React.Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(error) { return { error }; }
@@ -1295,7 +1462,7 @@ class ErrorBoundary extends React.Component {
     const e = this.state.error;
     return (
       <div style={{ padding: 32, fontFamily: "Inter, sans-serif", maxWidth: 760, margin: "40px auto" }}>
-        <h1 style={{ color: "#ea580c", fontSize: 22, fontWeight: 800 }}>Le site a rencontré une erreur</h1>
+        <h1 style={{ color: "#e67700", fontSize: 22, fontWeight: 800 }}>Le site a rencontré une erreur</h1>
         <p style={{ marginTop: 12 }}>Faites une capture d'écran de ce message et envoyez-la :</p>
         <pre style={{ marginTop: 12, padding: 16, background: "#fee2e2", borderRadius: 12, whiteSpace: "pre-wrap", fontSize: 13 }}>{String(e && e.message) + "\n\n" + String((e && e.stack) || "").split("\n").slice(0, 6).join("\n")}</pre>
       </div>
