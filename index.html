@@ -1244,7 +1244,8 @@ function App() {
   const assoActive = navAsso.some(([id]) => id === page);
 
   return (
-    <ImgCtx.Provider value={{ images, overrides: imgOverrides, saveImage, access: { logged: !!user, isCge, join: goAdhesion, numero: me && me.membre_cge ? (me.numero_membre || "") : null } }}>
+    <ImgCtx.Provider value={{ images, overrides: imgOverrides, saveImage, access: { logged: !!user, isCge, join: goAdhesion, numero: me && me.membre_cge ? (me.numero_membre || "") : null,
+      dept: me && me.departement ? { nom: me.departement, poste: me.poste_cge || "" } : null } }}>
     <div className="min-h-screen bg-stone-50 text-slate-800 font-sans">
       {toast && (
         <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 max-w-md w-max px-5 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-2 fade-up ${toast.type === "error" ? "bg-rose-600 text-white" : "bg-slate-900 text-white"}`}>
@@ -2724,6 +2725,9 @@ function ProfileSpace({ uid, profile, update, pct, fullName, applications, regis
             <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
               <ImgCtx.Consumer>{(v) => v.access && v.access.numero !== null && v.access.numero !== undefined && (
                 <span className="px-3 py-1 rounded-full bg-orange-600 text-xs font-bold flex items-center gap-1"><Award size={12} /> Membre CGE{v.access.numero ? ` · ${v.access.numero}` : ""}</span>
+              )}</ImgCtx.Consumer>
+              <ImgCtx.Consumer>{(v) => v.access && v.access.dept && (
+                <span className="px-3 py-1 rounded-full bg-white bg-opacity-15 text-xs font-bold flex items-center gap-1"><Users size={12} /> {v.access.dept.nom}{v.access.dept.poste ? ` · ${v.access.dept.poste}` : ""}</span>
               )}</ImgCtx.Consumer>
               {isAncien && <span className="px-3 py-1 rounded-full bg-white bg-opacity-15 text-xs font-bold">Ancien{profile.promotion && ` · Promo ${profile.promotion}`}</span>}
               {isAncien && profile.mentor && <span className="px-3 py-1 rounded-full bg-emerald-500 text-xs font-bold flex items-center gap-1"><Handshake size={12} /> Mentor</span>}
@@ -4501,6 +4505,80 @@ function CampagneForm({ initial, onDone, notify }) {
   );
 }
 
+// Vue « Départements » : une carte par département, avec ses membres et leur poste.
+const POSTES_SUGGERES = ["Chef(fe) de département", "Adjoint(e)", "Secrétaire", "Membre"];
+const rangPoste = (p) => (/chef/i.test(p || "") ? 0 : /adjoint/i.test(p || "") ? 1 : 2);
+
+function DepartementsView({ comptes, canEdit, notify, reload }) {
+  const [ajout, setAjout] = useState({});
+  const membres = comptes.filter((p) => p.membre_cge || p.departement);
+  const depts = [...new Set([...DEPARTEMENTS, ...membres.map((p) => p.departement).filter(Boolean)])];
+  const sans = membres.filter((p) => p.membre_cge && !p.departement);
+  const definir = async (p, dep, poste, msg) => {
+    const { error } = await sb.rpc("definir_poste", { cible: p.id, dep: dep || "", poste: poste || "" });
+    if (error) return notify(error.message, "error");
+    notify(msg || "Enregistré."); reload();
+  };
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl bg-sky-50 border border-sky-200 p-5 flex gap-3 text-sm text-sky-900">
+        <Info size={20} className="flex-shrink-0 text-sky-600 mt-0.5" />
+        <p>Rattachez les membres CGE à un département et indiquez leur poste : il s'affiche dans leur espace. C'est indépendant de la case « Bureau » (qui sert à la cotisation mensuelle du bureau). La liste des départements se modifie dans Textes & réglages → Listes.</p>
+      </div>
+      <datalist id="postes-dept">{POSTES_SUGGERES.map((x) => <option key={x} value={x} />)}</datalist>
+      <div className="grid lg:grid-cols-2 gap-6">
+        {depts.map((dep) => {
+          const list = membres.filter((p) => p.departement === dep).sort((a, b) => rangPoste(a.poste_cge) - rangPoste(b.poste_cge) || String(a.nom).localeCompare(String(b.nom)));
+          const q = ajout[dep] || "";
+          const trouves = q.trim().length >= 2 ? membres.filter((p) => p.membre_cge && p.departement !== dep && [p.nom, p.matricule, p.filiere].join(" ").toLowerCase().includes(q.trim().toLowerCase())).slice(0, 6) : [];
+          return (
+            <Panel key={dep} title={`${dep} (${list.length})`} Icon={Users}>
+              {list.length === 0 ? <p className="text-sm text-slate-500 mb-3">Aucun membre pour le moment.</p> : (
+                <ul className="divide-y divide-slate-100 mb-3">
+                  {list.map((p) => (
+                    <li key={p.id + (p.poste_cge || "")} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-900 text-sm">{p.nom}</p>
+                        <p className="text-xs text-slate-500">{[p.numero_membre, p.filiere].filter(Boolean).join(" · ")}</p>
+                      </div>
+                      {canEdit ? (
+                        <div className="flex items-center gap-1.5">
+                          <input list="postes-dept" defaultValue={p.poste_cge || ""} placeholder="Poste" title="Poste (validé en quittant le champ)"
+                            onBlur={(e) => { const v = e.target.value.trim(); if (v !== (p.poste_cge || "")) definir(p, dep, v, `Poste de ${p.nom} enregistré.`); }}
+                            className="w-44 px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs" />
+                          <ConfirmButton onConfirm={() => definir(p, "", "", `${p.nom} retiré(e) de ${dep}.`)} confirmLabel="Retirer ?" ariaLabel="Retirer du département" className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50"><X size={15} /></ConfirmButton>
+                        </div>
+                      ) : p.poste_cge && <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">{p.poste_cge}</span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {canEdit && (
+                <div>
+                  <input value={q} onChange={(e) => setAjout({ ...ajout, [dep]: e.target.value })} placeholder="Ajouter un membre : nom, matricule..." className={inputCls + " mt-0"} />
+                  {trouves.length > 0 && (
+                    <ul className="mt-2 space-y-1">{trouves.map((p) => (
+                      <li key={p.id} className="flex justify-between items-center gap-2 text-sm">
+                        <span>{p.nom}{p.departement && <span className="text-xs text-amber-700"> · actuellement : {p.departement}</span>}</span>
+                        <button onClick={() => { setAjout({ ...ajout, [dep]: "" }); definir(p, dep, "Membre", `${p.nom} ajouté(e) à ${dep}.`); }} className="px-3 py-1 rounded-lg bg-orange-600 text-white text-xs font-semibold">Ajouter</button>
+                      </li>
+                    ))}</ul>
+                  )}
+                </div>
+              )}
+            </Panel>
+          );
+        })}
+      </div>
+      <Panel title={`Membres sans département (${sans.length})`} Icon={UserPlus}>
+        {sans.length === 0 ? <p className="text-sm text-slate-500">Tous les membres CGE ont un département.</p> : (
+          <div className="flex flex-wrap gap-2">{sans.map((p) => <span key={p.id} className="px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-sm">{p.nom}</span>)}</div>
+        )}
+      </Panel>
+    </div>
+  );
+}
+
 function AdminAdhesions({ can, notify }) {
   const canA = can("adhesions"), canT = can("tresorerie");
   const [campagnes, setCampagnes] = useState([]);
@@ -4587,7 +4665,7 @@ function AdminAdhesions({ can, notify }) {
     return out;
   };
 
-  const views = [["candidats", "Candidatures", Send], ["membres", "Membres CGE", Award], ...(canA ? [["campagnes", "Campagnes", Calendar]] : [])];
+  const views = [["candidats", "Candidatures", Send], ["membres", "Membres CGE", Award], ["departements", "Départements", Users], ...(canA ? [["campagnes", "Campagnes", Calendar]] : [])];
 
   return (
     <div className="space-y-6">
@@ -4710,6 +4788,8 @@ function AdminAdhesions({ can, notify }) {
           )}
         </Panel>
       )}
+
+      {view === "departements" && <DepartementsView comptes={comptes} canEdit={canA || canT} notify={notify} reload={load} />}
 
       {view === "campagnes" && canA && (
         editing ? (
@@ -5889,6 +5969,7 @@ function AdminPanel({ news, setNews, events, setEvents, jobs, setJobs, alumni, s
                           {m.role !== "admin" && (m.permissions || []).length > 0 && <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Droits délégués</span>}
                           {m.membre_cge && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Membre CGE{m.numero_membre ? ` · ${m.numero_membre}` : ""}</span>}
                           {m.membre_cge && <RetardBadge uid={m.id} />}
+                          {m.departement && <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">{m.departement}{m.poste_cge ? ` · ${m.poste_cge}` : ""}</span>}
                           {m.role !== "admin" && (m.permissions || []).length > 0 && <span className="text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Droits délégués</span>}
                           {self && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Vous</span>}
                         </p>
